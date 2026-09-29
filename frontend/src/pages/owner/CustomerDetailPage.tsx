@@ -1,0 +1,888 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { customerService } from '../../services/customerService';
+import { CustomerDetailSummary, CustomerPricingOverviewItem, Order } from '../../types';
+import { formatCurrency, formatDate } from '../../utils/formatters';
+import { 
+  ArrowLeft, Store, Phone, MapPin, Tag, ShoppingBag, 
+  CreditCard, Truck, Plus, Edit2, CheckCircle, AlertTriangle, X,
+  Repeat, FileText, MessageSquare, ExternalLink, Copy, Check, Smartphone, Send
+} from 'lucide-react';
+import { InvoiceModal } from '../../components/InvoiceModal';
+import { openWhatsApp, generateBalanceReminderMessage, generateInvoiceMessage } from '../../utils/whatsappUtils';
+import { useSettings } from '../../context/SettingsContext';
+
+export const CustomerDetailPage: React.FC = () => {
+  const { isWhatsAppEnabled } = useSettings();
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const [summary, setSummary] = useState<CustomerDetailSummary | null>(null);
+  const [pricing, setPricing] = useState<CustomerPricingOverviewItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Price Modal State
+  const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<CustomerPricingOverviewItem | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const selfOrderUrl = `${window.location.origin}/customer/${id}`;
+
+  const handleCopySelfOrderLink = () => {
+    navigator.clipboard.writeText(selfOrderUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2200);
+  };
+  const [newPrice, setNewPrice] = useState('');
+  const [isActivePrice, setIsActivePrice] = useState(true);
+  const [savingPrice, setSavingPrice] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+  // Active Tab: 'pricing' | 'orders' | 'payments' | 'deliveries'
+  const [activeTab, setActiveTab] = useState<'pricing' | 'orders' | 'payments' | 'deliveries'>('pricing');
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
+
+  const loadCustomerData = async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const [summaryData, pricingData] = await Promise.all([
+        customerService.getCustomerSummary(id),
+        customerService.getCustomerPricing(id),
+      ]);
+      setSummary(summaryData);
+      setPricing(pricingData);
+    } catch (err: unknown) {
+      console.error(err);
+      setError('Failed to load customer profile details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomerData();
+  }, [id]);
+
+  const handleOpenPriceModal = (item: CustomerPricingOverviewItem) => {
+    setSelectedProduct(item);
+    setNewPrice(item.customer_price || item.default_price);
+    setIsActivePrice(item.is_active);
+    setPriceError(null);
+    setIsPriceModalOpen(true);
+  };
+
+  const handleSavePrice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !selectedProduct) return;
+
+    const parsedPrice = parseFloat(newPrice);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      setPriceError('Please enter a valid price (greater than or equal to 0).');
+      return;
+    }
+
+    try {
+      setSavingPrice(true);
+      setPriceError(null);
+      await customerService.setCustomerPricing(id, {
+        product_id: selectedProduct.product_id,
+        price: parsedPrice.toFixed(2),
+        is_active: isActivePrice,
+      });
+      setIsPriceModalOpen(false);
+      // Reload pricing & summary
+      const updatedPricing = await customerService.getCustomerPricing(id);
+      setPricing(updatedPricing);
+    } catch (err: unknown) {
+      if (err instanceof Error) setPriceError(err.message);
+      else setPriceError('Failed to update customer price.');
+    } finally {
+      setSavingPrice(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center' }}>
+        <div className="spinner" style={{ margin: '0 auto' }} />
+        <p style={{ marginTop: '1rem', color: 'var(--text-secondary)' }}>Loading customer shop profile...</p>
+      </div>
+    );
+  }
+
+  if (error || !summary) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '2rem auto', textAlign: 'center' }}>
+        <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '1.5rem', borderRadius: 'var(--radius-lg)' }}>
+          <AlertTriangle size={32} style={{ margin: '0 auto 0.5rem' }} />
+          <p style={{ fontWeight: 600 }}>{error || 'Customer not found'}</p>
+          <button className="btn btn-secondary" style={{ marginTop: '1rem' }} onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} />
+            <span>Go Back</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { customer } = summary;
+
+  return (
+    <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      {/* Top Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button className="btn btn-secondary" onClick={() => navigate(-1)}>
+            <ArrowLeft size={16} />
+            <span>Back</span>
+          </button>
+          <div>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>{customer.name}</span>
+              {customer.is_credit_exceeded && (
+                <span className="badge badge-danger">Credit Exceeded</span>
+              )}
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
+              Proprietor: {customer.owner_name || 'N/A'} • Route: {customer.route_details?.name || 'Unassigned'}
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Self-Order Header Actions */}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleCopySelfOrderLink}
+            title="Copy Customer Self-Order Link"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            {copiedLink ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+            <span>{copiedLink ? 'Link Copied!' : 'Copy Order Link'}</span>
+          </button>
+          <a
+            href={`/customer/${customer.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#10b981', borderColor: '#10b981' }}
+            title="Open Customer Self-Order Screen in new tab"
+          >
+            <ExternalLink size={14} />
+            <span>Open Self-Order</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Customer Self-Order Upgrade Feature Card */}
+      <div
+        className="card"
+        style={{
+          padding: '1rem 1.25rem',
+          marginBottom: '1.5rem',
+          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%)',
+          border: '1px solid rgba(16, 185, 129, 0.35)',
+          borderRadius: 'var(--radius-lg)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '10px',
+              background: '#10b981',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
+            }}
+          >
+            <Smartphone size={22} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Customer Self-Order Upgrade (Direct Mobile Portal)
+              </h4>
+              <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                Active • No OTP Required
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.35 }}>
+              This customer can place daily wholesale Kubbus & Romali orders online using their shop link with 1-click confirmation.
+            </p>
+            <div style={{ fontSize: '0.74rem', color: 'var(--primary)', marginTop: '0.25rem', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+              {selfOrderUrl}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={handleCopySelfOrderLink}
+            title="Copy URL"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            {copiedLink ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
+            <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+          </button>
+
+          <a
+            href={`https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+              `Hello ${customer.name}, you can now place your daily Kubbus & Romali wholesale orders directly online: ${selfOrderUrl}`
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary btn-sm"
+            style={{ color: '#16a34a', borderColor: '#86efac', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            title="Send Self-Order Link to customer on WhatsApp"
+          >
+            <Send size={14} />
+            <span>Send on WhatsApp</span>
+          </a>
+
+          <a
+            href={`/customer/${customer.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+            title="Preview Self-Order Portal as customer"
+          >
+            <ExternalLink size={14} />
+            <span>Open Portal</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Basic Info & Financial KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid var(--primary)' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Current Receivable</span>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: customer.is_credit_exceeded ? 'var(--danger)' : 'var(--text-primary)', marginTop: '0.25rem' }}>
+            {formatCurrency(summary.outstanding_balance)}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            Continuous Route Credit
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #10b981' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total Sales</span>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#10b981', marginTop: '0.25rem' }}>
+            {formatCurrency(summary.total_sales)}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            Lifetime Orders: {summary.total_orders}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid var(--primary)' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Total Collected</span>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)', marginTop: '0.25rem' }}>
+            {formatCurrency(summary.total_paid)}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            Audited Payments
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #f59e0b' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Contact & Address</span>
+          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
+            {customer.phone}
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {customer.address}
+          </div>
+        </div>
+      </div>
+
+      {/* Prompt 3: Last Order Card + Repeat Order & Frequent Order Info */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        {/* Last Order & Repeat Order */}
+        <div className="card" style={{ padding: '1.25rem', border: '1px solid #fed7aa', background: 'linear-gradient(to right bottom, #fffbeb, #ffffff)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '1.1rem' }}>🛍️</span>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#9a3412', margin: 0 }}>
+                LAST ORDER
+              </h3>
+            </div>
+            {summary.last_order && (
+              <span className="badge badge-neutral" style={{ fontSize: '0.72rem' }}>
+                #{summary.last_order.order_number} ({summary.last_order.order_date})
+              </span>
+            )}
+          </div>
+
+          {summary.last_order ? (
+            <div>
+              <div style={{ background: 'rgba(255,255,255,0.85)', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.85rem', border: '1px solid #fed7aa' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem' }}>
+                  {summary.last_order.items.map((it) => (
+                    <div key={it.product_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {it.product_name} — {it.quantity} pieces
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                          Hist: ₹{Number(it.historical_unit_price).toFixed(2)}
+                        </span>
+                        {it.price_changed && (
+                          <span className="badge badge-warning" style={{ fontSize: '0.68rem', padding: '0.1rem 0.35rem' }} title={`Current wholesale price is ₹${Number(it.current_unit_price).toFixed(2)}`}>
+                            Rate now: ₹{Number(it.current_unit_price).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ borderTop: '1px dashed #fdba74', marginTop: '0.5rem', paddingTop: '0.4rem', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '0.9rem', color: '#9a3412' }}>
+                  <span>Order Total:</span>
+                  <span>{formatCurrency(summary.last_order.total_amount)}</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    navigate('/manager/create-order', {
+                      state: {
+                        repeatCustomerId: customer.id,
+                        repeatItems: summary.last_order?.items.map((it) => ({
+                          product_id: it.product_id,
+                          quantity: it.quantity,
+                        })),
+                        sourceOrderNumber: summary.last_order?.order_number,
+                      },
+                    });
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#dc2626' }}
+                >
+                  <Repeat size={14} />
+                  <span>Repeat Last Order</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+              No previous orders found for this customer shop.
+            </p>
+          )}
+        </div>
+
+        {/* Frequent Order Information */}
+        <div className="card" style={{ padding: '1.25rem', border: '1px solid #fecaca', background: 'linear-gradient(to right bottom, #fef2f2, #ffffff)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '1.1rem' }}>📊</span>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--primary-dark)', margin: 0 }}>
+              FREQUENT ORDER PATTERNS
+            </h3>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.85)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                Most Frequent Product
+              </span>
+              <strong style={{ fontSize: '1rem', color: '#1e3a8a' }}>
+                {summary.frequent_order_info?.most_frequent_product || 'Kubbus'}
+              </strong>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.85)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                Typical Quantity
+              </span>
+              <strong style={{ fontSize: '1rem', color: '#1e3a8a' }}>
+                {summary.frequent_order_info?.typical_quantity || 0} pieces / order
+              </strong>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.85)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                Lifetime Orders
+              </span>
+              <strong style={{ fontSize: '1rem', color: '#1e3a8a' }}>
+                {summary.frequent_order_info?.total_orders || summary.total_orders} orders
+              </strong>
+            </div>
+
+            <div style={{ background: 'rgba(255,255,255,0.85)', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid #fee2e2' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                Last Order Date
+              </span>
+              <strong style={{ fontSize: '0.95rem', color: '#1e3a8a' }}>
+                {summary.frequent_order_info?.last_order_date || 'None'}
+              </strong>
+            </div>
+          </div>
+
+          {isWhatsAppEnabled && (
+            <div style={{ marginTop: '0.85rem', display: 'flex', gap: '0.5rem' }}>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  const msg = generateBalanceReminderMessage({
+                    customerName: customer.name,
+                    outstandingBalance: summary.outstanding_balance,
+                    creditLimit: customer.credit_limit,
+                    date: new Date().toLocaleDateString(),
+                  });
+                  openWhatsApp(customer.phone, msg);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#047857' }}
+              >
+                <MessageSquare size={14} />
+                <span>Share Balance on WhatsApp</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+        <button
+          className={`btn ${activeTab === 'pricing' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0', borderBottom: 'none' }}
+          onClick={() => setActiveTab('pricing')}
+        >
+          <Tag size={16} />
+          <span>Customer-Specific Pricing ({pricing.length})</span>
+        </button>
+        <button
+          className={`btn ${activeTab === 'orders' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0', borderBottom: 'none' }}
+          onClick={() => setActiveTab('orders')}
+        >
+          <ShoppingBag size={16} />
+          <span>Order History ({summary.recent_orders?.length || 0})</span>
+        </button>
+        <button
+          className={`btn ${activeTab === 'payments' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0', borderBottom: 'none' }}
+          onClick={() => setActiveTab('payments')}
+        >
+          <CreditCard size={16} />
+          <span>Payment History ({summary.recent_payments?.length || 0})</span>
+        </button>
+        <button
+          className={`btn ${activeTab === 'deliveries' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0', borderBottom: 'none' }}
+          onClick={() => setActiveTab('deliveries')}
+        >
+          <Truck size={16} />
+          <span>Delivery History ({summary.recent_deliveries?.length || 0})</span>
+        </button>
+      </div>
+
+      {/* Tab 1: Customer Pricing Management */}
+      {activeTab === 'pricing' && (
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Wholesale Customer Pricing</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Configure negotiated rates per product for {customer.name}. Orders automatically use this rate instead of the product base price.
+              </p>
+            </div>
+          </div>
+
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Packet Size</th>
+                  <th>Default Base Price</th>
+                  <th>Negotiated Customer Price</th>
+                  <th>Effective Billing Price</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pricing.map((item) => (
+                  <tr key={item.product_id}>
+                    <td>
+                      <div style={{ fontWeight: 700 }}>{item.product_name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.product_code}</div>
+                    </td>
+                    <td>{item.packet_size}</td>
+                    <td style={{ color: 'var(--text-muted)', textDecoration: item.is_custom_price ? 'line-through' : 'none' }}>
+                      {formatCurrency(item.default_price)}
+                    </td>
+                    <td>
+                      {item.is_custom_price ? (
+                        <span style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '1.05rem' }}>
+                          {formatCurrency(item.customer_price || item.default_price)}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                          None (Uses Base)
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <strong style={{ fontSize: '1rem' }}>{formatCurrency(item.effective_price)}</strong>
+                        {item.is_custom_price ? (
+                          <span className="badge badge-warning" style={{ fontSize: '0.72rem' }}>Custom</span>
+                        ) : (
+                          <span className="badge badge-neutral" style={{ fontSize: '0.72rem' }}>Default</span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      {item.is_custom_price ? (
+                        item.is_active ? (
+                          <span className="badge badge-success">Active Custom</span>
+                        ) : (
+                          <span className="badge badge-neutral">Inactive</span>
+                        )
+                      ) : (
+                        <span className="badge badge-neutral">Standard</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleOpenPriceModal(item)}
+                      >
+                        <Edit2 size={14} />
+                        <span>{item.is_custom_price ? 'Edit Rate' : 'Set Custom Rate'}</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: Order History */}
+      {activeTab === 'orders' && (
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem' }}>Historical Orders</h3>
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Date</th>
+                  <th>Items & Historical Rates</th>
+                  <th>Total Amount</th>
+                  <th>Order Status</th>
+                  <th>Delivery</th>
+                  <th style={{ textAlign: 'right' }}>Invoice & Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.recent_orders && summary.recent_orders.length > 0 ? (
+                  summary.recent_orders.map((ord) => (
+                    <tr key={ord.id}>
+                      <td>
+                        <div style={{ fontWeight: 700 }}>{ord.order_number}</div>
+                        {ord.source === 'CUSTOMER_LINK' && (
+                          <span
+                            className="badge badge-info"
+                            style={{
+                              fontSize: '0.68rem',
+                              padding: '0.1rem 0.4rem',
+                              marginTop: '0.2rem',
+                              display: 'inline-block',
+                              background: '#dcfce7',
+                              color: '#15803d',
+                              border: '1px solid #86efac',
+                            }}
+                          >
+                            📱 Self-Order
+                          </span>
+                        )}
+                      </td>
+                      <td>{formatDate(ord.order_date)}</td>
+                      <td>
+                        <div style={{ fontSize: '0.85rem' }}>
+                          {ord.items?.map((it) => (
+                            <div key={it.id} style={{ display: 'flex', gap: '0.5rem' }}>
+                              <span>{it.product_details?.name || 'Item'}:</span>
+                              <strong>{it.quantity} packs</strong>
+                              <span style={{ color: 'var(--text-muted)' }}>@ {formatCurrency(it.unit_price)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+                        {formatCurrency(ord.total_amount)}
+                      </td>
+                      <td>
+                        <span className={`badge ${
+                          ord.status === 'DELIVERED' ? 'badge-success' :
+                          ord.status === 'NOT_DELIVERED' ? 'badge-danger' : 'badge-neutral'
+                        }`}>
+                          {ord.status}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="badge badge-neutral">
+                          {ord.delivery_status || 'ASSIGNED'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setSelectedOrderForInvoice(ord as unknown as Order)}
+                            title="View & Print Professional Invoice"
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                          >
+                            <FileText size={13} />
+                            <span>Invoice</span>
+                          </button>
+                          {isWhatsAppEnabled && (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => {
+                                const items = (ord.items || []).map((it) => ({
+                                  name: it.product_details?.name || 'Product',
+                                  quantity: it.quantity,
+                                  unitPrice: it.unit_price,
+                                  subtotal: it.subtotal || (Number(it.unit_price) * it.quantity).toFixed(2),
+                                }));
+                                const msg = generateInvoiceMessage({
+                                  customerName: customer.name,
+                                  orderNumber: ord.order_number,
+                                  date: ord.order_date,
+                                  items,
+                                  totalAmount: ord.total_amount,
+                                  outstandingBalance: summary.outstanding_balance,
+                                });
+                                openWhatsApp(customer.phone, msg);
+                              }}
+                              title="Share on WhatsApp"
+                              style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                            >
+                              <MessageSquare size={13} />
+                              <span>Share</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      No order records found for this customer.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 3: Payment History */}
+      {activeTab === 'payments' && (
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem' }}>Payment Collections</h3>
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Receipt #</th>
+                  <th>Date</th>
+                  <th>Method</th>
+                  <th>Amount</th>
+                  <th>Collected By</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.recent_payments && summary.recent_payments.length > 0 ? (
+                  summary.recent_payments.map((p) => (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 700 }}>{p.payment_number}</td>
+                      <td>{formatDate(p.received_at)}</td>
+                      <td>
+                        <span className="badge badge-neutral">{p.payment_method}</span>
+                      </td>
+                      <td style={{ fontWeight: 800, color: '#10b981' }}>
+                        {formatCurrency(p.amount)}
+                      </td>
+                      <td>{p.collected_by_name || 'Driver / Staff'}</td>
+                      <td>
+                        <span className="badge badge-success">{p.status}</span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      No payment records found for this customer.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Delivery History */}
+      {activeTab === 'deliveries' && (
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem' }}>Delivery Tracking Records</h3>
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Delivery #</th>
+                  <th>Date</th>
+                  <th>Driver</th>
+                  <th>Status</th>
+                  <th>Notes / Failure Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.recent_deliveries && summary.recent_deliveries.length > 0 ? (
+                  summary.recent_deliveries.map((d) => (
+                    <tr key={d.id}>
+                      <td style={{ fontWeight: 700 }}>{d.delivery_number}</td>
+                      <td>{formatDate(d.created_at)}</td>
+                      <td>{d.driver_name || 'Assigned Driver'}</td>
+                      <td>
+                        <span className={`badge ${
+                          d.status === 'DELIVERED' ? 'badge-success' :
+                          d.status === 'NOT_DELIVERED' ? 'badge-danger' : 'badge-warning'
+                        }`}>
+                          {d.status}
+                        </span>
+                      </td>
+                      <td>
+                        {d.failed_reason ? (
+                          <span style={{ color: 'var(--danger)', fontWeight: 600 }}>Reason: {d.failed_reason}</span>
+                        ) : (
+                          d.notes || '—'
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                      No delivery records found for this customer.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer Price Modal */}
+      {isPriceModalOpen && selectedProduct && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '440px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>
+                Set Custom Wholesale Rate
+              </h3>
+              <button onClick={() => setIsPriceModalOpen(false)} style={{ color: 'var(--text-muted)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+              Product: <strong>{selectedProduct.product_name}</strong> ({selectedProduct.packet_size})<br />
+              Default Base Price: <strong>{formatCurrency(selectedProduct.default_price)}</strong>
+            </p>
+
+            {priceError && (
+              <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                {priceError}
+              </div>
+            )}
+
+            <form onSubmit={handleSavePrice}>
+              <div className="form-group">
+                <label className="form-label">Negotiated Customer Price (₹) *</label>
+                <input
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  className="form-input"
+                  style={{ fontSize: '1.15rem', fontWeight: 700 }}
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  placeholder="e.g. 10.50"
+                  required
+                  autoFocus
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
+                  Future billing for {customer.name} will default to this price automatically.
+                </span>
+              </div>
+
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+                <input
+                  type="checkbox"
+                  id="isActiveCheck"
+                  checked={isActivePrice}
+                  onChange={(e) => setIsActivePrice(e.target.checked)}
+                />
+                <label htmlFor="isActiveCheck" style={{ fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
+                  Active Customer Rate (Disable to revert to Base Price)
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => setIsPriceModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                  disabled={savingPrice}
+                >
+                  {savingPrice ? 'Saving...' : 'Save Rate'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Modal */}
+      {selectedOrderForInvoice && (
+        <InvoiceModal
+          order={selectedOrderForInvoice}
+          customer={customer}
+          onClose={() => setSelectedOrderForInvoice(null)}
+        />
+      )}
+    </div>
+  );
+};
