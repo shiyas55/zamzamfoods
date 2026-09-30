@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Headphones,
   Phone,
@@ -10,6 +10,9 @@ import {
   Check,
   ShieldCheck,
   ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Minimize2,
 } from 'lucide-react';
 
 export const ZENTRIX_SUPPORT_CONFIG = {
@@ -26,9 +29,20 @@ export const ZENTRIX_SUPPORT_CONFIG = {
 /**
  * Zentrix Sidebar Support Card
  * Embedded in Owner and Manager sidebars above user profile.
+ * Supports: Full Card mode, Compact Short Bar mode, and Sidebar collapsed icon mode.
  */
 export const ZentrixSidebarCard: React.FC<{ isCollapsed?: boolean }> = ({ isCollapsed }) => {
   const [copied, setCopied] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(() => {
+    return localStorage.getItem('zentrix_sidebar_card_minimized') === 'true';
+  });
+
+  const toggleMinimized = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextState = !isMinimized;
+    setIsMinimized(nextState);
+    localStorage.setItem('zentrix_sidebar_card_minimized', String(nextState));
+  };
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -65,6 +79,73 @@ export const ZentrixSidebarCard: React.FC<{ isCollapsed?: boolean }> = ({ isColl
     );
   }
 
+  // Small / Short Minimized Mode
+  if (isMinimized) {
+    return (
+      <div
+        style={{
+          margin: '0.35rem 0.75rem',
+          padding: '0.35rem 0.6rem',
+          borderRadius: '8px',
+          background: 'rgba(16, 185, 129, 0.12)',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <a
+          href={ZENTRIX_SUPPORT_CONFIG.whatsappUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            color: '#34d399',
+            textDecoration: 'none',
+            fontSize: '0.72rem',
+            fontWeight: 700,
+          }}
+          title="Zentrix 24x7 Help Desk (Click to Chat)"
+        >
+          <Headphones size={13} />
+          <span>Zentrix 24x7</span>
+        </a>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <a
+            href={ZENTRIX_SUPPORT_CONFIG.whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#4ade80', display: 'flex', alignItems: 'center', padding: '2px' }}
+            title="WhatsApp: 7012587705"
+          >
+            <MessageCircle size={12} />
+          </a>
+          <button
+            type="button"
+            onClick={toggleMinimized}
+            title="Expand Help Desk Card"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <ChevronDown size={13} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard Expanded Mode with Hide/Short Toggle
   return (
     <div
       style={{
@@ -113,22 +194,41 @@ export const ZentrixSidebarCard: React.FC<{ isCollapsed?: boolean }> = ({ isColl
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleCopy}
-          title="Copy 7012587705"
-          style={{
-            background: 'none',
-            border: 'none',
-            color: copied ? '#4ade80' : '#94a3b8',
-            cursor: 'pointer',
-            padding: '2px',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          {copied ? <Check size={13} /> : <Copy size={13} />}
-        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+          <button
+            type="button"
+            onClick={handleCopy}
+            title="Copy 7012587705"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: copied ? '#4ade80' : '#94a3b8',
+              cursor: 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+          </button>
+          <button
+            type="button"
+            onClick={toggleMinimized}
+            title="Minimize / Short Mode"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              padding: '2px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            <ChevronUp size={13} />
+          </button>
+        </div>
       </div>
 
       <div style={{ fontSize: '0.68rem', color: '#cbd5e1', marginBottom: '0.45rem', lineHeight: 1.25 }}>

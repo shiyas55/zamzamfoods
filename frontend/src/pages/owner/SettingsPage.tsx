@@ -31,6 +31,8 @@ import {
   Headphones,
 } from 'lucide-react';
 import { ZentrixSettingsSection, ZENTRIX_SUPPORT_CONFIG } from '../../components/ZentrixHelpDesk';
+import { DatabaseStorageBackupSection } from '../../components/DatabaseStorageBackupSection';
+
 
 export const SettingsPage: React.FC = () => {
   const { settings, loading, updateSettings, refreshSettings } = useSettings();
@@ -989,6 +991,9 @@ export const SettingsPage: React.FC = () => {
 
               </div>
             </div>
+
+            {/* SECTION: DATABASE STORAGE LEVEL & BACKUP DISASTER RECOVERY */}
+            {isOwner && <DatabaseStorageBackupSection />}
 
             {/* SECTION 3: ZENTRIX 24x7 HELP DESK & SOFTWARE SUPPORT */}
             <ZentrixSettingsSection />
