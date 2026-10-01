@@ -37,8 +37,8 @@ logger = logging.getLogger(__name__)
 
 # ─── Cookie helpers ───────────────────────────────────────────────────────────
 
-COOKIE_SECURE = os.environ.get("JWT_COOKIE_SECURE", "False").lower() == "true"
-COOKIE_SAMESITE = os.environ.get("JWT_COOKIE_SAMESITE", "Lax")
+COOKIE_SECURE = getattr(settings, "JWT_COOKIE_SECURE", not settings.DEBUG or os.environ.get("JWT_COOKIE_SECURE", "True").lower() == "true")
+COOKIE_SAMESITE = getattr(settings, "JWT_COOKIE_SAMESITE", "None" if not settings.DEBUG else "Lax")
 ACCESS_COOKIE = "zamzam_access"
 REFRESH_COOKIE = "zamzam_refresh"
 
@@ -72,14 +72,15 @@ def _set_auth_cookies(response: Response, access: str, refresh: str) -> None:
         httponly=True,
         secure=COOKIE_SECURE,
         samesite=COOKIE_SAMESITE,
-        path="/api/v1/auth/",  # Narrow path — only sent to auth endpoints
+        path="/",
     )
 
 
 def _clear_auth_cookies(response: Response) -> None:
     """Expire both auth cookies immediately."""
     response.delete_cookie(ACCESS_COOKIE, path="/")
-    response.delete_cookie(REFRESH_COOKIE, path="/api/v1/auth/")
+    response.delete_cookie(REFRESH_COOKIE, path="/")
+
 
 
 def _hash_token(raw_token: str) -> str:
@@ -202,25 +203,35 @@ class CookieTokenRefreshView(APIView):
                 )
                 .first()
             )
-            if not session or not session.is_valid:
+            if session and not session.is_valid:
+                session.is_active = False
+                session.save(update_fields=["is_active"])
                 resp = Response(
                     {"detail": "Persistent session has expired. Please log in again."},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
                 _clear_auth_cookies(resp)
-                if session:
-                    session.is_active = False
-                    session.save(update_fields=["is_active"])
                 return resp
 
-            # Rotate refresh token — update device session hash
+            # Rotate refresh token — update device session hash or auto-register if missing
             old_token.blacklist()
             new_refresh = RefreshToken.for_user(user)
             new_access_str = str(new_refresh.access_token)
             new_refresh_str = str(new_refresh)
 
-            session.refresh_token_hash = _hash_token(new_refresh_str)
-            session.save(update_fields=["refresh_token_hash", "last_used_at"])
+            if session:
+                session.refresh_token_hash = _hash_token(new_refresh_str)
+                session.save(update_fields=["refresh_token_hash", "last_used_at"])
+            else:
+                expires = timezone.now() + timezone.timedelta(days=PERSISTENT_LOGIN_DAYS)
+                DeviceSession.objects.create(
+                    user=user,
+                    refresh_token_hash=_hash_token(new_refresh_str),
+                    device_name=request.data.get("device_name", "") or "Auto-registered Device",
+                    user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                    ip_address=_get_client_ip(request),
+                    expires_at=expires,
+                )
 
         else:
             # Owner / other roles — simple rotation without device session tracking

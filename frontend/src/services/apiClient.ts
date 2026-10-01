@@ -1,16 +1,16 @@
 /**
  * Zamzam Foods API Client
  *
- * Uses credentials: "include" so that HttpOnly cookies (zamzam_access and
- * zamzam_refresh) are automatically sent with every request. The JavaScript
- * layer never reads or stores JWT tokens.
+ * Implements robust Dual-Authentication:
+ *   1. Sends Authorization: Bearer <token> header from localStorage (works everywhere, including cross-subdomain & third-party cookie blocked environments).
+ *   2. Sends credentials: "include" for HttpOnly cookie support.
  *
  * Token refresh flow:
  *   1. Request returns 401
- *   2. Client calls POST /auth/refresh/ (cookie is sent automatically)
- *   3. Server validates refresh cookie → issues new access + refresh cookies
- *   4. Client retries the original request (new access cookie is sent)
- *   5. If refresh also fails → dispatch auth:logout → frontend redirects to /login
+ *   2. Client calls POST /auth/refresh/ with refresh token and credentials
+ *   3. Server issues new access + refresh tokens
+ *   4. Client updates stored tokens and retries original request
+ *   5. If refresh fails → dispatch auth:logout → frontend redirects to /login
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
@@ -25,7 +25,7 @@ class ApiClient {
   private isRefreshing = false;
   private refreshSubscribers: Array<() => void> = [];
 
-  /** Notify all queued requests that a fresh cookie has been set. */
+  /** Notify all queued requests that a fresh token has been set. */
   private onTokenRefreshed() {
     this.refreshSubscribers.forEach((cb) => cb());
     this.refreshSubscribers = [];
@@ -38,26 +38,41 @@ class ApiClient {
 
   /**
    * Silently obtain a new access token by calling the refresh endpoint.
-   * The browser sends the zamzam_refresh cookie automatically.
-   * On success, the server sets a new zamzam_access cookie automatically.
-   * Returns true if refresh succeeded, false otherwise.
    */
   private async refreshAccessToken(): Promise<boolean> {
+    const refreshToken = localStorage.getItem('zamzam_refresh_token');
+    // If there is no refresh token and no user, we are simply unauthenticated
+    if (!refreshToken && !localStorage.getItem('zamzam_user')) {
+      return false;
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
+        body: refreshToken ? JSON.stringify({ refresh: refreshToken }) : undefined,
       });
 
       if (!response.ok) {
-        // Refresh cookie expired or blacklisted → force re-login
-        this.dispatchLogout();
+        // Prevent race condition: only clear if the token hasn't changed (e.g. from a fresh login)
+        if (localStorage.getItem('zamzam_refresh_token') === refreshToken) {
+          this.clearTokens();
+          this.dispatchLogout();
+        }
         return false;
+      }
+
+      const data = await response.json().catch(() => ({}));
+      if (data.access) {
+        this.setTokens(data.access, data.refresh || refreshToken || '');
       }
       return true;
     } catch {
-      this.dispatchLogout();
+      if (localStorage.getItem('zamzam_refresh_token') === refreshToken) {
+        this.clearTokens();
+        this.dispatchLogout();
+      }
       return false;
     }
   }
@@ -90,17 +105,23 @@ class ApiClient {
       ...((fetchOptions.headers as Record<string, string>) || {}),
     };
 
+    // Attach Bearer token if available
+    const accessToken = localStorage.getItem('zamzam_access_token');
+    if (accessToken && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
     let response: Response;
     try {
       response = await fetch(url, {
         ...fetchOptions,
         headers,
-        credentials: 'include', // Always send HttpOnly cookies
+        credentials: 'include',
       });
     } catch (err: unknown) {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error(
-          'You are currently offline. Live operations (payments, deliveries, expenses) require a connection to the Zamzam server.'
+          'You are currently offline. Live operations require a connection to the Zamzam server.'
         );
       }
       throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
@@ -120,7 +141,11 @@ class ApiClient {
 
         if (refreshed) {
           this.onTokenRefreshed();
-          // Retry original request — new access cookie is now set
+          // Update authorization header with newly refreshed access token
+          const freshToken = localStorage.getItem('zamzam_access_token');
+          if (freshToken) {
+            headers['Authorization'] = `Bearer ${freshToken}`;
+          }
           response = await fetch(url, {
             ...fetchOptions,
             headers,
@@ -134,6 +159,10 @@ class ApiClient {
         await new Promise<void>((resolve) => {
           this.addRefreshSubscriber(resolve);
         });
+        const freshToken = localStorage.getItem('zamzam_access_token');
+        if (freshToken) {
+          headers['Authorization'] = `Bearer ${freshToken}`;
+        }
         response = await fetch(url, {
           ...fetchOptions,
           headers,
@@ -189,17 +218,15 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'DELETE' });
   }
 
-  /**
-   * @deprecated  Tokens are now stored in HttpOnly cookies managed by the server.
-   * These stubs are kept so that any legacy code referencing them does not break.
-   */
-  public setTokens(_access: string, _refresh: string) {
-    // No-op: tokens live in HttpOnly cookies, not JS
+  public setTokens(access: string, refresh?: string) {
+    if (access) localStorage.setItem('zamzam_access_token', access);
+    if (refresh) localStorage.setItem('zamzam_refresh_token', refresh);
   }
 
   public clearTokens() {
-    // No-op: clearing is done server-side via the logout endpoint
     localStorage.removeItem('zamzam_user');
+    localStorage.removeItem('zamzam_access_token');
+    localStorage.removeItem('zamzam_refresh_token');
   }
 }
 

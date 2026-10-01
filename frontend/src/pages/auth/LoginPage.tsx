@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, User, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -9,12 +9,13 @@ export const LoginPage: React.FC = () => {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!username.trim() || !password) {
       setError('Please provide both username and password.');
       return;
     }
@@ -48,20 +49,16 @@ export const LoginPage: React.FC = () => {
       <style>{`
         @keyframes floatOrb1 {
           0%, 100% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(40px, -30px) scale(1.15); }
+          50% { transform: translate(30px, -25px) scale(1.12); }
         }
         @keyframes floatOrb2 {
           0%, 100% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(-35px, 35px) scale(1.2); }
-        }
-        @keyframes floatOrb3 {
-          0%, 100% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(25px, 40px) scale(0.9); }
+          50% { transform: translate(-30px, 30px) scale(1.15); }
         }
         @keyframes cardFadeIn {
           0% {
             opacity: 0;
-            transform: translateY(28px) scale(0.96);
+            transform: translateY(20px) scale(0.97);
           }
           100% {
             opacity: 1;
@@ -70,7 +67,7 @@ export const LoginPage: React.FC = () => {
         }
         @keyframes logoPulse {
           0%, 100% { transform: scale(1); filter: drop-shadow(0 4px 12px rgba(220, 38, 38, 0.2)); }
-          50% { transform: scale(1.04); filter: drop-shadow(0 8px 24px rgba(220, 38, 38, 0.35)); }
+          50% { transform: scale(1.03); filter: drop-shadow(0 6px 18px rgba(220, 38, 38, 0.3)); }
         }
         @keyframes shimmer {
           0% { transform: translateX(-100%); }
@@ -83,7 +80,10 @@ export const LoginPage: React.FC = () => {
         }
         @keyframes badgeGlow {
           0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-          50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+          50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
 
         .login-wrapper {
@@ -95,119 +95,168 @@ export const LoginPage: React.FC = () => {
           position: relative;
           overflow: hidden;
           padding: 1.5rem;
-          font-family: inherit;
+          box-sizing: border-box;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
         .ambient-orb {
           position: absolute;
           border-radius: 50%;
-          filter: blur(90px);
+          filter: blur(100px);
           pointer-events: none;
-          opacity: 0.6;
+          opacity: 0.55;
         }
         .orb-1 {
           width: 380px;
           height: 380px;
           background: radial-gradient(circle, #dc2626 0%, transparent 70%);
           top: -10%;
-          left: 15%;
+          left: 10%;
           animation: floatOrb1 12s ease-in-out infinite;
         }
         .orb-2 {
-          width: 420px;
-          height: 420px;
-          background: radial-gradient(circle, #b91c1c 0%, transparent 70%);
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, #991b1b 0%, transparent 70%);
           bottom: -15%;
           right: 10%;
           animation: floatOrb2 15s ease-in-out infinite;
         }
-        .orb-3 {
-          width: 300px;
-          height: 300px;
-          background: radial-gradient(circle, #f59e0b 0%, transparent 70%);
-          top: 40%;
-          left: 60%;
-          opacity: 0.35;
-          animation: floatOrb3 10s ease-in-out infinite;
-        }
 
         .login-card {
           width: 100%;
-          maxWidth: 440px;
-          background: rgba(255, 255, 255, 0.98);
+          max-width: 420px;
+          background: #ffffff;
           border-radius: 20px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+          box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
           overflow: hidden;
           position: relative;
           z-index: 10;
-          animation: cardFadeIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          backdrop-filter: blur(12px);
+          animation: cardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          box-sizing: border-box;
+        }
+
+        .login-header {
+          padding: 2.25rem 2rem 1.5rem;
+          background: #ffffff;
+          border-bottom: 1px solid #f1f5f9;
+          text-align: center;
         }
 
         .login-logo {
-          height: 86px;
-          width: 86px;
+          height: 76px;
+          width: 76px;
           object-fit: cover;
-          border-radius: 18px;
-          margin-bottom: 0.85rem;
+          border-radius: 16px;
+          margin-bottom: 0.75rem;
           animation: logoPulse 4s ease-in-out infinite;
           transition: transform 0.3s ease;
+          display: inline-block;
         }
         .login-logo:hover {
-          transform: scale(1.08) rotate(2deg);
+          transform: scale(1.06) rotate(1deg);
         }
 
         .animated-input-group {
-          position: relative;
           margin-bottom: 1.25rem;
+          text-align: left;
         }
         .animated-input-group label {
           display: block;
           font-size: 0.85rem;
           font-weight: 600;
           color: #334155;
-          margin-bottom: 0.4rem;
+          margin-bottom: 0.5rem;
+          letter-spacing: -0.01em;
         }
+
+        .input-wrapper {
+          position: relative;
+          width: 100%;
+          height: 48px;
+          display: flex;
+          align-items: center;
+          box-sizing: border-box;
+        }
+
+        .input-icon-left {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          transition: color 0.2s ease;
+          pointer-events: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+          z-index: 5;
+        }
+
         .animated-input {
           width: 100%;
-          padding: 0.75rem 1rem 0.75rem 2.6rem;
+          height: 100%;
+          padding: 0 44px 0 42px;
           border: 1.5px solid #e2e8f0;
-          border-radius: 10px;
+          border-radius: 12px;
           font-size: 0.95rem;
           color: #0f172a;
           background: #f8fafc;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           outline: none;
           box-sizing: border-box;
+          line-height: normal;
+        }
+        .animated-input::placeholder {
+          color: #94a3b8;
+          font-size: 0.9rem;
         }
         .animated-input:focus {
           border-color: #dc2626;
           background: #ffffff;
-          box-shadow: 0 0 0 3.5px rgba(220, 38, 38, 0.12);
-          transform: translateY(-1px);
+          box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
         }
-        .input-icon {
-          position: absolute;
-          left: 0.9rem;
-          top: 2.25rem;
-          color: #94a3b8;
-          transition: color 0.25s ease, transform 0.25s ease;
-          pointer-events: none;
-        }
-        .animated-input:focus + .input-icon,
-        .animated-input-group:focus-within .input-icon {
+        .input-wrapper:focus-within .input-icon-left {
           color: #dc2626;
-          transform: scale(1.1);
+        }
+
+        .password-toggle-btn {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: transparent;
+          border: none;
+          color: #94a3b8;
+          cursor: pointer;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          transition: all 0.15s ease;
+          z-index: 5;
+          padding: 0;
+        }
+        .password-toggle-btn:hover {
+          color: #dc2626;
+          background: rgba(220, 38, 38, 0.08);
+        }
+        .password-toggle-btn:active {
+          transform: translateY(-50%) scale(0.95);
         }
 
         .animated-submit-btn {
           width: 100%;
-          padding: 0.85rem 1.25rem;
+          height: 48px;
           background: linear-gradient(135deg, #e11d48 0%, #dc2626 50%, #b91c1c 100%);
           color: white;
           border: none;
-          border-radius: 10px;
-          font-size: 0.95rem;
+          border-radius: 12px;
+          font-size: 0.96rem;
           font-weight: 600;
           cursor: pointer;
           display: flex;
@@ -217,7 +266,8 @@ export const LoginPage: React.FC = () => {
           position: relative;
           overflow: hidden;
           box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          margin-top: 0.25rem;
         }
         .animated-submit-btn:hover:not(:disabled) {
           transform: translateY(-2px);
@@ -227,7 +277,7 @@ export const LoginPage: React.FC = () => {
           transform: translateY(0);
         }
         .animated-submit-btn:disabled {
-          opacity: 0.7;
+          opacity: 0.75;
           cursor: not-allowed;
         }
         .animated-submit-btn::after {
@@ -248,7 +298,7 @@ export const LoginPage: React.FC = () => {
           display: flex;
           align-items: center;
           gap: 0.6rem;
-          padding: 0.8rem 1rem;
+          padding: 0.75rem 0.9rem;
           border-radius: 10px;
           background: #fef2f2;
           border: 1px solid #fecaca;
@@ -264,30 +314,22 @@ export const LoginPage: React.FC = () => {
         }
 
         .support-link {
-          transition: transform 0.2s ease, opacity 0.2s ease;
+          transition: opacity 0.15s ease, transform 0.15s ease;
         }
         .support-link:hover {
+          opacity: 0.8;
           transform: translateY(-1px);
-          opacity: 0.85;
         }
       `}</style>
 
       {/* Floating Animated Ambient Glow Orbs */}
       <div className="ambient-orb orb-1" />
       <div className="ambient-orb orb-2" />
-      <div className="ambient-orb orb-3" />
 
       {/* Main Login Card */}
       <div className="login-card">
         {/* Header */}
-        <div
-          style={{
-            padding: '2.25rem 2rem 1.6rem',
-            background: 'white',
-            borderBottom: '1px solid #f1f5f9',
-            textAlign: 'center',
-          }}
-        >
+        <div className="login-header">
           <img 
             src="/app-icon.png" 
             alt="Zamzam Foods App Icon" 
@@ -304,13 +346,13 @@ export const LoginPage: React.FC = () => {
           >
             Zamzam Foods
           </h1>
-          <p style={{ fontSize: '0.86rem', color: '#64748b', margin: 0 }}>
+          <p style={{ fontSize: '0.84rem', color: '#64748b', margin: 0 }}>
             Enterprise Distribution Management System
           </p>
         </div>
 
-        {/* Form */}
-        <div style={{ padding: '2rem' }}>
+        {/* Form Body */}
+        <div style={{ padding: '1.75rem 2rem 2rem' }}>
           {error && (
             <div className="error-banner">
               <AlertCircle size={18} style={{ flexShrink: 0 }} />
@@ -321,7 +363,10 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit}>
             <div className="animated-input-group">
               <label htmlFor="username">Username</label>
-              <div style={{ position: 'relative' }}>
+              <div className="input-wrapper">
+                <div className="input-icon-left">
+                  <User size={18} />
+                </div>
                 <input
                   id="username"
                   type="text"
@@ -331,17 +376,20 @@ export const LoginPage: React.FC = () => {
                   onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}
                   autoComplete="username"
+                  autoFocus
                 />
-                <User size={18} className="input-icon" />
               </div>
             </div>
 
-            <div className="animated-input-group" style={{ marginBottom: '1.6rem' }}>
+            <div className="animated-input-group" style={{ marginBottom: '1.5rem' }}>
               <label htmlFor="password">Password</label>
-              <div style={{ position: 'relative' }}>
+              <div className="input-wrapper">
+                <div className="input-icon-left">
+                  <Lock size={18} />
+                </div>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   className="animated-input"
                   placeholder="Enter password"
                   value={password}
@@ -349,7 +397,15 @@ export const LoginPage: React.FC = () => {
                   disabled={isLoading}
                   autoComplete="current-password"
                 />
-                <Lock size={18} className="input-icon" />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
 
@@ -364,7 +420,7 @@ export const LoginPage: React.FC = () => {
                     style={{
                       width: 18,
                       height: 18,
-                      border: '2px solid rgba(255,255,255,0.3)',
+                      border: '2px solid rgba(255,255,255,0.35)',
                       borderTopColor: '#ffffff',
                       borderRadius: '50%',
                       animation: 'spin 0.8s linear infinite',
@@ -384,7 +440,7 @@ export const LoginPage: React.FC = () => {
           {/* Zentrix 24x7 Help Desk Support Footer */}
           <div
             style={{
-              marginTop: '1.8rem',
+              marginTop: '1.75rem',
               paddingTop: '1.25rem',
               borderTop: '1px solid #f1f5f9',
               textAlign: 'center',

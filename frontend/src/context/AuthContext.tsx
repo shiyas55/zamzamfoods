@@ -32,32 +32,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   /**
    * Validate the cached user by fetching /auth/me/.
-   * The HttpOnly access cookie is sent automatically.
+   * The HttpOnly access cookie or Bearer token is sent automatically.
    * apiClient handles automatic refresh if the access token has expired.
    */
   const refreshUser = async () => {
+    const accessToken = localStorage.getItem('zamzam_access_token');
+    const refreshToken = localStorage.getItem('zamzam_refresh_token');
+    const storedUser = authService.getStoredUser();
+
+    // If no tokens or stored user, we are simply in unauthenticated state
+    if (!accessToken && !refreshToken && !storedUser) {
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // If we have a cached user, assume the session might be valid and verify
       const freshUser = await authService.getCurrentUser();
       setUser(freshUser);
       localStorage.setItem('zamzam_user', JSON.stringify(freshUser));
     } catch {
-      // Session fully expired or no cookies — force logout state
-      setUser(null);
-      localStorage.removeItem('zamzam_user');
+      // Only clear if we actually have no valid token in storage
+      const currentToken = localStorage.getItem('zamzam_access_token');
+      if (!currentToken) {
+        setUser(null);
+        localStorage.removeItem('zamzam_user');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    // Always validate against the server on app start
+    // Only validate on mount if we have an active session
     refreshUser();
 
     // Handle server-initiated logout events (e.g. refresh token rejected)
     const handleLogoutEvent = () => {
-      setUser(null);
-      localStorage.removeItem('zamzam_user');
+      const currentToken = localStorage.getItem('zamzam_access_token');
+      if (!currentToken) {
+        setUser(null);
+        localStorage.removeItem('zamzam_user');
+      }
     };
 
     window.addEventListener('auth:logout', handleLogoutEvent);
@@ -65,9 +81,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, password: string): Promise<User> => {
-    const res = await authService.login(username, password);
-    setUser(res.user);
-    return res.user;
+    setIsLoading(true);
+    try {
+      const res = await authService.login(username, password);
+      setUser(res.user);
+      return res.user;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = async (): Promise<void> => {

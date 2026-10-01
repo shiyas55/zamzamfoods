@@ -17,11 +17,14 @@ export const authService = {
    * Returns the sanitised user object from the response body.
    */
   async login(username: string, password: string): Promise<AuthResponse> {
-    const data = await apiClient.post<AuthResponse>('/auth/login/', {
+    const data = await apiClient.post<AuthResponse & { access?: string; refresh?: string }>('/auth/login/', {
       username,
       password,
     });
-    // Persist only user metadata (not tokens) for fast page-load hydration
+    // Persist tokens and user metadata for reliable authentication across all environments
+    if (data.access) {
+      apiClient.setTokens(data.access, data.refresh);
+    }
     localStorage.setItem('zamzam_user', JSON.stringify(data.user));
     return data;
   },

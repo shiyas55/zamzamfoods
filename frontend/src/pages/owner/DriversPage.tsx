@@ -10,11 +10,15 @@ import {
   Filter,
   X,
   Edit2,
+  Trash2,
   CheckCircle,
   AlertCircle,
   FileText,
   UserCheck,
   ShieldCheck,
+  AlertTriangle,
+  Lock,
+  Key,
 } from 'lucide-react';
 
 export const DriversPage: React.FC = () => {
@@ -43,14 +47,21 @@ export const DriversPage: React.FC = () => {
   // Edit Driver Modal
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [editFormData, setEditFormData] = useState({
+    name: '',
     assigned_route: '',
     phone_number: '',
     vehicle_number: '',
     license_number: '',
+    password: '',
     is_active: true,
   });
   const [updatingDriver, setUpdatingDriver] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  // Delete Driver Modal
+  const [deletingDriver, setDeletingDriver] = useState<Driver | null>(null);
+  const [isDeletingDriver, setIsDeletingDriver] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Feedback Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -120,7 +131,7 @@ export const DriversPage: React.FC = () => {
         err.response?.data?.name?.[0] ||
         err.response?.data?.username?.[0] ||
         err.response?.data?.detail ||
-        'Failed to create driver profile. Please check the inputs.';
+        (err instanceof Error ? err.message : 'Failed to create driver profile. Please check the inputs.');
       setAddError(msg);
     } finally {
       setAddingDriver(false);
@@ -131,10 +142,12 @@ export const DriversPage: React.FC = () => {
   const handleOpenEdit = (driver: Driver) => {
     setEditingDriver(driver);
     setEditFormData({
+      name: driver.driver_name || '',
       assigned_route: driver.assigned_route || '',
       phone_number: driver.phone_number || driver.user_details?.phone_number || '',
       vehicle_number: driver.vehicle_number || '',
       license_number: driver.license_number || '',
+      password: '',
       is_active: driver.is_active,
     });
     setEditError(null);
@@ -150,24 +163,57 @@ export const DriversPage: React.FC = () => {
       setEditError(null);
 
       await routeService.updateDriver(editingDriver.id, {
+        name: editFormData.name.trim() || undefined,
         assigned_route: editFormData.assigned_route || null,
         phone_number: editFormData.phone_number.trim(),
         vehicle_number: editFormData.vehicle_number.trim(),
         license_number: editFormData.license_number.trim(),
+        password: editFormData.password.trim() || undefined,
         is_active: editFormData.is_active,
       });
 
+      const updatedName = editFormData.name.trim() || editingDriver.driver_name;
       setEditingDriver(null);
-      showToast(`Driver profile for ${editingDriver.driver_name} updated successfully!`);
+      showToast(`Driver profile for ${updatedName} updated successfully!`);
       await loadData();
     } catch (err: any) {
       console.error('Failed to update driver:', err);
       const msg =
         err.response?.data?.detail ||
-        'Failed to update driver profile. Please check the inputs.';
+        (err instanceof Error ? err.message : 'Failed to update driver profile. Please check the inputs.');
       setEditError(msg);
     } finally {
       setUpdatingDriver(false);
+    }
+  };
+
+  // Open delete modal
+  const handleOpenDelete = (driver: Driver) => {
+    setDeletingDriver(driver);
+    setDeleteError(null);
+  };
+
+  // Handle delete driver
+  const handleConfirmDelete = async () => {
+    if (!deletingDriver) return;
+
+    try {
+      setIsDeletingDriver(true);
+      setDeleteError(null);
+
+      await routeService.deleteDriver(deletingDriver.id);
+      const name = deletingDriver.driver_name;
+      setDeletingDriver(null);
+      showToast(`Driver profile for ${name} deleted successfully.`);
+      await loadData();
+    } catch (err: any) {
+      console.error('Failed to delete driver:', err);
+      const msg =
+        err.response?.data?.detail ||
+        (err instanceof Error ? err.message : 'Failed to delete driver profile. Ensure all active assignments are resolved.');
+      setDeleteError(msg);
+    } finally {
+      setIsDeletingDriver(false);
     }
   };
 
@@ -556,26 +602,50 @@ export const DriversPage: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    paddingTop: '0.75rem',
+                    paddingTop: '0.85rem',
                     borderTop: '1px solid var(--border)',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
                   }}
                 >
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     Deliveries today: <strong>{d.active_deliveries_count || 0}</strong>
                   </span>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => handleOpenEdit(d)}
-                    style={{
-                      fontSize: '0.8rem',
-                      padding: '4px 10px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    <Edit2 size={13} /> Edit Profile
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleOpenEdit(d)}
+                      style={{
+                        fontSize: '0.8rem',
+                        padding: '5px 10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        color: '#0284c7',
+                      }}
+                      title="Edit Driver Profile"
+                    >
+                      <Edit2 size={13} />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => handleOpenDelete(d)}
+                      style={{
+                        fontSize: '0.8rem',
+                        padding: '5px 10px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        color: '#dc2626',
+                      }}
+                      title="Delete Driver Profile"
+                    >
+                      <Trash2 size={13} />
+                      <span>Delete</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -811,21 +881,26 @@ export const DriversPage: React.FC = () => {
             className="card"
             style={{
               width: '100%',
-              maxWidth: '500px',
+              maxWidth: '520px',
               padding: '1.75rem',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
               borderRadius: '12px',
               backgroundColor: 'var(--card-bg, #ffffff)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
-                  Edit Driver Profile
-                </h3>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  {editingDriver.driver_name} (@{editingDriver.user_details?.username})
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <Edit2 size={22} style={{ color: '#0284c7' }} />
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
+                    Edit Driver Profile
+                  </h3>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                    @{editingDriver.user_details?.username || 'driver'}
+                  </span>
+                </div>
               </div>
               <button
                 onClick={() => setEditingDriver(null)}
@@ -857,21 +932,52 @@ export const DriversPage: React.FC = () => {
             <form onSubmit={handleUpdateDriver}>
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                  Assigned Route
+                  Driver Full Name
                 </label>
-                <select
-                  className="form-select"
+                <input
+                  type="text"
+                  className="form-input"
                   style={{ width: '100%' }}
-                  value={editFormData.assigned_route}
-                  onChange={(e) => setEditFormData({ ...editFormData, assigned_route: e.target.value })}
-                >
-                  <option value="">Unassigned / Floating</option>
-                  {routes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({r.code})
-                    </option>
-                  ))}
-                </select>
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  placeholder="e.g. Jamsheer K"
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    className="form-input"
+                    style={{ width: '100%' }}
+                    value={editFormData.phone_number}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone_number: e.target.value })}
+                    placeholder="e.g. 9847123456"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                    Assigned Route
+                  </label>
+                  <select
+                    className="form-select"
+                    style={{ width: '100%' }}
+                    value={editFormData.assigned_route}
+                    onChange={(e) => setEditFormData({ ...editFormData, assigned_route: e.target.value })}
+                  >
+                    <option value="">Unassigned / Floating</option>
+                    {routes.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} ({r.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
@@ -885,34 +991,40 @@ export const DriversPage: React.FC = () => {
                     style={{ width: '100%' }}
                     value={editFormData.vehicle_number}
                     onChange={(e) => setEditFormData({ ...editFormData, vehicle_number: e.target.value })}
+                    placeholder="e.g. KL 53 H 4092"
                   />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Phone Number
+                    License Number
                   </label>
                   <input
-                    type="tel"
+                    type="text"
                     className="form-input"
                     style={{ width: '100%' }}
-                    value={editFormData.phone_number}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone_number: e.target.value })}
+                    value={editFormData.license_number}
+                    onChange={(e) => setEditFormData({ ...editFormData, license_number: e.target.value })}
+                    placeholder="e.g. KL1020220019283"
                   />
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                  License Number
+              <div style={{ marginBottom: '1rem', background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                  <Lock size={14} color="#64748b" /> Reset Login Password (Optional)
                 </label>
                 <input
                   type="text"
                   className="form-input"
                   style={{ width: '100%' }}
-                  value={editFormData.license_number}
-                  onChange={(e) => setEditFormData({ ...editFormData, license_number: e.target.value })}
+                  value={editFormData.password}
+                  onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                  placeholder="Leave blank to keep unchanged"
                 />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.3rem' }}>
+                  Only enter a new password if the driver forgot their credentials.
+                </span>
               </div>
 
               <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -921,7 +1033,7 @@ export const DriversPage: React.FC = () => {
                   id="driver_active_checkbox"
                   checked={editFormData.is_active}
                   onChange={(e) => setEditFormData({ ...editFormData, is_active: e.target.checked })}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
                 />
                 <label htmlFor="driver_active_checkbox" style={{ fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer' }}>
                   Active Driver (available for order dispatch and route assignments)
@@ -947,6 +1059,120 @@ export const DriversPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ----------------- DELETE DRIVER CONFIRMATION MODAL ----------------- */}
+      {deletingDriver && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '480px',
+              padding: '1.75rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              borderRadius: '12px',
+              backgroundColor: 'var(--card-bg, #ffffff)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  background: '#fee2e2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={24} color="#dc2626" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Delete Driver Profile?
+                </h3>
+                <p style={{ margin: '0.15rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  This will remove the driver profile and their app access.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#fee2e2',
+                  color: '#991b1b',
+                  borderRadius: '6px',
+                  marginBottom: '1rem',
+                  fontSize: '0.85rem',
+                }}
+              >
+                {deleteError}
+              </div>
+            )}
+
+            <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.25rem' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                {deletingDriver.driver_name} <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 400 }}>@{deletingDriver.user_details?.username}</span>
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Assigned Route: <strong>{deletingDriver.assigned_route_details?.name || 'Unassigned'}</strong>
+              </div>
+              {deletingDriver.vehicle_number && (
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
+                  Vehicle: {deletingDriver.vehicle_number}
+                </div>
+              )}
+            </div>
+
+            {(deletingDriver.active_deliveries_count || 0) > 0 && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', padding: '0.65rem 0.85rem', borderRadius: '6px', fontSize: '0.8rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                <span>Warning: This driver currently has {deletingDriver.active_deliveries_count} active deliveries today.</span>
+              </div>
+            )}
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
+              Are you sure you want to delete <strong>{deletingDriver.driver_name}</strong>?
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setDeletingDriver(null)}
+                disabled={isDeletingDriver}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                style={{ flex: 1, backgroundColor: '#dc2626', borderColor: '#dc2626', color: '#ffffff', fontWeight: 700 }}
+                onClick={handleConfirmDelete}
+                disabled={isDeletingDriver}
+              >
+                {isDeletingDriver ? 'Deleting...' : 'Yes, Delete Driver'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -6,7 +6,11 @@ import { routeService } from '../../services/routeService';
 import { productService } from '../../services/productService';
 import { Customer, Route, Product } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
-import { Plus, Search, Store, AlertCircle, X, ChevronRight, Eye, Tag, ExternalLink, Copy, Check, Smartphone } from 'lucide-react';
+import { 
+  Plus, Search, Store, AlertCircle, X, ChevronRight, Eye, Tag, 
+  ExternalLink, Copy, Check, Smartphone, Edit2, Trash2, AlertTriangle, 
+  CheckCircle2, Save 
+} from 'lucide-react';
 
 export const CustomerShopsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,18 +22,47 @@ export const CustomerShopsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Form State
+  // Create Form State
   const [name, setName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [phone, setPhone] = useState('');
+  const [alternativePhone, setAlternativePhone] = useState('');
   const [address, setAddress] = useState('');
+  const [landmark, setLandmark] = useState('');
   const [routeId, setRouteId] = useState('');
+  const [creditLimit, setCreditLimit] = useState('5000.00');
   const [notes, setNotes] = useState('');
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
   const [productPrices, setProductPrices] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Edit Modal State
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editOwnerName, setEditOwnerName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editAlternativePhone, setEditAlternativePhone] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [editLandmark, setEditLandmark] = useState('');
+  const [editRouteId, setEditRouteId] = useState('');
+  const [editCreditLimit, setEditCreditLimit] = useState('5000.00');
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [editNotes, setEditNotes] = useState('');
+  const [editFormError, setEditFormError] = useState<string | null>(null);
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  // Delete Modal State
+  const [deletingCustomer, setDeletingCustomer] = useState<Customer | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeletingSubmitting, setIsDeletingSubmitting] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const fetchData = async () => {
     try {
@@ -66,7 +99,7 @@ export const CustomerShopsPage: React.FC = () => {
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !phone || !address || !routeId) {
+    if (!name.trim() || !phone.trim() || !address.trim() || !routeId) {
       setFormError('Please fill in shop name, phone, address, and select a route.');
       return;
     }
@@ -84,12 +117,15 @@ export const CustomerShopsPage: React.FC = () => {
         }));
 
       await customerService.createCustomer({
-        name,
-        owner_name: ownerName,
-        phone,
-        address,
+        name: name.trim(),
+        owner_name: ownerName.trim() || undefined,
+        phone: phone.trim(),
+        alternative_phone: alternativePhone.trim() || undefined,
+        address: address.trim(),
+        landmark: landmark.trim() || undefined,
         route: routeId,
-        notes: notes || undefined,
+        credit_limit: creditLimit || '5000.00',
+        notes: notes.trim() || undefined,
         product_prices: product_prices.length > 0 ? product_prices : undefined,
       });
 
@@ -97,7 +133,10 @@ export const CustomerShopsPage: React.FC = () => {
       setName('');
       setOwnerName('');
       setPhone('');
+      setAlternativePhone('');
       setAddress('');
+      setLandmark('');
+      setCreditLimit('5000.00');
       setNotes('');
       // Reset product prices to defaults
       const resetPrices: Record<string, string> = {};
@@ -106,12 +145,94 @@ export const CustomerShopsPage: React.FC = () => {
       });
       setProductPrices(resetPrices);
 
+      showToast(`Shop "${name.trim()}" created successfully!`);
       fetchData();
     } catch (err: unknown) {
       if (err instanceof Error) setFormError(err.message);
       else setFormError('Failed to create customer');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenEditModal = (c: Customer) => {
+    setEditingCustomer(c);
+    setEditName(c.name || '');
+    setEditOwnerName(c.owner_name || '');
+    setEditPhone(c.phone || '');
+    setEditAlternativePhone(c.alternative_phone || '');
+    setEditAddress(c.address || '');
+    setEditLandmark(c.landmark || '');
+    const rId = typeof c.route === 'string' ? c.route : c.route_details?.id || (routes[0]?.id ?? '');
+    setEditRouteId(rId);
+    setEditCreditLimit(c.credit_limit || '5000.00');
+    setEditIsActive(c.is_active ?? true);
+    setEditNotes(c.notes || '');
+    setEditFormError(null);
+  };
+
+  const handleUpdateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer) return;
+    if (!editName.trim() || !editPhone.trim() || !editAddress.trim() || !editRouteId) {
+      setEditFormError('Please fill in shop name, phone, address, and select a route.');
+      return;
+    }
+
+    try {
+      setIsEditSubmitting(true);
+      setEditFormError(null);
+
+      await customerService.updateCustomer(editingCustomer.id, {
+        name: editName.trim(),
+        owner_name: editOwnerName.trim(),
+        phone: editPhone.trim(),
+        alternative_phone: editAlternativePhone.trim(),
+        address: editAddress.trim(),
+        landmark: editLandmark.trim(),
+        route: editRouteId,
+        credit_limit: editCreditLimit,
+        is_active: editIsActive,
+        notes: editNotes.trim(),
+      });
+
+      const updatedName = editName.trim();
+      setEditingCustomer(null);
+      showToast(`Shop "${updatedName}" updated successfully!`);
+      fetchData();
+    } catch (err: unknown) {
+      if (err instanceof Error) setEditFormError(err.message);
+      else setEditFormError('Failed to update customer');
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
+
+  const handleOpenDeleteModal = (c: Customer) => {
+    setDeletingCustomer(c);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingCustomer) return;
+
+    try {
+      setIsDeletingSubmitting(true);
+      setDeleteError(null);
+
+      await customerService.deleteCustomer(deletingCustomer.id);
+      const deletedName = deletingCustomer.name;
+      setDeletingCustomer(null);
+      showToast(`Shop "${deletedName}" deleted successfully.`);
+      fetchData();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setDeleteError(err.message);
+      } else {
+        setDeleteError('Failed to delete customer shop. Make sure there are no conflicting dependencies.');
+      }
+    } finally {
+      setIsDeletingSubmitting(false);
     }
   };
 
@@ -122,6 +243,32 @@ export const CustomerShopsPage: React.FC = () => {
 
   return (
     <div>
+      {/* Success Notification Toast */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '1.5rem',
+            right: '1.5rem',
+            backgroundColor: '#065f46',
+            color: '#ffffff',
+            padding: '0.85rem 1.25rem',
+            borderRadius: '10px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            zIndex: 9999,
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            animation: 'fadeIn 0.25s ease-out',
+          }}
+        >
+          <CheckCircle2 size={18} color="#34d399" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -238,7 +385,12 @@ export const CustomerShopsPage: React.FC = () => {
                 customers.map((c) => (
                   <tr key={c.id}>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{c.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span style={{ fontWeight: 600 }}>{c.name}</span>
+                        {!c.is_active && (
+                          <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>Inactive</span>
+                        )}
+                      </div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.phone}</div>
                     </td>
                     <td>{c.owner_name || '—'}</td>
@@ -259,7 +411,41 @@ export const CustomerShopsPage: React.FC = () => {
                       )}
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {/* Edit Button */}
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleOpenEditModal(c)}
+                          title="Edit Customer Shop Details"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#0284c7' }}
+                        >
+                          <Edit2 size={13} />
+                          <span>Edit</span>
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleOpenDeleteModal(c)}
+                          title="Delete Customer Shop"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#dc2626' }}
+                        >
+                          <Trash2 size={13} />
+                          <span>Delete</span>
+                        </button>
+
+                        {/* Profile & Pricing */}
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleViewCustomer(c.id)}
+                          title="View Customer Profile & Wholesale Pricing"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                        >
+                          <Eye size={13} />
+                          <span>Profile</span>
+                        </button>
+
+                        {/* Self-Order Link */}
                         <button
                           className="btn btn-secondary btn-sm"
                           onClick={() => {
@@ -274,6 +460,8 @@ export const CustomerShopsPage: React.FC = () => {
                           {copiedId === c.id ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
                           <span>{copiedId === c.id ? 'Copied' : 'Link'}</span>
                         </button>
+
+                        {/* Open Self-Order Portal */}
                         <a
                           href={`/customer/${c.id}`}
                           target="_blank"
@@ -283,17 +471,8 @@ export const CustomerShopsPage: React.FC = () => {
                           style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#10b981' }}
                         >
                           <ExternalLink size={13} />
-                          <span>Self-Order</span>
+                          <span>Order</span>
                         </a>
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleViewCustomer(c.id)}
-                          title="View Customer Profile & Wholesale Pricing"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                        >
-                          <Eye size={13} />
-                          <span>Profile & Pricing</span>
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -313,81 +492,126 @@ export const CustomerShopsPage: React.FC = () => {
       {/* Add Customer Modal */}
       {isModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content" style={{ maxWidth: '650px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700 }}>Add Customer Shop</h3>
-              <button onClick={() => setIsModalOpen(false)} style={{ color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Store size={22} color="var(--primary)" />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Add New Customer Shop</h3>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
 
             {formError && (
-              <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                {formError}
+              <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{formError}</span>
               </div>
             )}
 
             <form onSubmit={handleCreateCustomer}>
-              <div className="form-group">
-                <label className="form-label">Shop Name *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Malabar Bakery"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Shop Name *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Malabar Bakery"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Proprietor / Contact Person</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. Yousuf"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Primary Phone Number *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. 9847000000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Alternative Phone</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. 9847111111"
+                    value={alternativePhone}
+                    onChange={(e) => setAlternativePhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Delivery Route *</label>
+                  <select
+                    className="form-select"
+                    value={routeId}
+                    onChange={(e) => setRouteId(e.target.value)}
+                    required
+                  >
+                    {routes.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} ({r.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Credit Limit (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-input"
+                    placeholder="5000.00"
+                    value={creditLimit}
+                    onChange={(e) => setCreditLimit(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Proprietor / Contact Person</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Yousuf"
-                  value={ownerName}
-                  onChange={(e) => setOwnerName(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Phone Number *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. 9847000000"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Delivery Route *</label>
-                <select
-                  className="form-select"
-                  value={routeId}
-                  onChange={(e) => setRouteId(e.target.value)}
-                  required
-                >
-                  {routes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({r.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Location / Address *</label>
+                <label className="form-label">Location / Street Address *</label>
                 <textarea
                   className="form-textarea"
                   rows={2}
-                  placeholder="Street / landmark address"
+                  placeholder="Street / building / locality"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Nearby Landmark</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. Opp. City Hospital"
+                  value={landmark}
+                  onChange={(e) => setLandmark(e.target.value)}
                 />
               </div>
 
@@ -432,7 +656,7 @@ export const CustomerShopsPage: React.FC = () => {
               )}
 
               <div className="form-group">
-                <label className="form-label">Notes / Preferences</label>
+                <label className="form-label">Notes / Delivery Preferences</label>
                 <textarea
                   className="form-textarea"
                   rows={2}
@@ -464,6 +688,256 @@ export const CustomerShopsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Customer Modal */}
+      {editingCustomer && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '650px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Edit2 size={22} color="#0284c7" />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Edit Customer Shop</h3>
+              </div>
+              <button onClick={() => setEditingCustomer(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {editFormError && (
+              <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span>{editFormError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateCustomer}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Shop Name *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Proprietor / Contact Person</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editOwnerName}
+                    onChange={(e) => setEditOwnerName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Primary Phone Number *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Alternative Phone</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editAlternativePhone}
+                    onChange={(e) => setEditAlternativePhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Delivery Route *</label>
+                  <select
+                    className="form-select"
+                    value={editRouteId}
+                    onChange={(e) => setEditRouteId(e.target.value)}
+                    required
+                  >
+                    {routes.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} ({r.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Credit Limit (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-input"
+                    value={editCreditLimit}
+                    onChange={(e) => setEditCreditLimit(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Location / Street Address *</label>
+                <textarea
+                  className="form-textarea"
+                  rows={2}
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Nearby Landmark</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editLandmark}
+                  onChange={(e) => setEditLandmark(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={editIsActive}
+                    onChange={(e) => setEditIsActive(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--primary)' }}
+                  />
+                  <span>Active Customer (Eligible for orders & deliveries)</span>
+                </label>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Notes / Preferences</label>
+                <textarea
+                  className="form-textarea"
+                  rows={2}
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ flex: 1 }}
+                  onClick={() => setEditingCustomer(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                  disabled={isEditSubmitting}
+                >
+                  {isEditSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Customer Confirmation Modal */}
+      {deletingCustomer && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '480px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#dc2626' }}>
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  background: '#fee2e2',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={24} color="#dc2626" />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  Delete Customer Shop?
+                </h3>
+                <p style={{ margin: '0.15rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  This action will permanently delete this shop record.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                {deleteError}
+              </div>
+            )}
+
+            <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0', marginBottom: '1.25rem' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+                {deletingCustomer.name}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Phone: {deletingCustomer.phone}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Route: {deletingCustomer.route_details?.name || 'Assigned'}
+              </div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
+                Current Balance: <strong>{formatCurrency(deletingCustomer.current_balance)}</strong>
+              </div>
+            </div>
+
+            {Number(deletingCustomer.current_balance) > 0 && (
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', padding: '0.65rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                <span>Warning: This shop has an outstanding balance of {formatCurrency(deletingCustomer.current_balance)}.</span>
+              </div>
+            )}
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
+              Are you sure you want to delete <strong>{deletingCustomer.name}</strong>?
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setDeletingCustomer(null)}
+                disabled={isDeletingSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                style={{ flex: 1, backgroundColor: '#dc2626', borderColor: '#dc2626', color: '#ffffff' }}
+                onClick={handleConfirmDelete}
+                disabled={isDeletingSubmitting}
+              >
+                {isDeletingSubmitting ? 'Deleting...' : 'Yes, Delete Shop'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

@@ -15,6 +15,11 @@
     <meta name="description" content="Zamzam Foods Business Management System — Kubbus & Romali wholesale distribution, driver dispatch, delivery routes, and credit ledger." />
     <meta name="robots" content="noindex, nofollow" />
 
+    <!-- Cache Busting Meta -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <!-- Icons -->
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -31,8 +36,23 @@
           navigator.serviceWorker.register('/sw.js').then((reg) => {
             // Check for SW updates every time the app loads
             reg.update();
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // Force skip waiting and reload when a new version is installed
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              }
+            });
           }).catch((err) => {
             console.warn('SW registration failed:', err);
+          });
+
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
           });
         });
       }

@@ -57,6 +57,10 @@ export const customerService = {
     return apiClient.patch<Customer>(`/customers/${id}/`, updates);
   },
 
+  async deleteCustomer(id: string): Promise<void> {
+    return apiClient.delete<void>(`/customers/${id}/`);
+  },
+
   async getCustomerPricing(id: string): Promise<import('../types').CustomerPricingOverviewItem[]> {
     return apiClient.get<import('../types').CustomerPricingOverviewItem[]>(`/customers/${id}/pricing/`);
   },

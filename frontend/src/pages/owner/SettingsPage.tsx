@@ -993,7 +993,7 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             {/* SECTION: DATABASE STORAGE LEVEL & BACKUP DISASTER RECOVERY */}
-            {isOwner && <DatabaseStorageBackupSection />}
+            <DatabaseStorageBackupSection />
 
             {/* SECTION 3: ZENTRIX 24x7 HELP DESK & SOFTWARE SUPPORT */}
             <ZentrixSettingsSection />

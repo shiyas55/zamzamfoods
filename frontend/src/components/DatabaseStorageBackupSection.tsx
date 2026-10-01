@@ -37,6 +37,19 @@ const ICON_MAP: Record<string, React.ElementType> = {
   ShieldCheck,
 };
 
+const DEFAULT_MODULE_LIST: DatabaseModuleStat[] = [
+  { id: 'products', name: 'Products & Categories', count: 0, icon: 'Package' },
+  { id: 'customers', name: 'Customers & Price Lists', count: 0, icon: 'Store' },
+  { id: 'orders', name: 'Orders & Order Items', count: 0, icon: 'ShoppingCart' },
+  { id: 'deliveries', name: 'Deliveries & Stops', count: 0, icon: 'Truck' },
+  { id: 'payments', name: 'Payments', count: 0, icon: 'CreditCard' },
+  { id: 'credits', name: 'Credit Ledger', count: 0, icon: 'BookOpen' },
+  { id: 'routes', name: 'Routes & Shifts', count: 0, icon: 'MapPin' },
+  { id: 'whatsapp', name: 'WhatsApp Conversations', count: 0, icon: 'MessageCircle' },
+  { id: 'accounts', name: 'Users & Sessions', count: 0, icon: 'Users' },
+  { id: 'logs', name: 'Audit & System Settings', count: 0, icon: 'ShieldCheck' },
+];
+
 export const DatabaseStorageBackupSection: React.FC = () => {
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +59,9 @@ export const DatabaseStorageBackupSection: React.FC = () => {
   // Backup states
   const [isFullBackingUp, setIsFullBackingUp] = useState(false);
   const [isSelectiveBackingUp, setIsSelectiveBackingUp] = useState(false);
-  const [selectedModules, setSelectedModules] = useState<string[]>([]);
+  const [selectedModules, setSelectedModules] = useState<string[]>(() =>
+    DEFAULT_MODULE_LIST.map((m) => m.id)
+  );
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fetchStats = useCallback(async (isRefresh = false) => {
@@ -56,9 +71,6 @@ export const DatabaseStorageBackupSection: React.FC = () => {
       setError(null);
       const data = await databaseService.getStats();
       setStats(data);
-      if (selectedModules.length === 0 && data.modules) {
-        setSelectedModules(data.modules.map((m) => m.id));
-      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -69,11 +81,14 @@ export const DatabaseStorageBackupSection: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedModules.length]);
+  }, []);
 
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  const modulesToRender =
+    stats?.modules && stats.modules.length > 0 ? stats.modules : DEFAULT_MODULE_LIST;
 
   const handleToggleModule = (id: string) => {
     setSelectedModules((prev) =>
@@ -82,12 +97,10 @@ export const DatabaseStorageBackupSection: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    if (stats?.modules) {
-      if (selectedModules.length === stats.modules.length) {
-        setSelectedModules([]);
-      } else {
-        setSelectedModules(stats.modules.map((m) => m.id));
-      }
+    if (selectedModules.length === modulesToRender.length) {
+      setSelectedModules([]);
+    } else {
+      setSelectedModules(modulesToRender.map((m) => m.id));
     }
   };
 
