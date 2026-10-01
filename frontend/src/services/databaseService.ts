@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient, API_BASE_URL } from './apiClient';
 
 export interface DatabaseModuleStat {
   id: string;
@@ -18,6 +18,8 @@ export interface DatabaseStats {
   table_count: number;
   modules: DatabaseModuleStat[];
   status: 'healthy' | 'warning' | 'critical';
+  alert_message?: string | null;
+  supabase_api_url?: string;
   checked_at: string;
 }
 
@@ -26,8 +28,6 @@ export interface BackupRequest {
   modules?: string[];
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
-
 export const databaseService = {
   async getStats(): Promise<DatabaseStats> {
     return apiClient.get<DatabaseStats>('/database/stats/');
@@ -35,12 +35,18 @@ export const databaseService = {
 
   async downloadBackup(payload: BackupRequest): Promise<void> {
     const url = `${API_BASE_URL}/database/backup/`;
+    const token = localStorage.getItem('zamzam_access_token');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(payload),
     });
 

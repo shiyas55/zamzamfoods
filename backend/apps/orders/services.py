@@ -9,9 +9,13 @@ from .models import Order, OrderItem, OrderActivityLog
 
 def generate_order_number():
     """Generates unique sequential order number for today."""
-    today_str = timezone.now().strftime("%Y%m%d")
+    today_str = timezone.localdate().strftime("%Y%m%d")
     count = Order.objects.filter(order_number__startswith=f"ORD-{today_str}").count() + 1
-    return f"ORD-{today_str}-{count:04d}"
+    order_num = f"ORD-{today_str}-{count:04d}"
+    while Order.objects.filter(order_number=order_num).exists():
+        count += 1
+        order_num = f"ORD-{today_str}-{count:04d}"
+    return order_num
 
 
 def create_order_service(customer_id, items_data, order_date=None, driver_id=None, notes="", created_by=None, shop_expense=None, shop_expense_notes="", source="MANAGER", entered_by_role="", entered_by_name="", entered_by_type="MANAGER"):
@@ -149,21 +153,9 @@ def create_order_service(customer_id, items_data, order_date=None, driver_id=Non
             }
         )
 
-        # Synchronize delivery dispatch when assigned to a driver
-        if driver:
-            from apps.deliveries.models import Delivery
-            today_str = now_ts.strftime("%Y%m%d")
-            deliv_count = Delivery.objects.filter(delivery_number__startswith=f"DEL-{today_str}").count() + 1
-            deliv_num = f"DEL-{today_str}-{deliv_count:04d}"
-            Delivery.objects.get_or_create(
-                order=order,
-                defaults={
-                    "delivery_number": deliv_num,
-                    "driver": driver,
-                    "route": route,
-                    "status": Delivery.Status.ASSIGNED,
-                }
-            )
+        # Synchronize delivery dispatch when assigned to a driver or route driver
+        from apps.deliveries.services import ensure_order_delivery
+        ensure_order_delivery(order, driver=driver, route=route)
 
     return order
 
@@ -191,34 +183,23 @@ def update_order_service(order_id, items_data=None, driver_id=None, route_id=Non
             from apps.routes.models import Route
             route = Route.objects.get(id=route_id)
             order.route = route
-            if hasattr(order, "delivery") and order.delivery:
-                order.delivery.route = route
-                order.delivery.save(update_fields=["route", "updated_at"])
+            order.save(update_fields=["route", "updated_at"])
 
         if driver_id is not None:
             if driver_id:
                 driver = Driver.objects.get(id=driver_id)
                 order.driver = driver
-                if hasattr(order, "delivery") and order.delivery:
-                    order.delivery.driver = driver
-                    order.delivery.save(update_fields=["driver", "updated_at"])
-                else:
-                    now_ts = timezone.now()
-                    today_str = now_ts.strftime("%Y%m%d")
-                    deliv_count = Delivery.objects.filter(delivery_number__startswith=f"DEL-{today_str}").count() + 1
-                    deliv_num = f"DEL-{today_str}-{deliv_count:04d}"
-                    Delivery.objects.create(
-                        order=order,
-                        delivery_number=deliv_num,
-                        driver=driver,
-                        route=order.route,
-                        status=Delivery.Status.ASSIGNED,
-                    )
+                order.save(update_fields=["driver", "updated_at"])
             else:
                 order.driver = None
+                order.save(update_fields=["driver", "updated_at"])
                 if hasattr(order, "delivery") and order.delivery:
                     order.delivery.driver = None
                     order.delivery.save(update_fields=["driver", "updated_at"])
+
+        from apps.deliveries.services import ensure_order_delivery
+        if order.driver or (order.route and order.route.drivers.filter(is_active=True).exists()):
+            ensure_order_delivery(order, driver=order.driver, route=order.route)
 
         if notes is not None:
             order.notes = notes

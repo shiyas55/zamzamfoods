@@ -277,6 +277,27 @@ export const OwnerLayout: React.FC = () => {
               {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
               <span className="sidebar-toggle-label">{theme === 'light' ? 'Dark' : 'Light'}</span>
             </button>
+            <Link
+              to="/manager"
+              className="btn btn-sm"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                height: '34px',
+                padding: '0.35rem 0.75rem',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                background: 'rgba(234, 88, 12, 0.15)',
+                color: '#ea580c',
+                border: '1px solid rgba(234, 88, 12, 0.3)',
+                borderRadius: '8px',
+                textDecoration: 'none',
+              }}
+              title="Switch to Daily Operations & Manager View"
+            >
+              <span>⇄ Manager View</span>
+            </Link>
             <span className="badge" style={{ background: '#5c1a0a', color: '#fbbf24', border: '1px solid #b45309', fontSize: '0.72rem' }}>
               OWNER
             </span>

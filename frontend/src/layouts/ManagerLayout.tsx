@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSettings } from '../context/SettingsContext';
@@ -7,7 +7,7 @@ import { BRAND_CONFIG } from '../config/brandConfig';
 import {
   LayoutDashboard, PlusCircle, ShoppingCart, Store, Send, CreditCard,
   BookOpen, LogOut, Receipt, Sun, Moon, Activity, History, Truck, Lock,
-  BarChart3, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Menu, X, MessageCircle,
+  BarChart3, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Menu, X, MessageCircle, Settings, Users,
 } from 'lucide-react';
 import { ZentrixSidebarCard, ZentrixHelpDeskWidget } from '../components/ZentrixHelpDesk';
 
@@ -66,6 +66,8 @@ export const ManagerLayout: React.FC = () => {
     { to: '/manager/driver-performance', label: 'Driver Performance',     icon: Activity        },
     { to: '/manager/daily-closing',      label: 'Daily Closing',          icon: Lock            },
     { to: '/manager/credit',             label: 'Credit Ledger',          icon: BookOpen        },
+    { to: '/manager/users',              label: 'Staff & Roles',          icon: Users           },
+    { to: '/manager/settings',           label: 'Settings & Cache',       icon: Settings        },
   ];
 
   const sidebarWidth = isCollapsed ? '72px' : '260px';
@@ -292,7 +294,41 @@ export const ManagerLayout: React.FC = () => {
               {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
               <span className="sidebar-toggle-label">{theme === 'light' ? 'Dark' : 'Light'}</span>
             </button>
-            <span className="badge badge-info" style={{ display: 'none' }} aria-hidden="true">Manager</span>
+            {user?.role === 'OWNER' && (
+              <Link
+                to="/owner"
+                className="btn btn-sm"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  height: '34px',
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  color: '#dc2626',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                }}
+                title="Return to Owner Administration Dashboard"
+              >
+                <span>⇄ Owner Admin</span>
+              </Link>
+            )}
+            <span
+              className="badge"
+              style={{
+                background: user?.role === 'OWNER' ? '#5c1a0a' : '#1e3a8a',
+                color: user?.role === 'OWNER' ? '#fbbf24' : '#93c5fd',
+                border: user?.role === 'OWNER' ? '1px solid #b45309' : '1px solid #3b82f6',
+                fontSize: '0.72rem',
+                padding: '0.2rem 0.55rem',
+              }}
+            >
+              {user?.role === 'OWNER' ? 'OWNER (MANAGER MODE)' : 'MANAGER'}
+            </span>
           </div>
         </header>
 

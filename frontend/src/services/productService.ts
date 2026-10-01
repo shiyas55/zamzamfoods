@@ -11,12 +11,28 @@ export const productService = {
     return apiClient.patch<Product>(`/products/${id}/`, { unit_price });
   },
 
+  async updateProduct(id: string, updates: Partial<{
+    name: string;
+    code: string;
+    description: string;
+    unit_price: string;
+    packet_size: string;
+    is_active: boolean;
+  }>): Promise<Product> {
+    return apiClient.patch<Product>(`/products/${id}/`, updates);
+  },
+
+  async deleteProduct(id: string): Promise<void> {
+    return apiClient.delete(`/products/${id}/`);
+  },
+
   async createProduct(product: {
     name: string;
     code: string;
     description: string;
     unit_price: string;
     packet_size: string;
+    is_active?: boolean;
   }): Promise<Product> {
     return apiClient.post<Product>('/products/', product);
   },

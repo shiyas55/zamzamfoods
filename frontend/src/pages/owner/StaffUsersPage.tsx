@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { authService } from '../../services/authService';
+import { useAuth } from '../../context/AuthContext';
 import { User } from '../../types';
 import { Users, Plus, X, Shield, Edit2, Trash2, Key } from 'lucide-react';
 
 export const StaffUsersPage: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,13 +101,29 @@ export const StaffUsersPage: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = async (user: User) => {
-    if (!window.confirm(`Are you sure you want to delete ${user.username}?`)) return;
+  // Delete Modal State
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteUser = (user: User) => {
+    setDeletingUser(user);
+    setDeleteError(null);
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!deletingUser) return;
     try {
-      await authService.deleteUser(user.id);
+      setIsDeletingUser(true);
+      setDeleteError(null);
+      await authService.deleteUser(deletingUser.id);
+      setDeletingUser(null);
       fetchUsers();
-    } catch (err) {
-      alert('Failed to delete user.');
+    } catch (err: unknown) {
+      if (err instanceof Error) setDeleteError(err.message);
+      else setDeleteError('Failed to delete user.');
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -148,7 +166,7 @@ export const StaffUsersPage: React.FC = () => {
             Staff & System Access
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-            Role-based user management for Owners, Managers, and Route Drivers.
+            Role-based user management for Owners, Managers, and Route Drivers. Owners have full managerial & operational access.
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
@@ -287,9 +305,9 @@ export const StaffUsersPage: React.FC = () => {
               <div className="form-group">
                 <label className="form-label">System Role *</label>
                 <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
-                  <option value="DRIVER">Driver (Mobile delivery interface)</option>
-                  <option value="MANAGER">Manager (Daily operations)</option>
-                  <option value="OWNER">Owner (Full administrative access)</option>
+                  <option value="OWNER">Owner (Full administrative + Manager access)</option>
+                  <option value="MANAGER">Manager (Daily order entry & delivery dispatch operations)</option>
+                  <option value="DRIVER">Driver (Mobile delivery interface & stop completion)</option>
                 </select>
               </div>
 
@@ -369,11 +387,21 @@ export const StaffUsersPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label">System Role *</label>
-                <select className="form-select" value={role} onChange={(e) => setRole(e.target.value)}>
-                  <option value="DRIVER">Driver (Mobile delivery interface)</option>
-                  <option value="MANAGER">Manager (Daily operations)</option>
-                  <option value="OWNER">Owner (Full administrative access)</option>
+                <select
+                  className="form-select"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  disabled={editingUser.id === currentUser?.id && currentUser?.role === 'OWNER'}
+                >
+                  <option value="OWNER">Owner (Full administrative + Manager access)</option>
+                  <option value="MANAGER">Manager (Daily order entry & delivery dispatch operations)</option>
+                  <option value="DRIVER">Driver (Mobile delivery interface & stop completion)</option>
                 </select>
+                {editingUser.id === currentUser?.id && (
+                  <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.75rem', color: '#b45309' }}>
+                    Note: This is your currently logged-in account. Owner role cannot be demoted to prevent lock-out.
+                  </p>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -485,6 +513,56 @@ export const StaffUsersPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deletingUser && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '440px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: '#dc2626' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                  Delete Staff Member?
+                </h3>
+                <span style={{ fontSize: '0.82rem', color: '#64748b' }}>Revokes system access immediately.</span>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                {deleteError}
+              </div>
+            )}
+
+            <p style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+              Are you sure you want to permanently delete user <strong>@{deletingUser.username}</strong> ({deletingUser.role})?
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setDeletingUser(null)}
+                disabled={isDeletingUser}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                style={{ flex: 1, background: '#dc2626', borderColor: '#dc2626', color: 'white', fontWeight: 700 }}
+                onClick={handleConfirmDeleteUser}
+                disabled={isDeletingUser}
+              >
+                {isDeletingUser ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
           </div>
         </div>
       )}

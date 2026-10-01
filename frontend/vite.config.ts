@@ -12,13 +12,10 @@ export default defineConfig({
   },
 
   server: {
-    // Development server configuration
     host: '0.0.0.0',
     port: 5173,
     allowedHosts: true,
     proxy: {
-      // In development, proxy /api calls to the local Django server.
-      // In production (Vercel), VITE_API_URL is used directly — no proxy needed.
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
@@ -27,7 +24,13 @@ export default defineConfig({
   },
 
   build: {
-    // No source maps in production (avoids exposing source code)
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+      },
+    },
   },
 })

@@ -42,12 +42,14 @@ export const authService = {
    * delete both auth cookies. Then clears local user cache.
    */
   async logout(): Promise<void> {
+    const refreshToken = localStorage.getItem('zamzam_refresh_token');
     try {
-      await apiClient.post('/auth/logout/');
+      await apiClient.post('/auth/logout/', { refresh: refreshToken });
     } catch {
       // Even if the server call fails, clear local state
     } finally {
-      apiClient.clearTokens(); // removes zamzam_user from localStorage
+      apiClient.clearTokens(); // removes zamzam_user, zamzam_access_token, zamzam_refresh_token
+      sessionStorage.clear();
       window.dispatchEvent(new CustomEvent('auth:logout'));
     }
   },

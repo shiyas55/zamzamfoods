@@ -21,6 +21,9 @@ import {
   Square,
   FileJson,
   ShieldAlert,
+  Server,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { databaseService, DatabaseStats, DatabaseModuleStat } from '../services/databaseService';
 
@@ -63,6 +66,15 @@ export const DatabaseStorageBackupSection: React.FC = () => {
     DEFAULT_MODULE_LIST.map((m) => m.id)
   );
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [copiedApiUrl, setCopiedApiUrl] = useState(false);
+
+  const handleCopyApiUrl = (url: string) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(url);
+      setCopiedApiUrl(true);
+      setTimeout(() => setCopiedApiUrl(false), 2500);
+    }
+  };
 
   const fetchStats = useCallback(async (isRefresh = false) => {
     try {
@@ -85,6 +97,11 @@ export const DatabaseStorageBackupSection: React.FC = () => {
 
   useEffect(() => {
     fetchStats();
+    // Live auto-polling every 15s to keep database storage & active records 100% dynamic in real-time
+    const interval = setInterval(() => {
+      fetchStats(true);
+    }, 15000);
+    return () => clearInterval(interval);
   }, [fetchStats]);
 
   const modulesToRender =
@@ -293,6 +310,151 @@ export const DatabaseStorageBackupSection: React.FC = () => {
           </div>
         )}
 
+        {/* Storage Full / Approaching 500MB Warning Banner */}
+        {stats?.alert_message && (
+          <div
+            style={{
+              padding: '1rem 1.25rem',
+              borderRadius: '12px',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '0.85rem',
+              background: stats.status === 'critical' ? '#fef2f2' : '#fffbeb',
+              border: `1.5px solid ${stats.status === 'critical' ? '#f87171' : '#fcd34d'}`,
+              boxShadow: '0 4px 12px -2px rgba(220, 38, 38, 0.08)',
+            }}
+          >
+            <div style={{ color: stats.status === 'critical' ? '#dc2626' : '#d97706', marginTop: '2px' }}>
+              <AlertTriangle size={20} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <h4
+                style={{
+                  margin: '0 0 0.25rem 0',
+                  fontSize: '0.92rem',
+                  fontWeight: 700,
+                  color: stats.status === 'critical' ? '#991b1b' : '#92400e',
+                }}
+              >
+                {stats.status === 'critical'
+                  ? 'CRITICAL: Database Storage Full (500 MB Free Tier Limit)'
+                  : 'WARNING: Database Storage Approaching 500 MB Capacity'}
+              </h4>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.84rem',
+                  lineHeight: '1.45',
+                  color: stats.status === 'critical' ? '#b91c1c' : '#b45309',
+                }}
+              >
+                {stats.alert_message}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Supabase RESTful API Endpoint Card */}
+        <div
+          style={{
+            padding: '1.15rem 1.35rem',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+            border: '1px solid #cbd5e1',
+            marginBottom: '1.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: '260px' }}>
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#059669',
+              }}
+            >
+              <Server size={20} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                  Supabase RESTful API Endpoint
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    background: '#ecfdf5',
+                    color: '#059669',
+                    border: '1px solid #a7f3d0',
+                    padding: '0.1rem 0.45rem',
+                    borderRadius: '999px',
+                  }}
+                >
+                  REST v1
+                </span>
+              </div>
+              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+                RESTful endpoint for querying and managing your database tables via PostgREST.
+              </p>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: '#ffffff',
+              padding: '0.4rem 0.75rem',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontFamily: 'monospace',
+              fontSize: '0.8rem',
+              color: '#334155',
+            }}
+          >
+            <span>{stats?.supabase_api_url || 'https://mfrakyarmmnvsvzlyota.supabase.co/rest/v1/'}</span>
+            <button
+              type="button"
+              onClick={() =>
+                handleCopyApiUrl(
+                  stats?.supabase_api_url || 'https://mfrakyarmmnvsvzlyota.supabase.co/rest/v1/'
+                )
+              }
+              style={{
+                background: copiedApiUrl ? '#10b981' : '#f1f5f9',
+                border: '1px solid ' + (copiedApiUrl ? '#059669' : '#cbd5e1'),
+                color: copiedApiUrl ? '#ffffff' : '#475569',
+                padding: '0.3rem 0.55rem',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                transition: 'all 0.2s ease',
+              }}
+              title="Copy API URL"
+            >
+              {copiedApiUrl ? <Check size={13} /> : <Copy size={13} />}
+              <span>{copiedApiUrl ? 'Copied' : 'Copy'}</span>
+            </button>
+          </div>
+        </div>
+
         {/* Storage Level Gauge & Top Stats Cards */}
         <div
           style={{
@@ -320,7 +482,7 @@ export const DatabaseStorageBackupSection: React.FC = () => {
                 {stats?.size_formatted || '...'}
               </span>
               <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                / {stats?.quota_formatted || '1.00 GB'}
+                / {stats?.quota_formatted || '500 MB'}
               </span>
             </div>
             {/* Storage Progress Bar */}
@@ -336,11 +498,13 @@ export const DatabaseStorageBackupSection: React.FC = () => {
             >
               <div
                 style={{
-                  width: `${Math.max(2, stats?.usage_pct || 1)}%`,
+                  width: `${Math.max(2, Math.min(100, stats?.usage_pct || 1))}%`,
                   height: '100%',
                   background:
                     (stats?.usage_pct || 0) > 85
                       ? 'linear-gradient(90deg, #f59e0b, #dc2626)'
+                      : (stats?.usage_pct || 0) > 65
+                      ? 'linear-gradient(90deg, #3b82f6, #f59e0b)'
                       : 'linear-gradient(90deg, #10b981, #059669)',
                   borderRadius: '999px',
                   transition: 'width 0.6s ease',
@@ -349,7 +513,13 @@ export const DatabaseStorageBackupSection: React.FC = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#64748b' }}>
               <span>Usage: {stats?.usage_pct ?? 0}%</span>
-              <span style={{ color: '#059669', fontWeight: 600 }}>Capacity Healthy</span>
+              {(stats?.usage_pct || 0) >= 90 ? (
+                <span style={{ color: '#dc2626', fontWeight: 700 }}>⚠️ Storage Full Soon</span>
+              ) : (stats?.usage_pct || 0) >= 75 ? (
+                <span style={{ color: '#d97706', fontWeight: 600 }}>Approaching 500 MB</span>
+              ) : (
+                <span style={{ color: '#059669', fontWeight: 600 }}>Capacity Healthy</span>
+              )}
             </div>
           </div>
 

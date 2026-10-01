@@ -15,8 +15,8 @@
     <meta name="description" content="Zamzam Foods Business Management System — Kubbus & Romali wholesale distribution, driver dispatch, delivery routes, and credit ledger." />
     <meta name="robots" content="noindex, nofollow" />
 
-    <!-- Cache Busting Meta -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <!-- Aggressive Cache Busting Meta -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
@@ -26,36 +26,30 @@
     <link rel="manifest" href="/manifest.json" />
 
     <title>Zamzam Foods — Distribution Management</title>
+    
+    <script>
+      // Automatic Cache Invalidation Engine (v3.2.1)
+      (function() {
+        var APP_BUILD_ID = '20261001-v3.2.1';
+        var lastBuild = localStorage.getItem('zamzam_app_build');
+        if (lastBuild !== APP_BUILD_ID) {
+          localStorage.setItem('zamzam_app_build', APP_BUILD_ID);
+          if ('caches' in window) {
+            caches.keys().then(function(keys) {
+              keys.forEach(function(k) { caches.delete(k); });
+            });
+          }
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              regs.forEach(function(r) { r.unregister(); });
+            });
+          }
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then((reg) => {
-            // Check for SW updates every time the app loads
-            reg.update();
-            reg.addEventListener('updatefound', () => {
-              const newWorker = reg.installing;
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // Force skip waiting and reload when a new version is installed
-                    newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  }
-                });
-              }
-            });
-          }).catch((err) => {
-            console.warn('SW registration failed:', err);
-          });
-
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.location.reload();
-          });
-        });
-      }
-    </script>
   </body>
 </html>

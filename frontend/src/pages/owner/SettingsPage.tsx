@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { ZentrixSettingsSection, ZENTRIX_SUPPORT_CONFIG } from '../../components/ZentrixHelpDesk';
 import { DatabaseStorageBackupSection } from '../../components/DatabaseStorageBackupSection';
-
+import { WebsiteCacheVersionSection } from '../../components/WebsiteCacheVersionSection';
 
 export const SettingsPage: React.FC = () => {
   const { settings, loading, updateSettings, refreshSettings } = useSettings();
@@ -994,6 +994,9 @@ export const SettingsPage: React.FC = () => {
 
             {/* SECTION: DATABASE STORAGE LEVEL & BACKUP DISASTER RECOVERY */}
             <DatabaseStorageBackupSection />
+
+            {/* SECTION: WEBSITE VERSION & CACHE PURGE TELEMETRY */}
+            <WebsiteCacheVersionSection />
 
             {/* SECTION 3: ZENTRIX 24x7 HELP DESK & SOFTWARE SUPPORT */}
             <ZentrixSettingsSection />

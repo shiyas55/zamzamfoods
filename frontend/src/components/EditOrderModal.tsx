@@ -6,6 +6,7 @@ import { routeService } from '../services/routeService';
 import { formatCurrency } from '../utils/formatters';
 import { X, Save, AlertCircle, ShoppingCart, UserCheck, Plus, Trash2, Unlock } from 'lucide-react';
 import { OrderActivityTimeline } from './OrderActivityTimeline';
+import { apiClient } from '../services/apiClient';
 
 interface EditOrderModalProps {
   order: Order;
@@ -141,19 +142,9 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, 
       setIsReopening(true);
       setError(null);
       
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/orders/orders/${order.id}/reopen/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({ reason: reopenReason })
+      const updated = await apiClient.post<Order>(`/orders/orders/${order.id}/reopen/`, {
+        reason: reopenReason,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(()=>({}));
-        throw new Error(data.error || data.detail || 'Failed to reopen order');
-      }
-      const updated = await res.json();
       onSuccess(updated);
     } catch (err: any) {
       setError(err.message);

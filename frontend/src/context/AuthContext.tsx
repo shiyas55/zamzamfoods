@@ -3,19 +3,19 @@
  *
  * Hydration strategy:
  *   1. Instantly restore cached user from localStorage (no loading flash)
- *   2. Validate against /auth/me/ using the HttpOnly access cookie
- *   3. If access token is expired, apiClient auto-calls /auth/refresh/ silently
- *   4. If refresh also fails → user is null → redirect to /login
- *
- * Logout: calls server endpoint (blacklists refresh token, clears cookies)
- *         then clears local state.
+ *   2. Validate against /auth/me/ in the background using Bearer header & HttpOnly cookies
+ *   3. If access token is expired, apiClient auto-calls /auth/refresh/ silently with mutex locking
+ *   4. User stays logged in seamlessly across page refreshes and devices.
  */
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { authService } from '../services/authService';
 
+export type AuthStatus = 'INITIALIZING' | 'AUTHENTICATED' | 'UNAUTHENTICATED';
+
 interface AuthContextType {
   user: User | null;
+  status: AuthStatus;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<User>;
@@ -25,24 +25,56 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const getInitialSession = (): { user: User | null; status: AuthStatus; isLoading: boolean } => {
+  const storedUser = authService.getStoredUser();
+  const token = localStorage.getItem('zamzam_access_token');
+  const refresh = localStorage.getItem('zamzam_refresh_token');
+
+  if (storedUser && (token || refresh)) {
+    // Session available in cache: mark authenticated immediately to avoid redirect/flicker
+    return {
+      user: storedUser,
+      status: 'AUTHENTICATED',
+      isLoading: false,
+    };
+  }
+
+  if (token || refresh) {
+    // Tokens present but profile missing from cache: initialize while loading
+    return {
+      user: null,
+      status: 'INITIALIZING',
+      isLoading: true,
+    };
+  }
+
+  // Completely unauthenticated
+  return {
+    user: null,
+    status: 'UNAUTHENTICATED',
+    isLoading: false,
+  };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Hydrate from cache immediately for a fast UI
-  const [user, setUser] = useState<User | null>(() => authService.getStoredUser());
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [initial] = useState(getInitialSession);
+  const [user, setUser] = useState<User | null>(initial.user);
+  const [status, setStatus] = useState<AuthStatus>(initial.status);
+  const [isLoading, setIsLoading] = useState<boolean>(initial.isLoading);
 
   /**
-   * Validate the cached user by fetching /auth/me/.
-   * The HttpOnly access cookie or Bearer token is sent automatically.
-   * apiClient handles automatic refresh if the access token has expired.
+   * Validate user session in the background.
+   * Never logs out due to transient network drops, 502/503/504 errors, or server cold starts.
    */
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     const accessToken = localStorage.getItem('zamzam_access_token');
     const refreshToken = localStorage.getItem('zamzam_refresh_token');
     const storedUser = authService.getStoredUser();
 
-    // If no tokens or stored user, we are simply in unauthenticated state
+    // If completely unauthenticated
     if (!accessToken && !refreshToken && !storedUser) {
       setUser(null);
+      setStatus('UNAUTHENTICATED');
       setIsLoading(false);
       return;
     }
@@ -51,56 +83,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const freshUser = await authService.getCurrentUser();
       setUser(freshUser);
       localStorage.setItem('zamzam_user', JSON.stringify(freshUser));
-    } catch {
-      // Only clear if we actually have no valid token in storage
-      const currentToken = localStorage.getItem('zamzam_access_token');
-      if (!currentToken) {
+      setStatus('AUTHENTICATED');
+    } catch (err: unknown) {
+      // Check if this was a definitive session rejection
+      const isSessionExpired = err instanceof Error && err.message.includes('Session expired');
+      const tokensCleared = !localStorage.getItem('zamzam_access_token') && !localStorage.getItem('zamzam_refresh_token');
+
+      if (isSessionExpired || tokensCleared) {
         setUser(null);
         localStorage.removeItem('zamzam_user');
+        setStatus('UNAUTHENTICATED');
+      } else if (storedUser) {
+        // Transient network error, 500, or Railway cold start:
+        // KEEP stored user active so the session is never lost on refresh!
+        setUser(storedUser);
+        setStatus('AUTHENTICATED');
       }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    // Only validate on mount if we have an active session
+    // Validate session on startup
     refreshUser();
 
-    // Handle server-initiated logout events (e.g. refresh token rejected)
+    // Handle explicit server-confirmed logout
     const handleLogoutEvent = () => {
-      const currentToken = localStorage.getItem('zamzam_access_token');
-      if (!currentToken) {
-        setUser(null);
-        localStorage.removeItem('zamzam_user');
-      }
+      setUser(null);
+      localStorage.removeItem('zamzam_user');
+      setStatus('UNAUTHENTICATED');
+      setIsLoading(false);
     };
 
     window.addEventListener('auth:logout', handleLogoutEvent);
     return () => window.removeEventListener('auth:logout', handleLogoutEvent);
-  }, []);
+  }, [refreshUser]);
 
   const login = async (username: string, password: string): Promise<User> => {
     setIsLoading(true);
     try {
       const res = await authService.login(username, password);
       setUser(res.user);
+      setStatus('AUTHENTICATED');
       return res.user;
+    } catch (err) {
+      setStatus('UNAUTHENTICATED');
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = async (): Promise<void> => {
-    await authService.logout(); // server blacklists token + clears cookies
-    setUser(null);
+    setIsLoading(true);
+    try {
+      await authService.logout();
+    } finally {
+      setUser(null);
+      setStatus('UNAUTHENTICATED');
+      setIsLoading(false);
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: !!user,
+        status,
+        isAuthenticated: status === 'AUTHENTICATED' && !!user,
         isLoading,
         login,
         logout,

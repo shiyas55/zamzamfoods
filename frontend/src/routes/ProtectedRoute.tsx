@@ -12,11 +12,11 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, status } = useAuth();
   const { isMaintenanceMode } = useSettings();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading || status === 'INITIALIZING') {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
         <div style={{ textAlign: 'center' }}>
@@ -27,7 +27,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (status === 'UNAUTHENTICATED' || !isAuthenticated || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

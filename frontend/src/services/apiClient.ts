@@ -7,13 +7,17 @@
  *
  * Token refresh flow:
  *   1. Request returns 401
- *   2. Client calls POST /auth/refresh/ with refresh token and credentials
+ *   2. Single-flight Promise mutex calls POST /auth/refresh/ with refresh token and credentials
  *   3. Server issues new access + refresh tokens
  *   4. Client updates stored tokens and retries original request
- *   5. If refresh fails → dispatch auth:logout → frontend redirects to /login
+ *   5. If refresh fails with 401 → dispatch auth:logout → frontend redirects to /login
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? '/api/v1'
+    : 'https://zamzamfood.up.railway.app/api/v1');
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -21,60 +25,78 @@ interface RequestOptions extends RequestInit {
   _skipRefresh?: boolean;
 }
 
+export interface RefreshResult {
+  success: boolean;
+  isAuthFailure: boolean;
+}
+
 class ApiClient {
-  private isRefreshing = false;
-  private refreshSubscribers: Array<() => void> = [];
-
-  /** Notify all queued requests that a fresh token has been set. */
-  private onTokenRefreshed() {
-    this.refreshSubscribers.forEach((cb) => cb());
-    this.refreshSubscribers = [];
-  }
-
-  /** Queue a retry callback to be called after refresh completes. */
-  private addRefreshSubscriber(cb: () => void) {
-    this.refreshSubscribers.push(cb);
-  }
+  private refreshPromise: Promise<RefreshResult> | null = null;
 
   /**
    * Silently obtain a new access token by calling the refresh endpoint.
+   * Utilizes a single-flight mutex to prevent concurrent refresh race conditions.
+   * Multiple concurrent 401s coalesce into exactly ONE POST /auth/refresh/ request.
    */
-  private async refreshAccessToken(): Promise<boolean> {
+  private async refreshAccessToken(): Promise<RefreshResult> {
     const refreshToken = localStorage.getItem('zamzam_refresh_token');
     // If there is no refresh token and no user, we are simply unauthenticated
     if (!refreshToken && !localStorage.getItem('zamzam_user')) {
-      return false;
+      return { success: false, isAuthFailure: true };
     }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: refreshToken ? JSON.stringify({ refresh: refreshToken }) : undefined,
-      });
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
 
-      if (!response.ok) {
-        // Prevent race condition: only clear if the token hasn't changed (e.g. from a fresh login)
-        if (localStorage.getItem('zamzam_refresh_token') === refreshToken) {
-          this.clearTokens();
-          this.dispatchLogout();
+    this.refreshPromise = (async (): Promise<RefreshResult> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: refreshToken ? JSON.stringify({ refresh: refreshToken }) : undefined,
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          const errDetail = typeof data?.detail === 'string' ? data.detail.toLowerCase() : '';
+          const isDefinitiveAuthFailure =
+            response.status === 401 ||
+            (response.status === 400 &&
+              (errDetail.includes('token') ||
+                errDetail.includes('invalid') ||
+                errDetail.includes('expired') ||
+                errDetail.includes('blacklisted')));
+
+          if (isDefinitiveAuthFailure) {
+            const currentRt = localStorage.getItem('zamzam_refresh_token');
+            if (currentRt === refreshToken) {
+              this.clearTokens();
+              this.dispatchLogout();
+            }
+            return { success: false, isAuthFailure: true };
+          }
+
+          // 500, 502, 503, 504 or other server issues are NOT auth rejections
+          return { success: false, isAuthFailure: false };
         }
-        return false;
-      }
 
-      const data = await response.json().catch(() => ({}));
-      if (data.access) {
-        this.setTokens(data.access, data.refresh || refreshToken || '');
+        const data = await response.json().catch(() => ({}));
+        if (data.access) {
+          this.setTokens(data.access, data.refresh || refreshToken || '');
+          return { success: true, isAuthFailure: false };
+        }
+        return { success: false, isAuthFailure: false };
+      } catch {
+        // Network error during refresh: do not force logout, preserve session
+        return { success: false, isAuthFailure: false };
+      } finally {
+        this.refreshPromise = null;
       }
-      return true;
-    } catch {
-      if (localStorage.getItem('zamzam_refresh_token') === refreshToken) {
-        this.clearTokens();
-        this.dispatchLogout();
-      }
-      return false;
-    }
+    })();
+
+    return this.refreshPromise;
   }
 
   private dispatchLogout() {
@@ -118,7 +140,7 @@ class ApiClient {
         headers,
         credentials: 'include',
       });
-    } catch (err: unknown) {
+    } catch {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error(
           'You are currently offline. Live operations require a connection to the Zamzam server.'
@@ -127,47 +149,31 @@ class ApiClient {
       throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
     }
 
-    // ── 401 handler: attempt token refresh then retry ──────────────────────
+    // ── 401 handler: attempt single-flight token refresh then retry ONCE ─────────
     if (
       response.status === 401 &&
       !_skipRefresh &&
       !endpoint.includes('/auth/login') &&
       !endpoint.includes('/auth/refresh')
     ) {
-      if (!this.isRefreshing) {
-        this.isRefreshing = true;
-        const refreshed = await this.refreshAccessToken();
-        this.isRefreshing = false;
+      const refreshResult = await this.refreshAccessToken();
 
-        if (refreshed) {
-          this.onTokenRefreshed();
-          // Update authorization header with newly refreshed access token
-          const freshToken = localStorage.getItem('zamzam_access_token');
-          if (freshToken) {
-            headers['Authorization'] = `Bearer ${freshToken}`;
-          }
-          response = await fetch(url, {
-            ...fetchOptions,
-            headers,
-            credentials: 'include',
-          });
-        } else {
-          throw new Error('Session expired. Please log in again.');
-        }
-      } else {
-        // Another refresh is in progress — wait for it, then retry
-        await new Promise<void>((resolve) => {
-          this.addRefreshSubscriber(resolve);
-        });
+      if (refreshResult.success) {
+        // Update authorization header with newly refreshed access token
         const freshToken = localStorage.getItem('zamzam_access_token');
         if (freshToken) {
           headers['Authorization'] = `Bearer ${freshToken}`;
         }
+        // Retry fetch ONCE with fresh token and credentials
         response = await fetch(url, {
           ...fetchOptions,
           headers,
           credentials: 'include',
         });
+      } else if (refreshResult.isAuthFailure) {
+        throw new Error('Session expired. Please log in again.');
+      } else {
+        throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
       }
     }
 

@@ -27,8 +27,16 @@ export const routeService = {
     return apiClient.get<Driver>('/drivers/my_profile/');
   },
 
-  async createRoute(route: { name: string; code: string; description: string }): Promise<Route> {
+  async createRoute(route: { name: string; code: string; description?: string; is_active?: boolean }): Promise<Route> {
     return apiClient.post<Route>('/routes/', route);
+  },
+
+  async updateRoute(id: string, updates: Partial<{ name: string; code: string; description: string; is_active: boolean }>): Promise<Route> {
+    return apiClient.patch<Route>(`/routes/${id}/`, updates);
+  },
+
+  async deleteRoute(id: string): Promise<void> {
+    return apiClient.delete(`/routes/${id}/`);
   },
 
   async createDriver(payload: CreateDriverPayload): Promise<Driver> {

@@ -363,14 +363,15 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit}>
             <div className="animated-input-group">
               <label htmlFor="username">Username</label>
-              <div className="input-wrapper">
-                <div className="input-icon-left">
+              <div className="input-wrapper" style={{ position: 'relative', width: '100%', height: '48px', display: 'flex', alignItems: 'center' }}>
+                <div className="input-icon-left" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 5, color: '#94a3b8' }}>
                   <User size={18} />
                 </div>
                 <input
                   id="username"
                   type="text"
                   className="animated-input"
+                  style={{ width: '100%', height: '100%', paddingLeft: '42px', paddingRight: '44px', boxSizing: 'border-box' }}
                   placeholder="Enter username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -383,14 +384,15 @@ export const LoginPage: React.FC = () => {
 
             <div className="animated-input-group" style={{ marginBottom: '1.5rem' }}>
               <label htmlFor="password">Password</label>
-              <div className="input-wrapper">
-                <div className="input-icon-left">
+              <div className="input-wrapper" style={{ position: 'relative', width: '100%', height: '48px', display: 'flex', alignItems: 'center' }}>
+                <div className="input-icon-left" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 5, color: '#94a3b8' }}>
                   <Lock size={18} />
                 </div>
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   className="animated-input"
+                  style={{ width: '100%', height: '100%', paddingLeft: '42px', paddingRight: '44px', boxSizing: 'border-box' }}
                   placeholder="Enter password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -400,6 +402,7 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   className="password-toggle-btn"
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
                   onClick={() => setShowPassword(!showPassword)}
                   tabIndex={-1}
                   title={showPassword ? 'Hide password' : 'Show password'}

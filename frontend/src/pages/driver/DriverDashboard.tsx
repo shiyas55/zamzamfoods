@@ -178,6 +178,27 @@ export const DriverDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Auto-sync deliveries in background every 25 seconds
+    const interval = setInterval(() => {
+      deliveryService.getDeliveries().then((delList) => {
+        setDeliveries(delList);
+      }).catch((err) => {
+        console.warn('Background delivery refresh failed:', err);
+      });
+    }, 25000);
+
+    const handleFocus = () => {
+      deliveryService.getDeliveries().then((delList) => {
+        setDeliveries(delList);
+      }).catch(() => {});
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const toggleExpand = (id: string) => {

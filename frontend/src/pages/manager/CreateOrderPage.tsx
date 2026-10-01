@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { RealWhatsAppWebView } from '../../components/RealWhatsAppWebView';
 import { useSettings } from '../../context/SettingsContext';
+import { draftOrderStorage } from '../../utils/draftOrderStorage';
 
 export interface WhatsAppCustomerContext {
   id: string;
@@ -88,8 +89,10 @@ export const CreateOrderPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
-  // Date Option (Defaults to today YYYY-MM-DD)
+  // Date Option (Defaults to today YYYY-MM-DD or saved date)
   const [orderDate, setOrderDate] = useState<string>(() => {
+    const saved = localStorage.getItem('zamzam_selected_order_date');
+    if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) return saved;
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -239,14 +242,17 @@ export const CreateOrderPage: React.FC = () => {
           setDayStatus({ is_opened: false, is_closed: false });
         }
 
-        // Map customerId -> Order
+        // Map customerId -> Order (newest order takes precedence)
         const orderMap = new Map<string, Order>();
         existingOrders.forEach((ord) => {
           const custId = ord.customer;
-          if (custId) {
+          if (custId && !orderMap.has(custId)) {
             orderMap.set(custId, ord);
           }
         });
+
+        // Load any in-progress local drafts for this target date
+        const drafts = draftOrderStorage.getAllDraftsForDate(targetDate);
 
         // Map customerId -> Cash and GPay totals
         const cashMap = new Map<string, number>();
@@ -261,7 +267,7 @@ export const CreateOrderPage: React.FC = () => {
           }
         });
 
-        // Build spreadsheet rows populated from database
+        // Build spreadsheet rows populated from database and drafts
         const populatedRows: OrderRow[] = currentCustomers.map((cust) => {
           const existingOrder = orderMap.get(cust.id);
           let kQty = '';
@@ -269,19 +275,28 @@ export const CreateOrderPage: React.FC = () => {
 
           if (existingOrder && existingOrder.items) {
             existingOrder.items.forEach((item) => {
-              const pCode = item.product_details?.code || '';
+              const pCode = (item.product_details?.code || '').toUpperCase();
               const pName = (item.product_details?.name || '').toLowerCase();
-              if (pCode === 'KUB' || pName.includes('kubbus')) {
+              if (pCode === 'KBS' || pCode === 'KUB' || pName.includes('kubbus')) {
                 kQty = item.quantity > 0 ? String(item.quantity) : '';
               }
-              if (pCode === 'ROM' || pName.includes('romali')) {
+              if (pCode === 'PRI' || pCode === 'ROM' || pName.includes('romali')) {
                 rQty = item.quantity > 0 ? String(item.quantity) : '';
               }
             });
           }
 
-          const cAmt = cashMap.get(cust.id);
-          const gAmt = gpayMap.get(cust.id);
+          let cAmt = cashMap.get(cust.id);
+          let gAmt = gpayMap.get(cust.id);
+
+          // Restore unsubmitted draft if no database order exists yet
+          const draft = drafts[cust.id];
+          if (!existingOrder && draft) {
+            if (!kQty && draft.kubbusQty) kQty = draft.kubbusQty;
+            if (!rQty && draft.romaliQty) rQty = draft.romaliQty;
+            if (cAmt === undefined && draft.cashAmount) cAmt = parseFloat(draft.cashAmount) || undefined;
+            if (gAmt === undefined && draft.gpayAmount) gAmt = parseFloat(draft.gpayAmount) || undefined;
+          }
 
           const custRouteId = cust.route || cust.route_details?.id || '';
           const custRouteName = cust.route_details?.name || '';
@@ -302,7 +317,7 @@ export const CreateOrderPage: React.FC = () => {
                 : routeDriver.driver_name
               : undefined);
 
-          const isLocked = existingOrder && ['BILLING', 'DELIVERY_CREATED', 'COMPLETED', 'CANCELLED'].includes(existingOrder.status);
+          const isLocked = existingOrder && ['DELIVERED', 'COMPLETED', 'CANCELLED'].includes(existingOrder.status);
 
           return {
             rowId: `shop_${cust.id}`,
@@ -316,8 +331,8 @@ export const CreateOrderPage: React.FC = () => {
             driverName: driverDisplay,
             kubbusQty: kQty,
             romaliQty: rQty,
-            cashAmount: cAmt ? cAmt.toFixed(2) : '',
-            gpayAmount: gAmt ? gAmt.toFixed(2) : '',
+            cashAmount: cAmt !== undefined ? cAmt.toFixed(2) : '',
+            gpayAmount: gAmt !== undefined ? gAmt.toFixed(2) : '',
             status: isLocked ? 'LOCKED' : (existingOrder ? 'SAVED' : 'IDLE'),
             orderId: existingOrder?.id,
             orderNumber: existingOrder?.order_number,
@@ -380,6 +395,7 @@ export const CreateOrderPage: React.FC = () => {
   // When orderDate changes, automatically re-query database for that date!
   const handleDateChange = (newDate: string) => {
     setOrderDate(newDate);
+    localStorage.setItem('zamzam_selected_order_date', newDate);
     setSuccessBanner(null);
     setUnlockedSelfOrderIds(new Set());
     if (customers.length > 0) {
@@ -575,7 +591,7 @@ export const CreateOrderPage: React.FC = () => {
     return null;
   }, [searchQuery, visibleRows, selectedCustomerId, customers, rows]);
 
-  // Handle cell value change (resets SAVED status to IDLE so edited row can be saved/updated!)
+  // Handle cell value change (resets SAVED status to IDLE and persists in draft storage)
   const handleCellChange = (rowId: string, field: keyof OrderRow, value: string) => {
     const targetRow = rows.find((r) => r.rowId === rowId);
     if (targetRow && targetRow.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(rowId)) {
@@ -587,12 +603,24 @@ export const CreateOrderPage: React.FC = () => {
     setRows((prev) =>
       prev.map((r) => {
         if (r.rowId === rowId) {
-          return {
+          const updated = {
             ...r,
             [field]: value,
             // If user changes quantity on a saved row, mark as IDLE so it can be submitted and updated!
-            status: 'IDLE',
+            status: 'IDLE' as const,
           };
+          if (updated.customerId) {
+            draftOrderStorage.saveDraft({
+              customerId: updated.customerId,
+              orderDate,
+              kubbusQty: updated.kubbusQty,
+              romaliQty: updated.romaliQty,
+              cashAmount: updated.cashAmount,
+              gpayAmount: updated.gpayAmount,
+              updatedAt: Date.now(),
+            });
+          }
+          return updated;
         }
         return r;
       })
@@ -604,12 +632,22 @@ export const CreateOrderPage: React.FC = () => {
     setRows((prev) =>
       prev.map((r) => {
         if (r.customerId === customerId) {
-          return {
+          const updated = {
             ...r,
             kubbusQty: kubbus || r.kubbusQty,
             romaliQty: romali || r.romaliQty,
-            status: 'IDLE',
+            status: 'IDLE' as const,
           };
+          draftOrderStorage.saveDraft({
+            customerId: updated.customerId,
+            orderDate,
+            kubbusQty: updated.kubbusQty,
+            romaliQty: updated.romaliQty,
+            cashAmount: updated.cashAmount,
+            gpayAmount: updated.gpayAmount,
+            updatedAt: Date.now(),
+          });
+          return updated;
         }
         return r;
       })
@@ -714,7 +752,7 @@ export const CreateOrderPage: React.FC = () => {
           d.is_active
       );
 
-      const assignedDriverId = autoConfirmDriver ? routeDriver?.id || null : null;
+      const assignedDriverId = row.driverId || routeDriver?.id || null;
 
       const items: Array<{ product_id: string; quantity: number; unit_price: string }> = [];
       if (fin.kQty > 0 && kubbusProduct) {
@@ -786,6 +824,11 @@ export const CreateOrderPage: React.FC = () => {
             : r
         )
       );
+
+      // Clear draft on successful database persistence
+      if (row.customerId) {
+        draftOrderStorage.clearDraft(orderDate, row.customerId);
+      }
 
       setSuccessBanner(`Saved order for ${row.customerName} successfully!`);
       setTimeout(() => setSuccessBanner(null), 3500);
@@ -1193,7 +1236,7 @@ export const CreateOrderPage: React.FC = () => {
             d.is_active
         );
 
-        const assignedDriverId = autoConfirmDriver ? routeDriver?.id || null : null;
+        const assignedDriverId = row.driverId || routeDriver?.id || null;
 
         const items: Array<{ product_id: string; quantity: number; unit_price: string }> = [];
         if (fin.kQty > 0 && kubbusProduct) {
@@ -1269,6 +1312,11 @@ export const CreateOrderPage: React.FC = () => {
           )
         );
 
+        // Clear draft on successful order submission
+        if (row.customerId) {
+          draftOrderStorage.clearDraft(orderDate, row.customerId);
+        }
+
         successCount++;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Order creation failed';
@@ -1288,6 +1336,11 @@ export const CreateOrderPage: React.FC = () => {
 
     setIsSubmittingAll(false);
     setSubmitProgress(null);
+
+    // Re-sync rows from the database source of truth
+    if (customers.length > 0) {
+      await loadOrdersForDate(orderDate, customers, drivers);
+    }
 
     if (successCount > 0) {
       setSuccessBanner(

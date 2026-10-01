@@ -46,9 +46,9 @@ import { DriverSummaryPage } from '../pages/driver/DriverSummaryPage';
 import { DriverProfilePage } from '../pages/driver/DriverProfilePage';
 
 export const AppRoutes: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, status } = useAuth();
 
-  if (isLoading) {
+  if (isLoading || status === 'INITIALIZING') {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
         <div className="spinner" />
@@ -58,7 +58,7 @@ export const AppRoutes: React.FC = () => {
 
   // Root redirect helper
   const getHomeRedirect = () => {
-    if (!isAuthenticated || !user) return <Navigate to="/login" replace />;
+    if (status === 'UNAUTHENTICATED' || !isAuthenticated || !user) return <Navigate to="/login" replace />;
     if (user.role === 'DRIVER') return <Navigate to="/driver" replace />;
     if (user.role === 'MANAGER') return <Navigate to="/manager" replace />;
     return <Navigate to="/owner" replace />;
@@ -121,6 +121,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="credit" element={<CreditLedgerPage />} />
         <Route path="drivers" element={<DriversPage />} />
         <Route path="daily-closing" element={<DailyClosingPage />} />
+        <Route path="users" element={<StaffUsersPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
 
@@ -145,3 +147,5 @@ export const AppRoutes: React.FC = () => {
     </Routes>
   );
 };
+
+

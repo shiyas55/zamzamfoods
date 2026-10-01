@@ -25,7 +25,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 
-from apps.common.permissions import IsOwner
+from apps.common.permissions import IsOwner, IsManagerOrOwner
 from .models import User, DeviceSession
 from .serializers import (
     UserSerializer,
@@ -77,9 +77,29 @@ def _set_auth_cookies(response: Response, access: str, refresh: str) -> None:
 
 
 def _clear_auth_cookies(response: Response) -> None:
-    """Expire both auth cookies immediately."""
-    response.delete_cookie(ACCESS_COOKIE, path="/")
-    response.delete_cookie(REFRESH_COOKIE, path="/")
+    """Expire both auth cookies immediately across all browsers."""
+    response.set_cookie(
+        ACCESS_COOKIE,
+        "",
+        max_age=0,
+        expires="Thu, 01 Jan 1970 00:00:00 GMT",
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        path="/",
+    )
+    response.set_cookie(
+        REFRESH_COOKIE,
+        "",
+        max_age=0,
+        expires="Thu, 01 Jan 1970 00:00:00 GMT",
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        path="/",
+    )
+    response.delete_cookie(ACCESS_COOKIE, path="/", samesite=COOKIE_SAMESITE)
+    response.delete_cookie(REFRESH_COOKIE, path="/", samesite=COOKIE_SAMESITE)
 
 
 
@@ -167,16 +187,33 @@ class CookieTokenRefreshView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        refresh_str = request.COOKIES.get(REFRESH_COOKIE) or request.data.get("refresh")
-        if not refresh_str:
+        candidate_tokens = []
+        payload_token = request.data.get("refresh") if isinstance(request.data, dict) else None
+        if payload_token and isinstance(payload_token, str) and payload_token.strip():
+            candidate_tokens.append(payload_token.strip())
+
+        cookie_token = request.COOKIES.get(REFRESH_COOKIE)
+        if cookie_token and isinstance(cookie_token, str) and cookie_token.strip():
+            if cookie_token.strip() not in candidate_tokens:
+                candidate_tokens.append(cookie_token.strip())
+
+        if not candidate_tokens:
             return Response(
                 {"detail": "No refresh token cookie or parameter present."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        try:
-            old_token = RefreshToken(refresh_str)
-        except (TokenError, InvalidToken):
+        old_token = None
+        refresh_str = None
+        for cand in candidate_tokens:
+            try:
+                old_token = RefreshToken(cand)
+                refresh_str = cand
+                break
+            except (TokenError, InvalidToken):
+                continue
+
+        if not old_token or not refresh_str:
             resp = Response(
                 {"detail": "Refresh token is invalid or expired."},
                 status=status.HTTP_401_UNAUTHORIZED,
@@ -214,7 +251,10 @@ class CookieTokenRefreshView(APIView):
                 return resp
 
             # Rotate refresh token — update device session hash or auto-register if missing
-            old_token.blacklist()
+            try:
+                old_token.blacklist()
+            except Exception:
+                pass
             new_refresh = RefreshToken.for_user(user)
             new_access_str = str(new_refresh.access_token)
             new_refresh_str = str(new_refresh)
@@ -235,7 +275,10 @@ class CookieTokenRefreshView(APIView):
 
         else:
             # Owner / other roles — simple rotation without device session tracking
-            old_token.blacklist()
+            try:
+                old_token.blacklist()
+            except Exception:
+                pass
             new_refresh = RefreshToken.for_user(user)
             new_access_str = str(new_refresh.access_token)
             new_refresh_str = str(new_refresh)
@@ -257,17 +300,24 @@ class CookieLogoutView(APIView):
     Revokes/blacklists the refresh token, deactivates the device session,
     and clears both auth cookies. The old refresh token cannot be reused.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        refresh_str = request.COOKIES.get(REFRESH_COOKIE)
+        tokens_to_revoke = []
+        payload_token = request.data.get("refresh") if isinstance(request.data, dict) else None
+        if payload_token and isinstance(payload_token, str) and payload_token.strip():
+            tokens_to_revoke.append(payload_token.strip())
 
-        if refresh_str:
+        cookie_token = request.COOKIES.get(REFRESH_COOKIE)
+        if cookie_token and isinstance(cookie_token, str) and cookie_token.strip():
+            if cookie_token.strip() not in tokens_to_revoke:
+                tokens_to_revoke.append(cookie_token.strip())
+
+        for refresh_str in tokens_to_revoke:
             token_hash = _hash_token(refresh_str)
 
             # Deactivate device session
             DeviceSession.objects.filter(
-                user=request.user,
                 refresh_token_hash=token_hash,
                 is_active=True,
             ).update(is_active=False)
@@ -277,7 +327,14 @@ class CookieLogoutView(APIView):
                 token = RefreshToken(refresh_str)
                 token.blacklist()
             except (TokenError, InvalidToken):
-                pass  # Already invalid — that's fine
+                pass  # Already invalid/blacklisted — idempotent
+
+        # Also deactivate any active sessions if user is authenticated via Bearer
+        if request.user and request.user.is_authenticated:
+            DeviceSession.objects.filter(
+                user=request.user,
+                is_active=True,
+            ).update(is_active=False)
 
         response = Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)
         _clear_auth_cookies(response)
@@ -331,10 +388,10 @@ class MySessionsView(APIView):
 
 class UserViewSet(viewsets.ModelViewSet):
     """
-    User management endpoint (Owner only).
+    User management endpoint (Owner and Manager access).
     """
     queryset = User.objects.all().order_by("-date_joined")
-    permission_classes = [IsOwner]
+    permission_classes = [IsManagerOrOwner]
 
     def get_serializer_class(self):
         if self.action == "create":

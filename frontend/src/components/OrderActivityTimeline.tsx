@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
+import { apiClient } from '../services/apiClient';
 
 interface ActivityLog {
   id: string;
@@ -20,14 +21,8 @@ export const OrderActivityTimeline: React.FC<{ orderId: string }> = ({ orderId }
     const fetchLogs = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/orders/orders/${orderId}/activity/`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        });
-        if (!res.ok) throw new Error('Failed to fetch activity logs');
-        const data = await res.json();
-        setLogs(data);
+        const data = await apiClient.get<ActivityLog[]>(`/orders/orders/${orderId}/activity/`);
+        setLogs(Array.isArray(data) ? data : []);
       } catch (err: any) {
         setError(err.message);
       } finally {
