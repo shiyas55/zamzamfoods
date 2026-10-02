@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Lock, User, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { getDynamicStoreInfo } from '../../utils/whatsappUtils';
 
 export const LoginPage: React.FC = () => {
+  const store = getDynamicStoreInfo();
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -47,40 +49,10 @@ export const LoginPage: React.FC = () => {
   return (
     <div className="login-wrapper">
       <style>{`
-        @keyframes floatOrb1 {
-          0%, 100% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(30px, -25px) scale(1.12); }
-        }
-        @keyframes floatOrb2 {
-          0%, 100% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(-30px, 30px) scale(1.15); }
-        }
-        @keyframes cardFadeIn {
-          0% {
-            opacity: 0;
-            transform: translateY(20px) scale(0.97);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @keyframes logoPulse {
-          0%, 100% { transform: scale(1); filter: drop-shadow(0 4px 12px rgba(220, 38, 38, 0.2)); }
-          50% { transform: scale(1.03); filter: drop-shadow(0 6px 18px rgba(220, 38, 38, 0.3)); }
-        }
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
-          20%, 60% { transform: translateX(-6px); }
-          40%, 80% { transform: translateX(6px); }
-        }
-        @keyframes badgeGlow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-          50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+          20%, 60% { transform: translateX(-4px); }
+          40%, 80% { transform: translateX(4px); }
         }
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -91,89 +63,58 @@ export const LoginPage: React.FC = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #090d16;
+          background: #f1f5f9;
           position: relative;
-          overflow: hidden;
           padding: 1.5rem;
           box-sizing: border-box;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
-        .ambient-orb {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(100px);
-          pointer-events: none;
-          opacity: 0.55;
-        }
-        .orb-1 {
-          width: 380px;
-          height: 380px;
-          background: radial-gradient(circle, #dc2626 0%, transparent 70%);
-          top: -10%;
-          left: 10%;
-          animation: floatOrb1 12s ease-in-out infinite;
-        }
-        .orb-2 {
-          width: 400px;
-          height: 400px;
-          background: radial-gradient(circle, #991b1b 0%, transparent 70%);
-          bottom: -15%;
-          right: 10%;
-          animation: floatOrb2 15s ease-in-out infinite;
-        }
-
         .login-card {
           width: 100%;
-          max-width: 420px;
+          max-width: 390px;
           background: #ffffff;
-          border-radius: 20px;
-          box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          border: 1px solid #cbd5e1;
+          box-shadow: var(--shadow-sm);
           overflow: hidden;
           position: relative;
           z-index: 10;
-          animation: cardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
           box-sizing: border-box;
         }
 
         .login-header {
-          padding: 2.25rem 2rem 1.5rem;
+          padding: 1.75rem 1.5rem 1.25rem;
           background: #ffffff;
-          border-bottom: 1px solid #f1f5f9;
+          border-bottom: 1px solid #e2e8f0;
           text-align: center;
         }
 
         .login-logo {
-          height: 76px;
-          width: 76px;
+          height: 64px;
+          width: 64px;
           object-fit: cover;
-          border-radius: 16px;
-          margin-bottom: 0.75rem;
-          animation: logoPulse 4s ease-in-out infinite;
-          transition: transform 0.3s ease;
+          border-radius: 6px;
+          margin-bottom: 0.5rem;
           display: inline-block;
-        }
-        .login-logo:hover {
-          transform: scale(1.06) rotate(1deg);
         }
 
         .animated-input-group {
-          margin-bottom: 1.25rem;
+          margin-bottom: 1.1rem;
           text-align: left;
         }
         .animated-input-group label {
           display: block;
-          font-size: 0.85rem;
-          font-weight: 600;
+          font-size: 0.82rem;
+          font-weight: 700;
           color: #334155;
-          margin-bottom: 0.5rem;
-          letter-spacing: -0.01em;
+          margin-bottom: 0.4rem;
         }
 
         .input-wrapper {
           position: relative;
           width: 100%;
-          height: 48px;
+          height: 40px;
           display: flex;
           align-items: center;
           box-sizing: border-box;
@@ -181,150 +122,118 @@ export const LoginPage: React.FC = () => {
 
         .input-icon-left {
           position: absolute;
-          left: 14px;
+          left: 12px;
           top: 50%;
           transform: translateY(-50%);
           color: #94a3b8;
-          transition: color 0.2s ease;
           pointer-events: none;
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 20px;
-          height: 20px;
+          width: 18px;
+          height: 18px;
           z-index: 5;
         }
 
         .animated-input {
           width: 100%;
           height: 100%;
-          padding: 0 44px 0 42px;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 12px;
-          font-size: 0.95rem;
+          padding: 0 40px 0 38px;
+          border: 1px solid #cbd5e1;
+          border-radius: 4px;
+          font-size: 0.9rem;
           color: #0f172a;
-          background: #f8fafc;
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          background: #ffffff;
           outline: none;
           box-sizing: border-box;
           line-height: normal;
         }
         .animated-input::placeholder {
           color: #94a3b8;
-          font-size: 0.9rem;
+          font-size: 0.88rem;
         }
         .animated-input:focus {
-          border-color: #dc2626;
-          background: #ffffff;
-          box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12);
+          border-color: #b91c1c;
+          box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.15);
         }
         .input-wrapper:focus-within .input-icon-left {
-          color: #dc2626;
+          color: #b91c1c;
         }
 
         .password-toggle-btn {
           position: absolute;
-          right: 10px;
+          right: 8px;
           top: 50%;
           transform: translateY(-50%);
           background: transparent;
           border: none;
           color: #94a3b8;
           cursor: pointer;
-          width: 32px;
-          height: 32px;
+          width: 28px;
+          height: 28px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 8px;
-          transition: all 0.15s ease;
+          border-radius: 4px;
           z-index: 5;
           padding: 0;
         }
         .password-toggle-btn:hover {
-          color: #dc2626;
-          background: rgba(220, 38, 38, 0.08);
-        }
-        .password-toggle-btn:active {
-          transform: translateY(-50%) scale(0.95);
+          color: #b91c1c;
         }
 
         .animated-submit-btn {
           width: 100%;
-          height: 48px;
-          background: linear-gradient(135deg, #e11d48 0%, #dc2626 50%, #b91c1c 100%);
+          height: 40px;
+          background: #b91c1c;
           color: white;
           border: none;
-          border-radius: 12px;
-          font-size: 0.96rem;
-          font-weight: 600;
+          border-radius: 4px;
+          font-size: 0.92rem;
+          font-weight: 700;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 0.5rem;
-          position: relative;
-          overflow: hidden;
-          box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: var(--shadow-sm);
+          transition: background 0.15s ease;
           margin-top: 0.25rem;
         }
         .animated-submit-btn:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(220, 38, 38, 0.45);
-        }
-        .animated-submit-btn:active:not(:disabled) {
-          transform: translateY(0);
+          background: #991b1b;
         }
         .animated-submit-btn:disabled {
-          opacity: 0.75;
+          opacity: 0.65;
           cursor: not-allowed;
-        }
-        .animated-submit-btn::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 50%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
-          transform: translateX(-100%);
-        }
-        .animated-submit-btn:hover::after {
-          animation: shimmer 1.2s infinite;
         }
 
         .error-banner {
           display: flex;
           align-items: center;
           gap: 0.6rem;
-          padding: 0.75rem 0.9rem;
-          border-radius: 10px;
+          padding: 0.65rem 0.8rem;
+          border-radius: 4px;
           background: #fef2f2;
           border: 1px solid #fecaca;
-          color: #dc2626;
-          font-size: 0.85rem;
-          font-weight: 500;
-          margin-bottom: 1.25rem;
-          animation: shake 0.5s ease-in-out;
+          color: #b91c1c;
+          font-size: 0.82rem;
+          font-weight: 600;
+          margin-bottom: 1.1rem;
+          animation: shake 0.4s ease-in-out;
         }
 
         .status-badge-pulse {
-          animation: badgeGlow 2s infinite;
+          display: inline-block;
         }
 
         .support-link {
-          transition: opacity 0.15s ease, transform 0.15s ease;
+          transition: opacity 0.15s ease;
         }
         .support-link:hover {
           opacity: 0.8;
-          transform: translateY(-1px);
         }
       `}</style>
-
-      {/* Floating Animated Ambient Glow Orbs */}
-      <div className="ambient-orb orb-1" />
-      <div className="ambient-orb orb-2" />
 
       {/* Main Login Card */}
       <div className="login-card">
@@ -488,7 +397,7 @@ export const LoginPage: React.FC = () => {
               }}
             >
               <a
-                href="https://wa.me/917012587705?text=Hello%20Zentrix%20Support%2C%20I%20need%20assistance%20logging%20in"
+                href={`https://wa.me/${store.businessPhone.replace(/[^0-9]/g, '') || '917012587705'}?text=Hello%20Support%2C%20I%20need%20assistance%20logging%20in`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="support-link"
@@ -502,11 +411,11 @@ export const LoginPage: React.FC = () => {
                   gap: '0.25rem',
                 }}
               >
-                <span>💬 WhatsApp: 7012587705</span>
+                <span>💬 WhatsApp: {store.businessPhone}</span>
               </a>
               <span style={{ color: '#cbd5e1' }}>|</span>
               <a
-                href="tel:+917012587705"
+                href={`tel:${store.businessPhone.replace(/[^0-9+]/g, '') || '+917012587705'}`}
                 className="support-link"
                 style={{
                   color: '#334155',
@@ -518,7 +427,7 @@ export const LoginPage: React.FC = () => {
                   gap: '0.25rem',
                 }}
               >
-                <span>📞 Call: 7012587705</span>
+                <span>📞 Call: {store.businessPhone}</span>
               </a>
             </div>
           </div>

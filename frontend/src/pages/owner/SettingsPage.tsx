@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import { ZentrixSettingsSection, ZENTRIX_SUPPORT_CONFIG } from '../../components/ZentrixHelpDesk';
 import { DatabaseStorageBackupSection } from '../../components/DatabaseStorageBackupSection';
-import { WebsiteCacheVersionSection } from '../../components/WebsiteCacheVersionSection';
 
 export const SettingsPage: React.FC = () => {
   const { settings, loading, updateSettings, refreshSettings } = useSettings();
@@ -171,18 +170,18 @@ export const SettingsPage: React.FC = () => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <div style={{
-            width: 46,
-            height: 46,
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+            width: 38,
+            height: 38,
+            borderRadius: '6px',
+            background: '#b91c1c',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#fef08a',
-            boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+            color: '#ffffff',
+            boxShadow: 'var(--shadow-sm)',
             flexShrink: 0,
           }}>
-            <SettingsIcon size={26} />
+            <SettingsIcon size={22} />
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
@@ -995,8 +994,6 @@ export const SettingsPage: React.FC = () => {
             {/* SECTION: DATABASE STORAGE LEVEL & BACKUP DISASTER RECOVERY */}
             <DatabaseStorageBackupSection />
 
-            {/* SECTION: WEBSITE VERSION & CACHE PURGE TELEMETRY */}
-            <WebsiteCacheVersionSection />
 
             {/* SECTION 3: ZENTRIX 24x7 HELP DESK & SOFTWARE SUPPORT */}
             <ZentrixSettingsSection />
@@ -1083,8 +1080,7 @@ export const SettingsPage: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1101,24 +1097,23 @@ export const SettingsPage: React.FC = () => {
           <div
             style={{
               backgroundColor: 'var(--bg-card, #ffffff)',
-              borderRadius: '16px',
+              borderRadius: '8px',
               border: '1px solid var(--border)',
               width: '100%',
               maxWidth: '520px',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.25)',
+              boxShadow: 'var(--shadow-md)',
               overflow: 'hidden',
-              animation: 'modalSlideUp 0.25s ease-out',
             }}
           >
             {/* Modal Header */}
             <div
               style={{
-                padding: '1.25rem 1.5rem',
+                padding: '1rem 1.25rem',
                 borderBottom: '1px solid var(--border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%)',
+                background: '#f8fafc',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

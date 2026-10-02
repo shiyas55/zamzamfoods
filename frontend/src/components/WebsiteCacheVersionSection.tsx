@@ -162,7 +162,7 @@ export const WebsiteCacheVersionSection: React.FC = () => {
       style={{
         backgroundColor: 'var(--bg-card, #ffffff)',
         border: '1px solid var(--border, #e2e8f0)',
-        borderRadius: '16px',
+        borderRadius: '6px',
         overflow: 'hidden',
         boxShadow: 'var(--shadow-sm)',
       }}
@@ -170,22 +170,23 @@ export const WebsiteCacheVersionSection: React.FC = () => {
       {/* Top Banner Header */}
       <div
         style={{
-          padding: '1.25rem 1.75rem',
-          background: 'linear-gradient(135deg, #090d16 0%, #1e1b4b 100%)',
+          padding: '1rem 1.25rem',
+          background: '#0f172a',
           color: 'white',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '1rem',
+          borderBottom: '1px solid #1e293b',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <div
             style={{
-              width: 42,
-              height: 42,
-              borderRadius: '12px',
+              width: 38,
+              height: 38,
+              borderRadius: '6px',
               background: 'rgba(99, 102, 241, 0.25)',
               border: '1px solid rgba(99, 102, 241, 0.45)',
               display: 'flex',
@@ -194,11 +195,11 @@ export const WebsiteCacheVersionSection: React.FC = () => {
               color: '#818cf8',
             }}
           >
-            <Globe size={22} />
+            <Globe size={20} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <h3 style={{ fontSize: '1.18rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
                 Website Version & Cache Telemetry
               </h3>
               <span
@@ -208,8 +209,8 @@ export const WebsiteCacheVersionSection: React.FC = () => {
                   backgroundColor: 'rgba(16, 185, 129, 0.25)',
                   color: '#34d399',
                   border: '1px solid rgba(52, 211, 153, 0.35)',
-                  padding: '0.15rem 0.55rem',
-                  borderRadius: '999px',
+                  padding: '0.12rem 0.5rem',
+                  borderRadius: '4px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.04em',
                   display: 'flex',
@@ -221,7 +222,7 @@ export const WebsiteCacheVersionSection: React.FC = () => {
                 LIVE PRODUCTION
               </span>
             </div>
-            <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0.2rem 0 0 0' }}>
               Real-time build timestamps, cloud deployment sync, and 1-click browser cache reset.
             </p>
           </div>
@@ -237,15 +238,15 @@ export const WebsiteCacheVersionSection: React.FC = () => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.45rem',
-              padding: '0.55rem 0.95rem',
-              borderRadius: '10px',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              padding: '0.45rem 0.85rem',
+              borderRadius: '6px',
+              background: '#1e293b',
+              border: '1px solid #334155',
               color: '#ffffff',
               fontSize: '0.82rem',
               fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              transition: 'background 0.15s ease',
             }}
           >
             <RefreshCw size={14} className={checkingUpdate ? 'spinner' : ''} />
@@ -260,16 +261,16 @@ export const WebsiteCacheVersionSection: React.FC = () => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.45rem',
-              padding: '0.55rem 1.15rem',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.25)',
+              padding: '0.45rem 1rem',
+              borderRadius: '6px',
+              background: '#b91c1c',
+              border: '1px solid #991b1b',
               color: '#ffffff',
               fontSize: '0.82rem',
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
-              transition: 'all 0.15s ease',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'background 0.15s ease',
             }}
           >
             <Trash2 size={15} className={clearingCache ? 'spinner' : ''} />

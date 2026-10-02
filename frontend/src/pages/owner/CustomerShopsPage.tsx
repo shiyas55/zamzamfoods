@@ -9,8 +9,9 @@ import { formatCurrency } from '../../utils/formatters';
 import { 
   Plus, Search, Store, AlertCircle, X, ChevronRight, Eye, Tag, 
   ExternalLink, Copy, Check, Smartphone, Edit2, Trash2, AlertTriangle, 
-  CheckCircle2, Save 
+  CheckCircle2, Save, FileText 
 } from 'lucide-react';
+import { CustomerStatementModal } from '../../components/CustomerStatementModal';
 
 export const CustomerShopsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,10 +20,12 @@ export const CustomerShopsPage: React.FC = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<string>('');
   const [search, setSearch] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
 
   // Create Form State
   const [name, setName] = useState('');
@@ -51,6 +54,8 @@ export const CustomerShopsPage: React.FC = () => {
   const [editCreditLimit, setEditCreditLimit] = useState('5000.00');
   const [editIsActive, setEditIsActive] = useState(true);
   const [editNotes, setEditNotes] = useState('');
+  const [editProductPrices, setEditProductPrices] = useState<Record<string, string>>({});
+  const [editPricingLoading, setEditPricingLoading] = useState(false);
   const [editFormError, setEditFormError] = useState<string | null>(null);
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
@@ -64,11 +69,18 @@ export const CustomerShopsPage: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
       const [custList, routeList, prodList] = await Promise.all([
-        customerService.getCustomers(selectedRoute || undefined, search || undefined),
+        customerService.getCustomers(selectedRoute || undefined, debouncedSearch || undefined),
         routeService.getRoutes(),
         productService.getProducts(),
       ]);
@@ -95,7 +107,7 @@ export const CustomerShopsPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedRoute, search]);
+  }, [selectedRoute, debouncedSearch]);
 
   const handleCreateCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,7 +167,7 @@ export const CustomerShopsPage: React.FC = () => {
     }
   };
 
-  const handleOpenEditModal = (c: Customer) => {
+  const handleOpenEditModal = async (c: Customer) => {
     setEditingCustomer(c);
     setEditName(c.name || '');
     setEditOwnerName(c.owner_name || '');
@@ -169,6 +181,28 @@ export const CustomerShopsPage: React.FC = () => {
     setEditIsActive(c.is_active ?? true);
     setEditNotes(c.notes || '');
     setEditFormError(null);
+
+    // Default prices from products
+    const initialEditPrices: Record<string, string> = {};
+    availableProducts.forEach((p) => {
+      initialEditPrices[p.id] = p.unit_price;
+    });
+    setEditProductPrices(initialEditPrices);
+
+    // Fetch existing customer-specific wholesale pricing
+    try {
+      setEditPricingLoading(true);
+      const customerPricingList = await customerService.getCustomerPricing(c.id);
+      const mergedPrices: Record<string, string> = { ...initialEditPrices };
+      customerPricingList.forEach((item) => {
+        mergedPrices[item.product_id] = item.effective_price || item.default_price;
+      });
+      setEditProductPrices(mergedPrices);
+    } catch (e) {
+      console.error('Failed to load customer prices for edit modal:', e);
+    } finally {
+      setEditPricingLoading(false);
+    }
   };
 
   const handleUpdateCustomer = async (e: React.FormEvent) => {
@@ -183,6 +217,14 @@ export const CustomerShopsPage: React.FC = () => {
       setIsEditSubmitting(true);
       setEditFormError(null);
 
+      // Package updated customer product wholesale prices
+      const product_prices = availableProducts
+        .filter((p) => editProductPrices[p.id] !== undefined && editProductPrices[p.id].trim() !== '')
+        .map((p) => ({
+          product_id: p.id,
+          price: editProductPrices[p.id].trim(),
+        }));
+
       await customerService.updateCustomer(editingCustomer.id, {
         name: editName.trim(),
         owner_name: editOwnerName.trim(),
@@ -194,6 +236,7 @@ export const CustomerShopsPage: React.FC = () => {
         credit_limit: editCreditLimit,
         is_active: editIsActive,
         notes: editNotes.trim(),
+        product_prices: product_prices.length > 0 ? product_prices : undefined,
       });
 
       const updatedName = editName.trim();
@@ -290,8 +333,8 @@ export const CustomerShopsPage: React.FC = () => {
         style={{
           padding: '0.85rem 1.25rem',
           marginBottom: '1.25rem',
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%)',
-          border: '1px solid rgba(16, 185, 129, 0.35)',
+          background: '#f8fafc',
+          border: '1px solid #cbd5e1',
           borderRadius: 'var(--radius-md)',
           display: 'flex',
           alignItems: 'center',
@@ -443,6 +486,17 @@ export const CustomerShopsPage: React.FC = () => {
                         >
                           <Eye size={13} />
                           <span>Profile</span>
+                        </button>
+
+                        {/* Statement Print / Share */}
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => setStatementCustomer(c)}
+                          title="Print Customer Account Statement & Ledger"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#b91c1c' }}
+                        >
+                          <FileText size={13} />
+                          <span>Statement</span>
                         </button>
 
                         {/* Self-Order Link */}
@@ -808,6 +862,51 @@ export const CustomerShopsPage: React.FC = () => {
                 />
               </div>
 
+              {/* Wholesale Product Pricing Assignment in Edit Modal */}
+              {availableProducts.length > 0 && (
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-md)', padding: '0.85rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Tag size={16} color="var(--primary)" />
+                      <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Wholesale Product Rates (₹)
+                      </span>
+                    </div>
+                    {editPricingLoading && (
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Loading customer rates...</span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                    Adjust custom unit prices for this customer. Orders for this shop will automatically use these rates.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                    {availableProducts.map((p) => (
+                      <div key={p.id} style={{ background: '#ffffff', padding: '0.65rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid #cbd5e1' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                          {p.name}
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+                          Standard: ₹{Number(p.unit_price).toFixed(2)}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>₹</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className="form-input"
+                            style={{ padding: '0.3rem 0.5rem', fontSize: '0.88rem', fontWeight: 600 }}
+                            value={editProductPrices[p.id] ?? p.unit_price}
+                            onChange={(e) => setEditProductPrices({ ...editProductPrices, [p.id]: e.target.value })}
+                            placeholder={p.unit_price}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
                   <input
@@ -936,6 +1035,14 @@ export const CustomerShopsPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Customer Statement Modal */}
+      {statementCustomer && (
+        <CustomerStatementModal
+          customer={statementCustomer}
+          onClose={() => setStatementCustomer(null)}
+        />
       )}
     </div>
   );

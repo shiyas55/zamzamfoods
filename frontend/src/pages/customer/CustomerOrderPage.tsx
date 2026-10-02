@@ -43,7 +43,7 @@ interface CustomerInfo {
 
 export const CustomerOrderPage: React.FC = () => {
   const { customerId } = useParams();
-  const { isWhatsAppEnabled, isSelfOrderEnabled, isMaintenanceMode, businessPhone, businessName } = useSettings();
+  const { isWhatsAppEnabled, isSelfOrderEnabled, isMaintenanceMode, businessPhone, businessName, gstNumber, settings } = useSettings();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -190,16 +190,26 @@ export const CustomerOrderPage: React.FC = () => {
 
   const shareOnWhatsApp = () => {
     if (!customer || !submittedOrderNo) return;
+    const storeName = (businessName || settings?.business_name || 'Zamzam Foods').toUpperCase();
+    const storeGst = gstNumber || settings?.gst_number || '';
+    const storeContact = businessPhone || settings?.phone_number || '';
+
     const itemsText = activeItems.map((p) => `• ${p.name}: ${quantities[p.id]} ${p.unit} (₹${(quantities[p.id] * parseFloat(p.price)).toFixed(2)})`).join('\n');
-    const msg = `*ZAMZAM FOODS - WHOLESALE ORDER*\n` +
-      `Order #: *${submittedOrderNo}*\n` +
-      `Shop: *${customer.name}*\n` +
-      `Address: ${customer.address}\n\n` +
-      `*Items:*\n${itemsText}\n\n` +
-      `*Order Total: ₹${orderTotal.toFixed(2)}*\n` +
-      `Order placed via Customer Portal.`;
-    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    let msg = `*${storeName} - WHOLESALE ORDER*\n`;
+    if (storeGst) msg += `GSTIN: *${storeGst}*\n`;
+    if (storeContact) msg += `Ph: ${storeContact}\n`;
+    msg += `--------------------------------\n`;
+    msg += `Order #: *${submittedOrderNo}*\n`;
+    msg += `Shop: *${customer.name}*\n`;
+    if (customer.address) msg += `Address: ${customer.address}\n`;
+    msg += `--------------------------------\n`;
+    msg += `*Items:*\n${itemsText}\n\n`;
+    msg += `*Order Total: ₹${orderTotal.toFixed(2)}*\n`;
+    msg += `Order placed via Customer Portal.`;
+
+    const cleanPhone = storeContact ? storeContact.replace(/[^0-9]/g, '') : '';
+    const targetUrl = cleanPhone.length === 10 ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}` : cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(targetUrl, '_blank');
   };
 
   if (loading) {
@@ -447,10 +457,10 @@ export const CustomerOrderPage: React.FC = () => {
       {/* 1. Header Banner */}
       <header
         style={{
-          background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 60%, #b91c1c 100%)',
+          background: '#7f1d1d',
           color: '#ffffff',
-          padding: '1.25rem 1rem 1.5rem',
-          boxShadow: '0 4px 15px rgba(127, 29, 29, 0.3)',
+          padding: '1.25rem 1rem 1.25rem',
+          boxShadow: 'var(--shadow-sm)',
         }}
       >
         <div style={{ maxWidth: '520px', margin: '0 auto', width: '100%' }}>
@@ -813,11 +823,9 @@ export const CustomerOrderPage: React.FC = () => {
           bottom: 0,
           left: 0,
           right: 0,
-          background: 'rgba(255, 255, 255, 0.96)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderTop: '1px solid #e2e8f0',
-          boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.08)',
+          background: '#ffffff',
+          borderTop: '1px solid #cbd5e1',
+          boxShadow: 'var(--shadow-md)',
           zIndex: 90,
           padding: '0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px))',
         }}
@@ -846,14 +854,14 @@ export const CustomerOrderPage: React.FC = () => {
                     fontSize: '0.7rem',
                     fontWeight: 800,
                     padding: '0.05rem 0.4rem',
-                    borderRadius: '999px',
+                    borderRadius: '4px',
                   }}
                 >
                   {totalItemCount} {totalItemCount === 1 ? 'pkt' : 'pkts'}
                 </span>
               )}
             </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: orderTotal > 0 ? '#dc2626' : '#0f172a', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: orderTotal > 0 ? '#b91c1c' : '#0f172a', lineHeight: 1.1 }}>
               {formatCurrency(orderTotal)}
             </div>
           </div>
@@ -864,23 +872,23 @@ export const CustomerOrderPage: React.FC = () => {
             onClick={() => setIsConfirmModalOpen(true)}
             disabled={activeItems.length === 0}
             style={{
-              padding: '0.85rem 1.6rem',
-              background: activeItems.length > 0 ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : '#cbd5e1',
+              padding: '0.65rem 1.4rem',
+              background: activeItems.length > 0 ? '#b91c1c' : '#cbd5e1',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '12px',
-              fontSize: '1rem',
+              borderRadius: '6px',
+              fontSize: '0.95rem',
               fontWeight: 800,
               cursor: activeItems.length > 0 ? 'pointer' : 'not-allowed',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.5rem',
-              boxShadow: activeItems.length > 0 ? '0 4px 14px rgba(220, 38, 38, 0.35)' : 'none',
-              transition: 'all 0.15s ease',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'background 0.15s ease',
             }}
           >
             <span>{activeItems.length > 0 ? 'Review Order' : 'Add Items'}</span>
-            <ArrowRight size={18} />
+            <ArrowRight size={17} />
           </button>
         </div>
       </footer>
@@ -891,8 +899,7 @@ export const CustomerOrderPage: React.FC = () => {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(15, 23, 42, 0.6)',
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'center',
@@ -1100,15 +1107,15 @@ export const CustomerOrderPage: React.FC = () => {
                 disabled={!isConfirmedCheckbox || submitting}
                 style={{
                   flex: 2,
-                  padding: '0.85rem',
-                  background: isConfirmedCheckbox && !submitting ? 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)' : '#cbd5e1',
+                  padding: '0.75rem',
+                  background: isConfirmedCheckbox && !submitting ? '#b91c1c' : '#cbd5e1',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '12px',
+                  borderRadius: '6px',
                   fontWeight: 800,
-                  fontSize: '1rem',
+                  fontSize: '0.95rem',
                   cursor: isConfirmedCheckbox && !submitting ? 'pointer' : 'not-allowed',
-                  boxShadow: isConfirmedCheckbox && !submitting ? '0 4px 15px rgba(220, 38, 38, 0.35)' : 'none',
+                  boxShadow: 'var(--shadow-sm)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',

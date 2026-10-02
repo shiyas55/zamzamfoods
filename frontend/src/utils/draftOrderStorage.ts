@@ -18,8 +18,9 @@
 export interface OrderDraft {
   customerId: string;
   orderDate: string;
-  kubbusQty: string;
-  romaliQty: string;
+  kubbusQty?: string;
+  romaliQty?: string;
+  productQuantities?: Record<string, string>;
   cashAmount: string;
   gpayAmount: string;
   updatedAt: number;
@@ -61,12 +62,13 @@ export const draftOrderStorage = {
 
   saveDraft(draft: OrderDraft): void {
     try {
-      const kQty = parseInt(draft.kubbusQty, 10) || 0;
-      const rQty = parseInt(draft.romaliQty, 10) || 0;
-      const cAmt = parseFloat(draft.cashAmount) || 0;
-      const gAmt = parseFloat(draft.gpayAmount) || 0;
+      const kQty = parseInt(draft.kubbusQty || '0', 10) || 0;
+      const rQty = parseInt(draft.romaliQty || '0', 10) || 0;
+      const hasProdQtys = Object.values(draft.productQuantities || {}).some((q) => (parseInt(q, 10) || 0) > 0);
+      const cAmt = parseFloat(draft.cashAmount || '0') || 0;
+      const gAmt = parseFloat(draft.gpayAmount || '0') || 0;
 
-      const hasContent = kQty > 0 || rQty > 0 || cAmt > 0 || gAmt > 0;
+      const hasContent = kQty > 0 || rQty > 0 || hasProdQtys || cAmt > 0 || gAmt > 0;
       const key = `${DRAFT_PREFIX}${draft.orderDate}_${draft.customerId}`;
 
       if (hasContent) {

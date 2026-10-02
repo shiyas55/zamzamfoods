@@ -177,44 +177,33 @@ export const ManagerDashboard: React.FC = () => {
     <div style={{ minHeight: '100%' }}>
 
       {/* ═══════════════════════════════════════════════════
-          HERO HEADER — Gradient banner with date + quick CTA
+          HERO HEADER — Enterprise header with date + quick CTA
       ═══════════════════════════════════════════════════ */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #dc2626 100%)',
-          borderRadius: '16px',
-          padding: '1.5rem 1.75rem',
-          marginBottom: '1.5rem',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 8px 32px rgba(153, 27, 27, 0.30)',
+          background: '#7f1d1d',
+          borderRadius: '6px',
+          padding: '1.25rem 1.5rem',
+          marginBottom: '1.25rem',
+          border: '1px solid #991b1b',
+          boxShadow: 'var(--shadow-sm)',
         }}
       >
-        {/* Background decoration */}
-        <div style={{
-          position: 'absolute', top: '-30px', right: '-20px', width: '220px', height: '220px',
-          borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '-50px', right: '120px', width: '150px', height: '150px',
-          borderRadius: '50%', background: 'rgba(251, 191, 36, 0.08)', pointerEvents: 'none',
-        }} />
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
               <div style={{
-                width: '36px', height: '36px', borderRadius: '10px',
-                background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem',
+                width: '32px', height: '32px', borderRadius: '4px',
+                background: 'rgba(255,255,255,0.15)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem',
               }}>
                 🏪
               </div>
               <div>
-                <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '-0.02em' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', margin: 0, letterSpacing: '-0.01em' }}>
                   Daily Operations
                 </h2>
-                <span style={{ fontSize: '0.78rem', color: '#fca5a5', fontWeight: 600 }}>
+                <span style={{ fontSize: '0.75rem', color: '#fca5a5', fontWeight: 600 }}>
                   Manager Control Centre
                 </span>
               </div>
@@ -223,12 +212,12 @@ export const ManagerDashboard: React.FC = () => {
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
                 background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
-                padding: '0.2rem 0.65rem', borderRadius: '999px',
-                fontSize: '0.75rem', fontWeight: 700, color: '#fef9c3',
+                padding: '0.15rem 0.5rem', borderRadius: '4px',
+                fontSize: '0.72rem', fontWeight: 700, color: '#ffffff',
               }}>
                 <span style={{
                   width: '6px', height: '6px', borderRadius: '50%',
-                  background: '#4ade80', boxShadow: '0 0 6px #4ade80',
+                  background: '#4ade80',
                   display: 'inline-block',
                 }} />
                 {todayStr}
@@ -248,21 +237,21 @@ export const ManagerDashboard: React.FC = () => {
               className="btn btn-secondary btn-sm"
               onClick={() => fetchTodayOperations()}
               disabled={loading}
-              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff', backdropFilter: 'blur(8px)' }}
+              style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', color: '#fff' }}
             >
               <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
               <span>Refresh</span>
             </button>
             <button
-              className="btn btn-primary"
+              className="btn"
               onClick={() => navigate('/manager/create-order')}
               style={{
-                background: '#fbbf24', color: '#7f1d1d', fontWeight: 800,
-                border: 'none', boxShadow: '0 4px 14px rgba(251, 191, 36, 0.4)',
+                background: '#ffffff', color: '#7f1d1d', fontWeight: 800,
+                border: '1px solid #cbd5e1', boxShadow: 'var(--shadow-sm)',
                 display: 'flex', alignItems: 'center', gap: '0.45rem',
               }}
             >
-              <PlusCircle size={17} />
+              <PlusCircle size={16} />
               <span>New Order</span>
             </button>
           </div>
@@ -272,35 +261,36 @@ export const ManagerDashboard: React.FC = () => {
       {/* ═══════════════════════════════════════════════════
           QUICK ACTIONS GRID
       ═══════════════════════════════════════════════════ */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Zap size={12} />
           Quick Access
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.6rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.5rem' }}>
           {[
-            { label: 'New Order', icon: <PlusCircle size={18} />, onClick: () => navigate('/manager/create-order'), color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-            { label: 'New Customer', icon: <Plus size={18} />, onClick: () => setIsNewCustModalOpen(true), color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
-            { label: "Today's Orders", icon: <ShoppingCart size={18} />, onClick: () => navigate('/manager/orders'), color: '#0369a1', bg: '#eff6ff', border: '#bfdbfe' },
-            { label: 'Deliveries', icon: <Send size={18} />, onClick: () => navigate('/manager/deliveries'), color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
-            { label: 'Payments', icon: <CreditCard size={18} />, onClick: () => navigate('/manager/payments'), color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-            { label: 'Customers', icon: <Users size={18} />, onClick: () => navigate('/manager/customers'), color: '#0f766e', bg: '#f0fdfa', border: '#99f6e4' },
-            { label: 'Driver Expenses', icon: <Receipt size={18} />, onClick: () => navigate('/manager/expenses'), color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-            { label: 'Daily Closing', icon: <Lock size={18} />, onClick: () => navigate('/manager/daily-closing'), color: '#78350f', bg: '#fef3c7', border: '#fde68a' },
+            { label: 'New Order', icon: <PlusCircle size={17} />, onClick: () => navigate('/manager/create-order'), color: '#b91c1c', bg: '#ffffff', border: '#cbd5e1' },
+            { label: 'New Customer', icon: <Plus size={17} />, onClick: () => setIsNewCustModalOpen(true), color: '#475569', bg: '#ffffff', border: '#cbd5e1' },
+            { label: "Today's Orders", icon: <ShoppingCart size={17} />, onClick: () => navigate('/manager/orders'), color: '#0369a1', bg: '#ffffff', border: '#cbd5e1' },
+            { label: 'Deliveries', icon: <Send size={17} />, onClick: () => navigate('/manager/deliveries'), color: '#15803d', bg: '#ffffff', border: '#cbd5e1' },
+            { label: 'Payments', icon: <CreditCard size={17} />, onClick: () => navigate('/manager/payments'), color: '#b45309', bg: '#ffffff', border: '#cbd5e1' },
+            { label: 'Customers', icon: <Users size={17} />, onClick: () => navigate('/manager/customers'), color: '#0f766e', bg: '#ffffff', border: '#cbd5e1' },
+            { label: 'Driver Expenses', icon: <Receipt size={17} />, onClick: () => navigate('/manager/expenses'), color: '#b91c1c', bg: '#ffffff', border: '#cbd5e1' },
+            { label: 'Daily Closing', icon: <Lock size={17} />, onClick: () => navigate('/manager/daily-closing'), color: '#78350f', bg: '#ffffff', border: '#cbd5e1' },
           ].map((action) => (
             <button
               key={action.label}
               onClick={action.onClick}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: '0.5rem', padding: '0.85rem 0.5rem',
-                background: action.bg, border: `1.5px solid ${action.border}`,
-                borderRadius: '12px', cursor: 'pointer',
-                color: action.color, fontWeight: 700, fontSize: '0.78rem',
-                transition: 'all 0.15s ease', textAlign: 'center', lineHeight: 1.25,
+                gap: '0.4rem', padding: '0.65rem 0.5rem',
+                background: action.bg, border: `1px solid ${action.border}`,
+                borderRadius: '6px', cursor: 'pointer',
+                color: action.color, fontWeight: 700, fontSize: '0.76rem',
+                transition: 'background 0.15s ease, border-color 0.15s ease', textAlign: 'center', lineHeight: 1.25,
+                boxShadow: 'var(--shadow-sm)',
               }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 6px 16px ${action.border}`; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'none'; (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#94a3b8'; (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = action.border; (e.currentTarget as HTMLButtonElement).style.background = action.bg; }}
             >
               {action.icon}
               <span>{action.label}</span>
@@ -689,26 +679,26 @@ export const ManagerDashboard: React.FC = () => {
       ═══════════════════════════════════════════════════ */}
       {isNewCustModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '540px', borderRadius: '18px', overflow: 'hidden', padding: 0 }}>
+          <div className="modal-content" style={{ maxWidth: '540px', borderRadius: '8px', overflow: 'hidden', padding: 0 }}>
             {/* Modal Header */}
             <div style={{
-              background: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
-              padding: '1.25rem 1.5rem',
+              background: '#7f1d1d',
+              padding: '1rem 1.25rem',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '9px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Store size={18} color="#fff" />
+                  <div style={{ width: '32px', height: '32px', borderRadius: '4px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Store size={16} color="#fff" />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>Add New Customer Shop</h3>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', margin: 0 }}>Add New Customer Shop</h3>
                     <span style={{ fontSize: '0.72rem', color: '#fca5a5' }}>Set up shop & open billing in one step</span>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsNewCustModalOpen(false)}
                   style={{
-                    width: '30px', height: '30px', borderRadius: '50%',
+                    width: '28px', height: '28px', borderRadius: '4px',
                     background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer',
                     color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}

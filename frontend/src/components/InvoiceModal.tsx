@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { Order, Customer } from '../types';
-import { openWhatsApp, generateInvoiceMessage, BUSINESS_NAME, BUSINESS_PHONE } from '../utils/whatsappUtils';
-import { BRAND_CONFIG } from '../config/brandConfig';
+import { openWhatsApp, generateInvoiceMessage } from '../utils/whatsappUtils';
 import { useSettings } from '../context/SettingsContext';
+import { Printer, MessageCircle, X, Check, Receipt, FileText, QrCode } from 'lucide-react';
 
 interface InvoiceModalProps {
   order: Order;
@@ -13,6 +13,7 @@ interface InvoiceModalProps {
 export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, customer, onClose }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [applyGst, setApplyGst] = useState(false);
+  const [printFormat, setPrintFormat] = useState<'A4' | 'THERMAL'>('A4');
   const { isWhatsAppEnabled, gstNumber, businessPhone, businessName, settings } = useSettings();
 
   const cust = customer || order.customer_details;
@@ -20,9 +21,99 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, customer, onC
   const gstAmount = applyGst ? subtotal * 0.05 : 0;
   const finalTotal = subtotal + gstAmount;
   const prevCredit = cust?.current_balance ? Number(cust.current_balance) : 0;
+  const totalAccountDue = prevCredit + finalTotal;
+
+  const storeName = businessName || settings?.business_name || 'Zamzam Foods Wholesale';
+  const storePhone = businessPhone || settings?.phone_number || '+91 98470 12345';
+  const storeGst = gstNumber || settings?.gst_number || '';
+  const storeAddress = settings?.address || 'Main Road, Pandikkad, Malappuram, Kerala';
+  const storeEmail = settings?.email || 'info@zamzamfoods.com';
+  const storeUpi = settings?.upi_id || '';
+  const storeFooterNotes = settings?.invoice_footer_notes || 'Thank you for your business. Fresh Kubbus & Romali rotis delivered daily.';
 
   const handlePrint = () => {
-    window.print();
+    if (!invoiceRef.current) {
+      window.print();
+      return;
+    }
+
+    // Clean up any previous print iframes
+    const oldFrame = document.getElementById('invoice-print-frame');
+    if (oldFrame) oldFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'invoice-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      window.print();
+      return;
+    }
+
+    const isThermal = printFormat === 'THERMAL';
+    const invoiceHtml = invoiceRef.current.innerHTML;
+
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Invoice #${order.order_number}</title>
+          <style>
+            @page {
+              size: ${isThermal ? '80mm auto' : 'A4 portrait'};
+              margin: ${isThermal ? '2mm' : '8mm'};
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            html, body {
+              margin: 0;
+              padding: ${isThermal ? '2mm' : '6mm'};
+              background: #ffffff;
+              color: #0f172a;
+              font-family: ${isThermal ? 'monospace, system-ui, sans-serif' : 'system-ui, -apple-system, sans-serif'};
+              font-size: ${isThermal ? '11px' : '12px'};
+              line-height: 1.35;
+              width: ${isThermal ? '76mm' : '100%'};
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+            .invoice-non-printable {
+              display: none !important;
+            }
+          </style>
+        </head>
+        <body>
+          ${invoiceHtml}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        iframe.remove();
+      }, 3000);
+    }, 200);
   };
 
   const handleWhatsAppShare = () => {
@@ -42,223 +133,698 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, customer, onC
       items,
       totalAmount: finalTotal.toFixed(2),
       gstAmount: applyGst ? gstAmount.toFixed(2) : undefined,
-      outstandingBalance: customer?.current_balance,
+      outstandingBalance: prevCredit > 0 ? prevCredit.toFixed(2) : undefined,
+      businessOverride: {
+        businessName: storeName,
+        businessPhone: storePhone,
+        gstNumber: storeGst,
+        address: storeAddress,
+        upiId: storeUpi,
+        email: storeEmail,
+      },
     });
 
     openWhatsApp(custPhone, msg);
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex justify-center items-center p-2 sm:p-4 print:p-0 print:bg-white print:static print:inset-auto">
-      {/* Container */}
-      <div className="relative w-full max-w-3xl bg-white text-slate-800 rounded-xl shadow-2xl overflow-hidden print:shadow-none print:w-full print:max-w-none print:rounded-none">
-        
-        {/* Actions Bar (Hidden during print) */}
-        <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 print:hidden">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-amber-400">INVOICE #{order.order_number}</span>
-            <span className="text-xs px-2 py-0.5 rounded bg-red-900/60 text-red-200 border border-red-700 uppercase font-mono">
+    <div
+      className="invoice-modal-overlay"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        overflowY: 'auto',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        padding: '1.25rem 0.75rem',
+        boxSizing: 'border-box',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <style>{`
+        @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            overflow: visible !important;
+            height: auto !important;
+          }
+
+          /* Hide all app contents outside the invoice modal */
+          #root > *:not(.invoice-modal-overlay),
+          .manager-sidebar,
+          .manager-topbar,
+          .sidebar,
+          header,
+          nav,
+          aside,
+          .invoice-non-printable,
+          .btn,
+          button {
+            display: none !important;
+          }
+
+          .invoice-modal-overlay {
+            position: static !important;
+            inset: auto !important;
+            background: transparent !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+            overflow: visible !important;
+          }
+
+          .invoice-modal-overlay .card {
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+          }
+
+          .invoice-printable-wrapper {
+            position: static !important;
+            width: 100% !important;
+            margin: 0 auto !important;
+            padding: ${printFormat === 'THERMAL' ? '2mm' : '8mm'} !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            display: block !important;
+            page-break-inside: avoid;
+          }
+
+          .thermal-mode {
+            width: 80mm !important;
+            max-width: 80mm !important;
+            padding: 2mm !important;
+            margin: 0 auto !important;
+            font-size: 11px !important;
+          }
+        }
+      `}</style>
+
+      {/* Main Card Container */}
+      <div
+        className="card"
+        style={{
+          width: '100%',
+          maxWidth: printFormat === 'THERMAL' ? '460px' : '760px',
+          background: '#ffffff',
+          borderRadius: '8px',
+          border: '1px solid #cbd5e1',
+          boxShadow: 'var(--shadow-md)',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        {/* Top Operational Bar (Hidden during Print) */}
+        <div
+          className="invoice-non-printable"
+          style={{
+            background: '#0f172a',
+            color: '#ffffff',
+            padding: '0.75rem 1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            borderBottom: '1px solid #1e293b',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#ffffff', letterSpacing: '-0.01em' }}>
+              ORDER #{order.order_number}
+            </span>
+            <span
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                backgroundColor: '#991b1b',
+                color: '#ffffff',
+                padding: '0.12rem 0.45rem',
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+              }}
+            >
               {order.status}
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={applyGst} 
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {/* Format Toggle: A4 Standard vs 80mm Thermal */}
+            <div
+              style={{
+                display: 'inline-flex',
+                background: '#1e293b',
+                borderRadius: '4px',
+                padding: '2px',
+                border: '1px solid #334155',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setPrintFormat('A4')}
+                style={{
+                  padding: '0.25rem 0.55rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  background: printFormat === 'A4' ? '#b91c1c' : 'transparent',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <FileText size={12} />
+                <span>A4 Invoice</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintFormat('THERMAL')}
+                style={{
+                  padding: '0.25rem 0.55rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  background: printFormat === 'THERMAL' ? '#b91c1c' : 'transparent',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <Receipt size={12} />
+                <span>80mm POS Slip</span>
+              </button>
+            </div>
+
+            {/* GST Checkbox */}
+            <label
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: '#cbd5e1',
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={applyGst}
                 onChange={(e) => setApplyGst(e.target.checked)}
-                className="w-3.5 h-3.5 accent-amber-500"
+                style={{ accentColor: '#b91c1c', cursor: 'pointer' }}
               />
-              Include GST (5%)
+              <span>5% GST</span>
             </label>
-            <div className="flex items-center gap-2">
-              {isWhatsAppEnabled && (
-                <button
-                  onClick={handleWhatsAppShare}
-                  type="button"
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 shadow transition-colors"
-                >
-                  <span>💬</span> Share WhatsApp
-                </button>
-              )}
+
+            {isWhatsAppEnabled && (
+              <button
+                type="button"
+                onClick={handleWhatsAppShare}
+                style={{
+                  padding: '0.35rem 0.65rem',
+                  background: '#15803d',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+              >
+                <MessageCircle size={13} />
+                <span>WhatsApp</span>
+              </button>
+            )}
+
             <button
+              type="button"
               onClick={handlePrint}
-              type="button"
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 shadow transition-colors"
+              style={{
+                padding: '0.35rem 0.75rem',
+                background: '#b91c1c',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
             >
-              <span>🖨️</span> Print / PDF
+              <Printer size={13} />
+              <span>Print</span>
             </button>
+
             <button
-              onClick={onClose}
               type="button"
-              className="p-1.5 text-slate-400 hover:text-white rounded text-lg leading-none"
-              title="Close"
+              onClick={onClose}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Close modal"
             >
-              ✕
+              <X size={18} />
             </button>
-          </div>
           </div>
         </div>
 
-        {/* Printable Paper Area */}
-        <div ref={invoiceRef} className="p-6 sm:p-8 bg-white font-sans text-slate-800 printable-content">
-          
-          {/* Header with Zamzam Signboard Branding: Red + Dark Red + Yellow */}
-          <div className="border-b-4 border-red-700 pb-5 mb-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <div className="inline-block bg-gradient-to-r from-red-800 to-red-600 text-amber-300 font-black text-2xl tracking-wider px-3 py-1 rounded shadow-sm">
-                  {businessName || 'ZAMZAM FOODS'}
+        {/* ==================================================================== */}
+        {/* PRINTABLE CONTENT AREA                                               */}
+        {/* ==================================================================== */}
+        <div
+          ref={invoiceRef}
+          className={`invoice-printable-wrapper ${printFormat === 'THERMAL' ? 'thermal-mode' : ''}`}
+          style={{
+            padding: printFormat === 'THERMAL' ? '1rem' : '1.75rem',
+            backgroundColor: '#ffffff',
+            color: '#0f172a',
+            fontFamily: printFormat === 'THERMAL' ? 'monospace, system-ui, sans-serif' : 'system-ui, -apple-system, sans-serif',
+          }}
+        >
+          {printFormat === 'THERMAL' ? (
+            /* ─────────────────────────────────────────────────────────────
+               FORMAT 1: 80mm THERMAL POS RECEIPT LAYOUT
+            ───────────────────────────────────────────────────────────── */
+            <div style={{ maxWidth: '340px', margin: '0 auto', fontSize: '12px', lineHeight: 1.35 }}>
+              {/* Header */}
+              <div style={{ textAlign: 'center', paddingBottom: '0.75rem', borderBottom: '1px dashed #0f172a' }}>
+                <img
+                  src="/app-icon.png"
+                  alt="Store Logo"
+                  style={{ width: '42px', height: '42px', objectFit: 'contain', margin: '0 auto 0.35rem', display: 'block' }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <div style={{ fontWeight: 900, fontSize: '15px', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                  {storeName}
                 </div>
-                <div className="text-xs font-semibold text-red-800 mt-1 uppercase tracking-wide">
-                  Wholesale Bakery & Bread Distribution
+                <div style={{ fontSize: '11px', color: '#334155', marginTop: '2px' }}>
+                  {storeAddress}
                 </div>
-                <div className="text-xs text-slate-500 mt-0.5">
-                  {BRAND_CONFIG.routes.join(' • ')} Routes | Ph: {businessPhone || BUSINESS_PHONE}
+                <div style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>
+                  Ph: {storePhone}
                 </div>
-                {gstNumber && (
-                  <div className="text-xs font-bold text-slate-700 mt-0.5 font-mono">
-                    GSTIN: <span className="text-red-700">{gstNumber}</span>
+                {storeGst && (
+                  <div style={{ fontSize: '11px', fontWeight: 800, marginTop: '2px' }}>
+                    GSTIN: {storeGst}
                   </div>
                 )}
-              </div>
-
-              <div className="sm:text-right">
-                <div className="text-xl font-bold text-slate-800 uppercase tracking-tight">TAX INVOICE</div>
-                <div className="text-xs font-semibold text-slate-600 mt-0.5">
-                  Invoice No: <span className="font-mono text-red-700 font-bold">INV-{order.order_number}</span>
+                <div style={{ fontWeight: 800, fontSize: '12px', marginTop: '0.5rem', borderTop: '1px solid #0f172a', paddingTop: '0.35rem' }}>
+                  TAX INVOICE / POS RECEIPT
                 </div>
-                <div className="text-xs text-slate-500">Date: {order.order_date}</div>
-                {order.route_details && (
-                  <div className="text-xs text-slate-500">Route: {order.route_details.name}</div>
-                )}
               </div>
-            </div>
-          </div>
 
-          {/* Customer & Order Metadata */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 p-3 bg-red-50/50 rounded-lg border border-red-100 text-xs">
-            <div>
-              <span className="font-bold text-red-900 uppercase block mb-1">Billed To (Customer):</span>
-              <div className="font-bold text-sm text-slate-800">{cust?.name || 'Customer'}</div>
-              {cust?.owner_name && <div className="text-slate-600">Attn: {cust.owner_name}</div>}
-              {cust?.phone && <div className="text-slate-600">Ph: {cust.phone}</div>}
-              {cust?.address && <div className="text-slate-600">{cust.address}</div>}
-            </div>
+              {/* Order & Customer Metadata */}
+              <div style={{ padding: '0.5rem 0', borderBottom: '1px dashed #0f172a', fontSize: '11px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Bill No: <strong>#{order.order_number}</strong></span>
+                  <span>Date: {order.order_date}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+                  <span>Customer: <strong>{cust?.name || 'Customer'}</strong></span>
+                </div>
+                {cust?.phone && <div>Phone: {cust.phone}</div>}
+                {order.route_details?.name && <div>Route: {order.route_details.name}</div>}
+                {order.driver_name && <div>Driver: {order.driver_name}</div>}
+              </div>
 
-            <div className="sm:text-right">
-              <span className="font-bold text-red-900 uppercase block mb-1">Dispatch Details:</span>
-              <div>Order Ref: <span className="font-mono font-medium">#{order.order_number}</span></div>
-              <div>Delivery Status: <span className="font-semibold text-red-700">{order.status}</span></div>
-              {order.driver_name && <div>Assigned Driver: {order.driver_name}</div>}
-              <div>Created On: {new Date(order.created_at).toLocaleDateString()}</div>
-            </div>
-          </div>
-
-          {/* Products Table */}
-          <div className="overflow-x-auto mb-6">
-            <table className="w-full text-left border-collapse text-xs sm:text-sm">
-              <thead>
-                <tr className="bg-red-800 text-white font-semibold uppercase text-[11px] tracking-wider">
-                  <th className="py-2 px-3 rounded-l">#</th>
-                  <th className="py-2 px-3">Item Description</th>
-                  <th className="py-2 px-3 text-right">Quantity</th>
-                  <th className="py-2 px-3 text-right">Unit Rate (₹)</th>
-                  <th className="py-2 px-3 text-right rounded-r">Total (₹)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {order.items.map((item, idx) => (
-                  <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                    <td className="py-2.5 px-3 text-slate-400 font-mono">{idx + 1}</td>
-                    <td className="py-2.5 px-3">
-                      <div className="font-bold text-slate-800">{item.product_details?.name || 'Product'}</div>
-                      {item.product_details?.packet_size && (
-                        <div className="text-[11px] text-slate-400">Pack: {item.product_details.packet_size}</div>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-medium text-slate-700">{item.quantity}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-slate-600">₹{Number(item.unit_price).toFixed(2)}</td>
-                    <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800">₹{Number(item.subtotal).toFixed(2)}</td>
-                  </tr>
+              {/* Itemized Table */}
+              <div style={{ padding: '0.5rem 0', borderBottom: '1px dashed #0f172a' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, borderBottom: '1px solid #0f172a', paddingBottom: '3px', fontSize: '11px' }}>
+                  <span style={{ width: '45%' }}>Item</span>
+                  <span style={{ width: '15%', textAlign: 'right' }}>Qty</span>
+                  <span style={{ width: '20%', textAlign: 'right' }}>Rate</span>
+                  <span style={{ width: '20%', textAlign: 'right' }}>Total</span>
+                </div>
+                {order.items.map((it) => (
+                  <div key={it.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: '11px' }}>
+                    <span style={{ width: '45%', fontWeight: 600 }}>{it.product_details?.name || 'Item'}</span>
+                    <span style={{ width: '15%', textAlign: 'right' }}>{it.quantity}</span>
+                    <span style={{ width: '20%', textAlign: 'right' }}>₹{Number(it.unit_price).toFixed(2)}</span>
+                    <span style={{ width: '20%', textAlign: 'right', fontWeight: 700 }}>₹{Number(it.subtotal).toFixed(2)}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Financial Breakdown Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start pt-3 border-t border-slate-200">
-            {/* Payment & Terms Note */}
-            <div className="text-xs text-slate-500 space-y-2">
-              <div className="p-3 bg-amber-50 rounded border border-amber-200 text-amber-900">
-                <div className="font-bold text-[11px] uppercase mb-0.5">Accepted Payment Modes:</div>
-                <div>Cash or UPI / GPay to Zamzam Foods authorized distribution driver.</div>
               </div>
-              <p className="text-[11px] italic">
-                * Note: Outstanding balance reflects the verified credit ledger as recorded in the wholesale distribution portal.
-              </p>
-            </div>
 
-            {/* Totals Summary */}
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2 text-xs sm:text-sm">
-              <div className="flex justify-between text-slate-600">
-                <span>Invoice Subtotal:</span>
-                <span className="font-mono font-medium">₹{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>Tax / GST:</span>
-                {applyGst ? (
-                  <span className="font-mono text-slate-700">₹{gstAmount.toFixed(2)} (5%)</span>
-                ) : (
-                  <span className="font-mono text-slate-400">₹0.00 (Exempt)</span>
+              {/* Totals Breakdown */}
+              <div style={{ padding: '0.5rem 0', borderBottom: '1px dashed #0f172a', fontSize: '11px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Subtotal:</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                {applyGst && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>GST (5%):</span>
+                    <span>₹{gstAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '13px', marginTop: '3px' }}>
+                  <span>CURRENT BILL:</span>
+                  <span>₹{finalTotal.toFixed(2)}</span>
+                </div>
+                {prevCredit > 0 && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px', color: '#b91c1c' }}>
+                      <span>Previous Due:</span>
+                      <span>₹{prevCredit.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '13px', marginTop: '3px', borderTop: '1px solid #0f172a', paddingTop: '3px' }}>
+                      <span>NET TOTAL DUE:</span>
+                      <span>₹{totalAccountDue.toFixed(2)}</span>
+                    </div>
+                  </>
                 )}
               </div>
-              
-              <div className="border-t border-slate-300 pt-2 flex justify-between font-bold text-base text-red-900">
-                <span>Current Order Total:</span>
-                <span className="font-mono">₹{finalTotal.toFixed(2)}</span>
-              </div>
 
-              {/* Outstanding Credit Separation */}
-              <div className="border-t border-slate-200 pt-2 mt-2 space-y-1">
-                <div className="flex justify-between text-slate-600 text-xs">
-                  <span>Previous Customer Balance:</span>
-                  <span className="font-mono">₹{prevCredit.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-900 font-bold text-sm bg-red-100/60 p-1.5 rounded">
-                  <span>Total Account Outstanding:</span>
-                  <span className="font-mono text-red-800">
-                    ₹{(subtotal + prevCredit).toFixed(2)}
-                  </span>
-                </div>
+              {/* Thermal Footer */}
+              <div style={{ textAlign: 'center', paddingTop: '0.65rem', fontSize: '10px', color: '#334155' }}>
+                {storeUpi && <div>UPI: <strong>{storeUpi}</strong></div>}
+                <div style={{ marginTop: '3px' }}>{storeFooterNotes}</div>
+                <div style={{ marginTop: '6px', fontWeight: 700 }}>* Thank You — Visit Again *</div>
               </div>
             </div>
-          </div>
+          ) : (
+            /* ─────────────────────────────────────────────────────────────
+               FORMAT 2: STANDARD A4/A5 PROFESSIONAL TAX INVOICE
+            ───────────────────────────────────────────────────────────── */
+            <div>
+              {/* Header with Store Identity, Logo & GSTIN */}
+              <div style={{ borderBottom: '2px solid #b91c1c', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                    <img
+                      src="/app-icon.png"
+                      alt="Store Logo"
+                      style={{
+                        width: '54px',
+                        height: '54px',
+                        objectFit: 'cover',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        flexShrink: 0,
+                      }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: '1.45rem', fontWeight: 900, color: '#b91c1c', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>
+                        {storeName}
+                      </h2>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginTop: '2px' }}>
+                        {storeAddress}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '2px' }}>
+                        Phone: <strong>{storePhone}</strong> {storeEmail ? `| Email: ${storeEmail}` : ''}
+                      </div>
+                      {storeGst && (
+                        <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0f172a', marginTop: '3px' }}>
+                          GSTIN: <span style={{ color: '#b91c1c', fontFamily: 'monospace' }}>{storeGst}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-          {/* Terms & Footer Notes */}
-          {settings?.invoice_footer_notes && (
-            <div className="mt-4 p-2.5 rounded bg-slate-50 border border-slate-200 text-xs text-slate-600 italic">
-              {settings.invoice_footer_notes}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0f172a', letterSpacing: '0.04em' }}>
+                      TAX INVOICE
+                    </div>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#b91c1c', marginTop: '2px' }}>
+                      Invoice No: <span style={{ fontFamily: 'monospace' }}>#{order.order_number}</span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '2px' }}>
+                      Date: <strong>{order.order_date}</strong>
+                    </div>
+                    {order.route_details?.name && (
+                      <div style={{ fontSize: '0.8rem', color: '#475569' }}>
+                        Route: <strong>{order.route_details.name}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Billed To (Customer Details) & Dispatch Details */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '1rem',
+                  padding: '0.85rem 1rem',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.82rem',
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '3px' }}>
+                    BILLED TO (CUSTOMER):
+                  </span>
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a' }}>
+                    {cust?.name || 'Customer'}
+                  </div>
+                  {cust?.owner_name && <div>Contact Person: <strong>{cust.owner_name}</strong></div>}
+                  {cust?.phone && <div>Phone: <strong>{cust.phone}</strong></div>}
+                  {cust?.address && <div>Address: {cust.address}</div>}
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '3px' }}>
+                    DISPATCH & PAYMENT STATUS:
+                  </span>
+                  <div>Order Reference: <strong style={{ fontFamily: 'monospace' }}>#{order.order_number}</strong></div>
+                  <div>Delivery Status: <strong style={{ color: '#b91c1c' }}>{order.status}</strong></div>
+                  {order.driver_name && <div>Delivery Driver: <strong>{order.driver_name}</strong></div>}
+                  <div>Created On: {new Date(order.created_at).toLocaleDateString()}</div>
+                </div>
+              </div>
+
+              {/* Products Table */}
+              <div style={{ overflowX: 'auto', marginBottom: '1.25rem' }}>
+                <table className="data-table" style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                      <th style={{ padding: '0.5rem 0.6rem', textAlign: 'center', width: '36px' }}>#</th>
+                      <th style={{ padding: '0.5rem 0.6rem', textAlign: 'left' }}>Item Description</th>
+                      <th style={{ padding: '0.5rem 0.6rem', textAlign: 'right', width: '80px' }}>Quantity</th>
+                      <th style={{ padding: '0.5rem 0.6rem', textAlign: 'right', width: '100px' }}>Unit Rate (₹)</th>
+                      <th style={{ padding: '0.5rem 0.6rem', textAlign: 'right', width: '110px' }}>Total (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.items.map((item, idx) => (
+                      <tr key={item.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '0.55rem 0.6rem', textAlign: 'center', color: '#64748b', fontFamily: 'monospace' }}>
+                          {idx + 1}
+                        </td>
+                        <td style={{ padding: '0.55rem 0.6rem' }}>
+                          <div style={{ fontWeight: 700, color: '#0f172a' }}>
+                            {item.product_details?.name || 'Product'}
+                          </div>
+                          {item.product_details?.packet_size && (
+                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                              Pack: {item.product_details.packet_size}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right', fontWeight: 600 }}>
+                          {item.quantity}
+                        </td>
+                        <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right', fontFamily: 'monospace' }}>
+                          ₹{Number(item.unit_price).toFixed(2)}
+                        </td>
+                        <td style={{ padding: '0.55rem 0.6rem', textAlign: 'right', fontFamily: 'monospace', fontWeight: 800 }}>
+                          ₹{Number(item.subtotal).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Financial Summary & Outstanding Ledger Section */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                  gap: '1.25rem',
+                  alignItems: 'start',
+                  paddingTop: '0.5rem',
+                  borderTop: '1px solid #e2e8f0',
+                }}
+              >
+                {/* Payment & Terms Note */}
+                <div style={{ fontSize: '0.78rem', color: '#475569' }}>
+                  <div
+                    style={{
+                      padding: '0.75rem',
+                      background: '#f8fafc',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                    }}
+                  >
+                    <div style={{ fontWeight: 800, textTransform: 'uppercase', color: '#0f172a', marginBottom: '3px', fontSize: '0.74rem' }}>
+                      Payment Methods & Terms:
+                    </div>
+                    <div>Cash on Delivery or UPI to authorized distribution driver.</div>
+                    {storeUpi && (
+                      <div style={{ marginTop: '4px', fontWeight: 700, color: '#0f172a' }}>
+                        UPI / VPA: <span style={{ fontFamily: 'monospace', color: '#b91c1c' }}>{storeUpi}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '0.5rem', fontStyle: 'italic' }}>
+                    * Outstanding balance is verified and synchronized with the live wholesale distribution credit ledger.
+                  </div>
+                </div>
+
+                {/* Calculation Table */}
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    padding: '0.85rem 1rem',
+                    fontSize: '0.84rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.35rem' }}>
+                    <span style={{ color: '#475569' }}>Invoice Subtotal:</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.35rem' }}>
+                    <span style={{ color: '#475569' }}>Tax / GST (5%):</span>
+                    <span style={{ fontFamily: 'monospace', color: applyGst ? '#0f172a' : '#94a3b8' }}>
+                      {applyGst ? `₹${gstAmount.toFixed(2)}` : '₹0.00 (Exempt)'}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      borderTop: '1px solid #cbd5e1',
+                      paddingTop: '0.45rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontWeight: 800,
+                      fontSize: '0.98rem',
+                      color: '#b91c1c',
+                    }}
+                  >
+                    <span>Current Bill Total:</span>
+                    <span style={{ fontFamily: 'monospace' }}>₹{finalTotal.toFixed(2)}</span>
+                  </div>
+
+                  {prevCredit > 0 && (
+                    <div style={{ borderTop: '1px dashed #cbd5e1', marginTop: '0.5rem', paddingTop: '0.45rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#475569' }}>
+                        <span>Previous Outstanding Due:</span>
+                        <span style={{ fontFamily: 'monospace', color: '#b91c1c', fontWeight: 700 }}>₹{prevCredit.toFixed(2)}</span>
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontWeight: 900,
+                          fontSize: '1rem',
+                          color: '#0f172a',
+                          background: '#fef2f2',
+                          padding: '0.35rem 0.5rem',
+                          borderRadius: '4px',
+                          marginTop: '4px',
+                          border: '1px solid #fecaca',
+                        }}
+                      >
+                        <span>Net Account Due:</span>
+                        <span style={{ fontFamily: 'monospace', color: '#b91c1c' }}>
+                          ₹{totalAccountDue.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer Notes */}
+              {storeFooterNotes && (
+                <div
+                  style={{
+                    marginTop: '1rem',
+                    padding: '0.6rem 0.85rem',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '0.74rem',
+                    color: '#475569',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  {storeFooterNotes}
+                </div>
+              )}
+
+              {/* Authorized Signatures */}
+              <div
+                style={{
+                  marginTop: '1.75rem',
+                  paddingTop: '1.25rem',
+                  borderTop: '1px solid #cbd5e1',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  textAlign: 'center',
+                  fontSize: '0.76rem',
+                  color: '#475569',
+                }}
+              >
+                <div>
+                  <div style={{ height: '40px' }} />
+                  <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '4px', fontWeight: 600 }}>
+                    Customer Signature & Seal
+                  </div>
+                </div>
+                <div>
+                  <div style={{ height: '40px' }} />
+                  <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '4px', fontWeight: 700, color: '#b91c1c' }}>
+                    For {storeName} (Authorized Signatory)
+                  </div>
+                </div>
+              </div>
             </div>
           )}
-
-          {/* Footer Signatures */}
-          <div className="mt-6 pt-6 border-t border-slate-200 grid grid-cols-2 text-center text-xs text-slate-500">
-            <div>
-              <div className="h-10"></div>
-              <div className="border-t border-dashed border-slate-300 pt-1 font-medium">
-                Customer Signature & Seal
-              </div>
-            </div>
-            <div>
-              <div className="h-10"></div>
-              <div className="border-t border-dashed border-slate-300 pt-1 font-medium text-red-900">
-                For Zamzam Foods (Authorized Signatory)
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
     </div>

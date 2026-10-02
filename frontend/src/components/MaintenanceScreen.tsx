@@ -26,7 +26,7 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ isPublic =
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+      background: '#0f172a',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -35,27 +35,26 @@ export const MaintenanceScreen: React.FC<MaintenanceScreenProps> = ({ isPublic =
       color: '#f8fafc',
     }}>
       <div style={{
-        maxWidth: 500,
+        maxWidth: 480,
         width: '100%',
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(16px)',
-        border: '1.5px solid rgba(239, 68, 68, 0.3)',
-        borderRadius: '20px',
-        padding: '2.5rem 2rem',
+        backgroundColor: '#1e293b',
+        border: '1px solid #334155',
+        borderRadius: '8px',
+        padding: '2rem 1.75rem',
         textAlign: 'center',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 40px rgba(239, 68, 68, 0.1)',
+        boxShadow: 'var(--shadow-md)',
       }}>
         {/* Animated Icon Badge */}
         <div style={{
-          width: 80,
-          height: 80,
-          borderRadius: '50%',
+          width: 56,
+          height: 56,
+          borderRadius: '8px',
           backgroundColor: 'rgba(239, 68, 68, 0.15)',
-          border: '2px solid rgba(239, 68, 68, 0.4)',
+          border: '1px solid rgba(239, 68, 68, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '0 auto 1.5rem',
+          margin: '0 auto 1.25rem',
           color: '#f87171',
         }}>
           <Wrench size={38} />

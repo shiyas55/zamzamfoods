@@ -25,20 +25,20 @@ export const DriverLayout: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-main)', display: 'flex', justifyContent: 'center' }}>
-      <div className="driver-shell" style={{ width: '100%', boxShadow: '0 0 30px rgba(0,0,0,0.12)' }}>
+      <div className="driver-shell" style={{ width: '100%', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
 
         {/* ── Sticky Header ── */}
         <header
           className="driver-header"
           style={{
-            background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 45%, #dc2626 100%)',
+            background: '#7f1d1d',
             color: 'white',
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'space-between',
-            padding: '0 1.1rem 0.75rem',
-            borderBottom: '2px solid #b91c1c',
-            boxShadow: '0 4px 12px rgba(127, 29, 29, 0.35)',
+            padding: '0 1rem 0.65rem',
+            borderBottom: '1px solid #991b1b',
+            boxShadow: 'var(--shadow-sm)',
           }}
         >
           {/* Brand + Route */}

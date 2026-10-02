@@ -3,7 +3,8 @@ import { creditService } from '../../services/creditService';
 import { customerService } from '../../services/customerService';
 import { CreditTransaction, Customer } from '../../types';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
-import { BookOpen, Plus, X } from 'lucide-react';
+import { BookOpen, Plus, X, FileText } from 'lucide-react';
+import { CustomerStatementModal } from '../../components/CustomerStatementModal';
 
 export const CreditLedgerPage: React.FC = () => {
   const [entries, setEntries] = useState<CreditTransaction[]>([]);
@@ -11,6 +12,7 @@ export const CreditLedgerPage: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [loading, setLoading] = useState(true);
+  const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
 
   // Adjustment Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -151,6 +153,21 @@ export const CreditLedgerPage: React.FC = () => {
           <option value="PAYMENT_REVERSAL">Payment Reversal</option>
           <option value="ADJUSTMENT">Adjustment</option>
         </select>
+
+        {selectedCustomer && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ color: '#b91c1c', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            onClick={() => {
+              const cust = customers.find((c) => c.id === selectedCustomer);
+              if (cust) setStatementCustomer(cust);
+            }}
+          >
+            <FileText size={15} />
+            <span>Print Customer Statement</span>
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -308,6 +325,14 @@ export const CreditLedgerPage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Customer Statement Modal */}
+      {statementCustomer && (
+        <CustomerStatementModal
+          customer={statementCustomer}
+          onClose={() => setStatementCustomer(null)}
+        />
       )}
     </div>
   );

@@ -79,3 +79,25 @@ python backend/manage.py migrate
 For zero-data-loss business continuity:
 1. **Continuous WAL Archiving**: Enable `archive_mode = on` and `archive_command` targeting an encrypted S3 / Cloud Storage bucket.
 2. **Read Replica**: Establish streaming replication for the Owner / Manager reporting dashboards to keep analytical query load separate from primary order write transactions.
+
+---
+
+## 4. Native Desktop Backup Manager (Tauri 2 & Rust)
+
+In addition to server snapshots, the **Zamzam Foods Desktop Application** (Tauri 2) includes an independent local backup daemon written in Rust:
+
+### Features
+* **Automated Closing Backup**: Captures a verified database snapshot whenever the store billing / counter application is closed.
+* **23:59 Safety Daemon**: Background thread verifies if the daily closing backup was performed; if missing, triggers a safety snapshot at 23:59.
+* **Duplicate Prevention**: Tracks daily backup completion (`YYYY-MM-DD`) and prevents redundant daily runs.
+* **Native Folder Picker**: Users choose their preferred local backup drive/directory (external HDD, USB, local folder).
+* **Safe Retention Policy**: Retains the last 30 successful backups (configurable) and **never deletes existing backups when a new backup fails**.
+* **Pre-Save Integrity Verification**: Backups are written to a `.tmp` file and checked for size, SQL transactional headers, and SHA-256 checksums before atomic rename.
+* **Zero Credential Exposure**: Database credentials (`DATABASE_URL`) remain securely on the server and are never exposed to the frontend, desktop UI, or client logs.
+
+### Restoring a Native PostgreSQL Desktop Backup (`.sql`):
+```bash
+# Execute against target PostgreSQL instance:
+psql "${DATABASE_URL}" -f "/path/to/backup/zamzam_backup_postgresql_YYYYMMDD_HHMMSS.sql"
+```
+

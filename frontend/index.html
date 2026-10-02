@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- PWA Meta -->
-    <meta name="theme-color" content="#dc2626" />
+    <meta name="theme-color" content="#b91c1c" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -28,25 +28,18 @@
     <title>Zamzam Foods — Distribution Management</title>
     
     <script>
-      // Automatic Cache Invalidation Engine (v3.2.1)
-      (function() {
-        var APP_BUILD_ID = '20261001-v3.2.1';
-        var lastBuild = localStorage.getItem('zamzam_app_build');
-        if (lastBuild !== APP_BUILD_ID) {
-          localStorage.setItem('zamzam_app_build', APP_BUILD_ID);
-          if ('caches' in window) {
-            caches.keys().then(function(keys) {
-              keys.forEach(function(k) { caches.delete(k); });
-            });
-          }
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(regs) {
-              regs.forEach(function(r) { r.unregister(); });
-            });
-          }
-        }
-      })();
+      // PWA Service Worker Registration
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http') && !window.__TAURI_INTERNALS__) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(reg) {
+            console.log('Zamzam PWA active with scope:', reg.scope);
+          }).catch(function(err) {
+            console.warn('PWA service worker registration failed:', err);
+          });
+        });
+      }
     </script>
+
   </head>
   <body>
     <div id="root"></div>

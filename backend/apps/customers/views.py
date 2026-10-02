@@ -53,6 +53,19 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
         return queryset.order_by("route__name", "name")
 
+    def destroy(self, request, *args, **kwargs):
+        from django.db.models import ProtectedError
+        instance = self.get_object()
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": "Cannot delete this customer shop because it has existing orders, payments, or delivery history. You can deactivate the shop instead to maintain financial audit integrity."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     @extend_schema(responses={200: CustomerPricingOverviewItemSerializer(many=True)})
     @action(detail=True, methods=["get", "post"], url_path="pricing")
     def pricing(self, request, pk=None):
@@ -176,26 +189,37 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "last_order_date": last_order_obj.order_date if last_order_obj else None,
         }
 
-        # Recent orders
+        # Recent orders (full historical details including product details, source, and delivery status)
         recent_orders = [
             {
                 "id": str(o.id),
                 "order_number": o.order_number,
-                "order_date": o.order_date,
+                "order_date": str(o.order_date),
                 "status": o.status,
-                "total_amount": o.total_amount,
+                "total_amount": str(o.total_amount),
+                "source": o.source,
+                "delivery_status": o.delivery.status if hasattr(o, "delivery") and o.delivery else "ASSIGNED",
                 "items": [
                     {
                         "id": str(it.id),
+                        "product": str(it.product.id),
                         "product_name": it.product.name,
+                        "product_details": {
+                            "id": str(it.product.id),
+                            "name": it.product.name,
+                            "code": it.product.code,
+                            "packet_size": it.product.packet_size or "",
+                            "unit_price": str(it.unit_price),
+                            "is_active": it.product.is_active,
+                        },
                         "quantity": it.quantity,
-                        "unit_price": it.unit_price,
-                        "subtotal": it.subtotal,
+                        "unit_price": str(it.unit_price),
+                        "subtotal": str(it.subtotal),
                     }
                     for it in o.items.select_related("product").all()
                 ],
             }
-            for o in orders[:10]
+            for o in orders.select_related("delivery")[:100]
         ]
 
         # Recent payments

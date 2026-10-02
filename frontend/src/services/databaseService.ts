@@ -25,7 +25,19 @@ export interface DatabaseStats {
 
 export interface BackupRequest {
   type: 'full' | 'selective';
+  format?: 'sql' | 'json';
   modules?: string[];
+}
+
+
+export interface RestoreResult {
+  success: boolean;
+  message: string;
+  format: string;
+  records_restored?: number;
+  statements_executed?: number;
+  filename: string;
+  restored_at: string;
 }
 
 export const databaseService = {
@@ -54,10 +66,11 @@ export const databaseService = {
       const errData = await response.json().catch(() => ({}));
       throw new Error(errData?.error || 'Failed to generate database backup');
     }
-
     const blob = await response.blob();
     const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = `zamzam_backup_${payload.type}_${new Date().toISOString().slice(0, 10)}.json`;
+    const ext = payload.format === 'sql' ? 'sql' : 'json';
+    let filename = `zamzam_backup_${payload.type}_${new Date().toISOString().slice(0, 10)}.${ext}`;
+
     if (contentDisposition) {
       const match = contentDisposition.match(/filename="?([^"]+)"?/);
       if (match && match[1]) {
@@ -73,5 +86,33 @@ export const databaseService = {
     a.click();
     a.remove();
     window.URL.revokeObjectURL(downloadUrl);
+  },
+
+  async restoreDatabase(file: File, format?: 'sql' | 'json'): Promise<RestoreResult> {
+    const url = `${API_BASE_URL}/database/restore/`;
+    const token = localStorage.getItem('zamzam_access_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    if (format) {
+      formData.append('format', format);
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: formData,
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data?.error || 'Database restoration failed');
+    }
+    return data as RestoreResult;
   },
 };

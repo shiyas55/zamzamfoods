@@ -57,8 +57,11 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# ─── Security ─────────────────────────────────────────────────────────────────
-*.pem
-*.key
-*.p12
-*.pfx
+# ─── Desktop App Builds ────────────────────────────────────────────────────────
+src-tauri/target/
+frontend/src-tauri/target/
+*.dmg
+*.exe
+*.msi
+*.app
+

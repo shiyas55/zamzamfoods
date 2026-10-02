@@ -138,13 +138,39 @@ Tests include:
 
 ---
 
-## 8. Production Deployment & PostgreSQL Migration
+---
 
-1. Set `DJANGO_ENV=production` in your `.env`.
-2. Configure PostgreSQL credentials or `DATABASE_URL` (e.g. `postgres://user:password@localhost:5432/zamzam_db`).
-3. Set `DJANGO_SECRET_KEY` and `JWT_SECRET_KEY` with strong random values.
-4. Set `DJANGO_ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS`.
-5. Run migrations: `python manage.py migrate`.
-6. Collect static assets: `python manage.py collectstatic --noinput`.
-7. Serve with Gunicorn/Uvicorn behind Nginx with SSL.
-# zamzamfoods
+## 9. Desktop Application (Tauri 2 & Rust)
+
+Zamzam Foods provides a native desktop wrapper built with **Tauri 2** (Rust) that embeds the React frontend with zero overhead and full native OS integration:
+
+### Running Desktop in Development:
+```bash
+cd frontend
+npm run desktop
+```
+
+### Packaging Production Installers:
+```bash
+# Windows (.exe NSIS installer)
+npm run desktop:build:win
+
+# macOS (.dmg)
+npm run desktop:build:mac
+
+# Linux (.deb / .AppImage)
+npm run desktop:build:linux
+```
+
+### Native Automated Backup Manager:
+The desktop application features a native Rust backup manager running independently in the background:
+* **Settings → Database Backup**:
+  * Native folder picker dialog to select local backup directory.
+  * One-click "Backup Now" with instant verification.
+  * Configurable retention (default 30 backups, never deletes prior backups on failure).
+  * Automatic daily closing backup when counter application closes.
+  * 23:59 safety backup daemon (runs if daily closing backup was not completed).
+  * Duplicate daily backup prevention.
+  * Real restorable PostgreSQL SQL transactional dumps.
+  * Zero database credential exposure to the frontend.
+

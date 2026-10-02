@@ -65,6 +65,9 @@ export interface Customer {
   is_credit_exceeded: boolean;
   is_active: boolean;
   notes?: string;
+  product_prices?: Array<{ product_id: string; price: string }>;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CustomerProductPrice {
@@ -179,6 +182,8 @@ export interface Order {
   entered_by_role?: string;
   entered_by_name?: string;
   created_at: string;
+  updated_at?: string;
+  submitted_at?: string;
 }
 
 export type DeliveryStatus = 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'NOT_DELIVERED' | 'FAILED' | 'RETURNED';
@@ -197,8 +202,11 @@ export interface Delivery {
   recipient_name?: string;
   failed_reason?: string;
   notes?: string;
+  stop_number?: number;
   created_at: string;
 }
+
+
 
 export type DriverExpenseCategory = 'PETROL' | 'FOOD' | 'PARKING' | 'TOLL' | 'MAINTENANCE' | 'SHOP_EXPENSE' | 'OTHER';
 export type DriverExpenseStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED';

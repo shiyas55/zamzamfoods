@@ -440,9 +440,9 @@ export const DriverCollectPaymentPage: React.FC = () => {
             {selectedCustomer && (
               <div
                 style={{
-                  background: 'linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%)',
+                  background: '#fef2f2',
                   padding: '0.85rem 1rem',
-                  borderRadius: '10px',
+                  borderRadius: '6px',
                   border: '1px solid #fecdd3',
                   display: 'flex',
                   justifyContent: 'space-between',

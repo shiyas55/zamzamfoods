@@ -6,23 +6,24 @@
   "description": "Zamzam Foods — Enterprise Distribution Management System",
   "author": "Zamzam Foods",
   "type": "module",
-  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "start": "vite preview --host 0.0.0.0 --port ${PORT:-5173}",
     "lint": "oxlint",
     "preview": "vite preview --host 0.0.0.0 --port ${PORT:-5173}",
-    "electron": "electron .",
-    "electron:dev": "NODE_ENV=development electron .",
-    "desktop": "electron .",
-    "electron:build": "npm run build && electron-builder",
-    "electron:build:mac": "npm run build && electron-builder --mac",
-    "electron:build:win": "npm run build && electron-builder --win",
-    "electron:build:linux": "npm run build && electron-builder --linux",
-    "electron:build:all": "npm run build && electron-builder -mwl"
+    "tauri": "tauri",
+    "desktop": "tauri dev",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "npm run build && tauri build",
+    "desktop:build:win": "npm run build && tauri build --target x86_64-pc-windows-msvc",
+    "desktop:build:mac": "npm run build && tauri build --target aarch64-apple-darwin",
+    "desktop:build:linux": "npm run build && tauri build --target x86_64-unknown-linux-gnu"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.8.1",
+    "@tauri-apps/plugin-opener": "^2.7.0",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.48.0",
     "react": "^19.2.8",
@@ -30,104 +31,13 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
-    "electron": "^44.4.5",
-    "electron-builder": "^26.15.3",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
-  },
-  "build": {
-    "appId": "com.zamzamfoods.desktop",
-    "productName": "Zamzam Foods",
-    "copyright": "Copyright © 2026 Zamzam Foods",
-    "directories": {
-      "output": "release",
-      "buildResources": "public"
-    },
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "public/**/*",
-      "package.json"
-    ],
-    "mac": {
-      "category": "public.app-category.business",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        }
-      ],
-      "icon": "public/icon-512.png",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false
-    },
-    "dmg": {
-      "title": "Zamzam Foods Installer",
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "public/icon-512.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "Zamzam Foods",
-      "uninstallDisplayName": "Zamzam Foods"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "public/icon-512.png",
-      "category": "Office",
-      "maintainer": "Zamzam Foods <info@zamzamfoods.com>"
-    }
   }
 }

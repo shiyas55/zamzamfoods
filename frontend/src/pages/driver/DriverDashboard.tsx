@@ -1,2301 +1,1425 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { deliveryService } from '../../services/deliveryService';
-import { reportService } from '../../services/reportService';
 import { paymentService } from '../../services/paymentService';
-import { Delivery, DashboardSummary, PaymentMethod } from '../../types';
-import { formatCurrency, formatDateTime } from '../../utils/formatters';
-import { openWhatsApp, generatePaymentReceiptMessage } from '../../utils/whatsappUtils';
+import { Delivery, PaymentMethod } from '../../types';
+import { formatCurrency } from '../../utils/formatters';
 import {
-  Truck,
   CheckCircle2,
   Clock,
-  MapPin,
-  HandCoins,
-  RefreshCw,
-  X,
-  XCircle,
   Phone,
   Navigation,
-  ChevronDown,
-  ChevronUp,
-  Receipt,
   Search,
   Check,
   Banknote,
   QrCode,
   AlertTriangle,
-  RotateCcw,
-  MessageSquare,
-  Sparkles,
-  Sunrise,
-  Sun,
-  Lock,
-  Unlock,
-  CheckSquare,
-  Square,
-  Package,
-  AlertCircle,
-  ShoppingBag,
-  ShieldCheck,
-  TrendingDown,
+  X,
+  XCircle,
+  RefreshCw,
+  HandCoins,
+  Store,
+  ChevronRight,
 } from 'lucide-react';
-import { driverShiftService, DriverShift } from '../../services/driverShiftService';
-import { useSettings } from '../../context/SettingsContext';
 
-const NOT_DELIVERED_REASONS = [
+const SKIP_REASONS = [
   'Shop Closed',
   'Owner Not Available',
   'Customer Refused Order',
   'Stock Already Sufficient',
   'Damaged In Transit',
   'Rescheduled to Tomorrow',
-  'Other Reason',
+  'Other',
 ];
+
+interface ShopFinancials {
+  previousOutstanding: number;
+  todayAmount: number;
+  collectedAmount: number;
+  remainingAmount: number;
+  totalDue: number;
+}
+
+const formatCompactINR = (val: number): string => {
+  if (val === 0) return '₹0';
+  const hasDecimals = val % 1 !== 0;
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(val);
+};
 
 export const DriverDashboard: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const { isWhatsAppEnabled } = useSettings();
 
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [paymentSummary, setPaymentSummary] = useState<{ total_collected: string; cash_total: string; upi_total: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'DELIVERED' | 'NOT_DELIVERED'>('ALL');
+  const [refreshing, setRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'DELIVERED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Driver Shift (Day Open / Day Close)
-  const [shift, setShift] = useState<DriverShift | null>(null);
-
-  // Day Open State
-  const [checkKubbus, setCheckKubbus] = useState(true);
-  const [checkRomali, setCheckRomali] = useState(true);
-  const [kubbusTakeInput, setKubbusTakeInput] = useState('');
-  const [romaliTakeInput, setRomaliTakeInput] = useState('');
-  const [openNotes, setOpenNotes] = useState('');
-  const [submittingOpenDay, setSubmittingOpenDay] = useState(false);
-  const [openDayError, setOpenDayError] = useState<string | null>(null);
-
-  // Day Close Modal State
-  const [isDayCloseModalOpen, setIsDayCloseModalOpen] = useState(false);
-  const [kubbusReturnInput, setKubbusReturnInput] = useState('0');
-  const [romaliReturnInput, setRomaliReturnInput] = useState('0');
-  const [closeNotes, setCloseNotes] = useState('');
-  const [submittingCloseDay, setSubmittingCloseDay] = useState(false);
-  const [closeDayError, setCloseDayError] = useState<string | null>(null);
-
-  // Expanded card tracking: set of delivery IDs currently expanded
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
-
-  // 1. Standalone Payment Collection Modal
+  // 1. Payment Modal State
   const [paymentDelivery, setPaymentDelivery] = useState<Delivery | null>(null);
   const [collectAmount, setCollectAmount] = useState('');
   const [collectMethod, setCollectMethod] = useState<PaymentMethod>('CASH');
   const [collectRef, setCollectRef] = useState('');
-  const [collectNotes, setCollectNotes] = useState('');
 
-  // 2. Delivery Completion Modal
+  // 2. Complete Delivery Modal State
   const [completeDelivery, setCompleteDelivery] = useState<Delivery | null>(null);
   const [recipientName, setRecipientName] = useState('');
-  const [deliveryNotes, setDeliveryNotes] = useState('');
   const [includePayment, setIncludePayment] = useState(false);
   const [completePayAmount, setCompletePayAmount] = useState('');
   const [completePayMethod, setCompletePayMethod] = useState<PaymentMethod>('CASH');
-  const [completePayRef, setCompletePayRef] = useState('');
 
-  // 3. Not Delivered / Skip Modal
+  // 3. Skip / Not Delivered Modal State
   const [skipDelivery, setSkipDelivery] = useState<Delivery | null>(null);
-  const [skipReason, setSkipReason] = useState(NOT_DELIVERED_REASONS[0]);
-  const [skipNotes, setSkipNotes] = useState('');
+  const [skipReason, setSkipReason] = useState(SKIP_REASONS[0]);
 
-  // 4. Payment Success Modal (WhatsApp share)
-  const [paymentSuccessData, setPaymentSuccessData] = useState<{
-    customerName: string;
-    customerPhone?: string;
-    paymentNumber: string;
-    amount: string;
-    paymentMethod: string;
-    remainingBalance: string;
-    date: string;
-  } | null>(null);
-
+  // Async action submission state
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // Helper to extract Kubbus and Romali quantities in pieces (ps) for any delivery
-  const getStopQuantities = (d: Delivery) => {
-    let kubbus = 0;
-    let romali = 0;
-    const items = d.order_details?.items || [];
-    for (const it of items) {
-      const name = (it.product_details?.name || '').toLowerCase();
-      const code = (it.product_details?.code || (it.product_details as any)?.sku || '').toLowerCase();
-      if (name.includes('kub') || code.includes('kub')) {
-        kubbus += Number(it.quantity) || 0;
-      } else if (name.includes('rom') || code.includes('rom')) {
-        romali += Number(it.quantity) || 0;
-      }
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (successToast) {
+      const t = setTimeout(() => setSuccessToast(null), 3500);
+      return () => clearTimeout(t);
     }
-    return { kubbus, romali };
-  };
+  }, [successToast]);
 
-  const fetchData = async () => {
+  const fetchDeliveries = useCallback(async (isSilent = false) => {
     try {
-      setLoading(true);
-      const [delList, sumData, paySum, shiftData] = await Promise.all([
-        deliveryService.getDeliveries(),
-        reportService.getDashboardSummary(),
-        paymentService.getDailySummary(),
-        driverShiftService.getTodayShift().catch((err) => {
-          console.warn('Driver shift status not loaded:', err);
-          return null;
-        }),
-      ]);
-      setDeliveries(delList);
-      setSummary(sumData);
-      setPaymentSummary(paySum);
-      if (shiftData) {
-        setShift(shiftData);
-        if (!shiftData.is_opened) {
-          const kQty =
-            shiftData.metrics?.assigned_kubbus ||
-            delList.reduce((acc: number, d: Delivery) => acc + getStopQuantities(d).kubbus, 0);
-          const rQty =
-            shiftData.metrics?.assigned_romali ||
-            delList.reduce((acc: number, d: Delivery) => acc + getStopQuantities(d).romali, 0);
-          setKubbusTakeInput(String(kQty));
-          setRomaliTakeInput(String(rQty));
-        }
-      }
-    } catch (err: unknown) {
-      console.error(err);
+      if (!isSilent) setLoading(true);
+      else setRefreshing(true);
+      const data = await deliveryService.getDeliveries();
+      setDeliveries(data);
+    } catch (err) {
+      console.warn('Failed to load deliveries:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
+    fetchDeliveries();
 
-    // Auto-sync deliveries in background every 25 seconds
+    // Auto-refresh in background every 20 seconds
     const interval = setInterval(() => {
-      deliveryService.getDeliveries().then((delList) => {
-        setDeliveries(delList);
-      }).catch((err) => {
-        console.warn('Background delivery refresh failed:', err);
-      });
-    }, 25000);
+      fetchDeliveries(true);
+    }, 20000);
 
-    const handleFocus = () => {
-      deliveryService.getDeliveries().then((delList) => {
-        setDeliveries(delList);
-      }).catch(() => {});
-    };
+    const handleFocus = () => fetchDeliveries(true);
     window.addEventListener('focus', handleFocus);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [fetchDeliveries]);
 
-  const toggleExpand = (id: string) => {
-    setExpandedCards((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
-  const handleOpenMaps = (address?: string) => {
-    if (!address) return;
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  // Financial calculations helper for any delivery stop
-  const getDeliveryFinancials = (d: Delivery) => {
+  // Compute financial values clearly for each delivery stop
+  const getFinancials = useCallback((d: Delivery): ShopFinancials => {
     const todayAmount = parseFloat(d.order_details?.total_amount || '0');
-    const customerCurrentDebt = parseFloat(d.order_details?.customer_details?.current_balance || '0');
+    const customerBalance = parseFloat(d.order_details?.customer_details?.current_balance || '0');
 
+    // In backend: if DELIVERED, today's order was already posted to current_balance
     let previousOutstanding = 0;
     let totalDue = 0;
 
     if (d.status === 'DELIVERED') {
-      // Order amount was already posted to current_balance
-      previousOutstanding = Math.max(0, customerCurrentDebt - todayAmount);
-      totalDue = customerCurrentDebt;
+      previousOutstanding = Math.max(0, customerBalance - todayAmount);
+      totalDue = customerBalance;
     } else {
-      // Order is pending or not delivered; current_balance is previous credit
-      previousOutstanding = customerCurrentDebt;
+      previousOutstanding = customerBalance;
       totalDue = previousOutstanding + todayAmount;
     }
+
+    // Collected for this specific delivery order if tracked, or payments today
+    const collectedAmount = parseFloat(
+      (d.order_details as any)?.paid_amount ||
+      (d.order_details as any)?.amount_paid ||
+      '0'
+    );
+
+    const remainingAmount = Math.max(0, totalDue - collectedAmount);
 
     return {
       previousOutstanding,
       todayAmount,
+      collectedAmount,
+      remainingAmount,
       totalDue,
     };
-  };
+  }, []);
 
-  // Open standalone payment collection modal
-  const openCollectPaymentModal = (d: Delivery) => {
-    const fin = getDeliveryFinancials(d);
+  // Filtered deliveries for mobile display
+  const filteredDeliveries = useMemo(() => {
+    return deliveries.filter((d) => {
+      if (statusFilter === 'PENDING' && (d.status === 'DELIVERED' || d.status === 'NOT_DELIVERED')) return false;
+      if (statusFilter === 'DELIVERED' && d.status !== 'DELIVERED') return false;
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const name = d.order_details?.customer_details?.name?.toLowerCase() || '';
+        const phone = d.order_details?.customer_details?.phone?.toLowerCase() || '';
+        const addr = d.order_details?.customer_details?.address?.toLowerCase() || '';
+        return name.includes(q) || phone.includes(q) || addr.includes(q);
+      }
+      return true;
+    });
+  }, [deliveries, statusFilter, searchQuery]);
+
+  const counts = useMemo(() => {
+    const total = deliveries.length;
+    const delivered = deliveries.filter((d) => d.status === 'DELIVERED').length;
+    const pending = deliveries.filter((d) => d.status !== 'DELIVERED' && d.status !== 'NOT_DELIVERED').length;
+    return { total, delivered, pending };
+  }, [deliveries]);
+
+  // Open Collect Modal
+  const openCollect = (d: Delivery) => {
+    const fin = getFinancials(d);
     setPaymentDelivery(d);
-    setCollectAmount(fin.todayAmount > 0 ? fin.todayAmount.toString() : fin.totalDue.toString());
+    // Default to today's bill amount, or remaining due if bill is 0
+    const defaultAmount = fin.todayAmount > 0 ? fin.todayAmount : fin.remainingAmount;
+    setCollectAmount(defaultAmount > 0 ? String(defaultAmount) : '');
     setCollectMethod('CASH');
     setCollectRef('');
-    setCollectNotes('');
     setActionError(null);
   };
 
-  // Submit standalone payment collection
+  // Submit Collect Payment
   const handleConfirmPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!paymentDelivery) return;
 
-    const amountNum = parseFloat(collectAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      setActionError('Please enter a valid payment amount greater than zero.');
+    const amt = parseFloat(collectAmount);
+    if (isNaN(amt) || amt <= 0) {
+      setActionError('Please enter a valid amount greater than ₹0');
       return;
     }
 
     try {
       setSubmitting(true);
       setActionError(null);
+      const shopName = paymentDelivery.order_details?.customer_details?.name || 'Shop';
 
-      const customerId = paymentDelivery.order_details?.customer || '';
-      const orderId = paymentDelivery.order;
-      const fin = getDeliveryFinancials(paymentDelivery);
-      const remainingDebt = Math.max(0, fin.totalDue - amountNum).toFixed(2);
-
-      const recorded = await paymentService.recordPayment({
-        customer_id: customerId,
-        amount: amountNum.toFixed(2),
+      await paymentService.recordPayment({
+        customer_id: paymentDelivery.order_details?.customer || '',
+        order_id: paymentDelivery.order,
+        amount: amt.toFixed(2),
         payment_method: collectMethod,
-        order_id: orderId,
         reference_number: collectRef.trim() || undefined,
-        notes: collectNotes.trim() || `Collected for shop ${paymentDelivery.order_details?.customer_details?.name}`,
+        notes: `Collected by driver for ${shopName}`,
       });
 
+      setSuccessToast(`₹${amt} collected from ${shopName}`);
       setPaymentDelivery(null);
-      setPaymentSuccessData({
-        customerName: paymentDelivery.order_details?.customer_details?.name || 'Customer Shop',
-        customerPhone: paymentDelivery.order_details?.customer_details?.phone,
-        paymentNumber: recorded.payment_number,
-        amount: amountNum.toFixed(2),
-        paymentMethod: collectMethod,
-        remainingBalance: remainingDebt,
-        date: new Date().toLocaleDateString(),
-      });
-
-      fetchData();
+      await fetchDeliveries(true);
     } catch (err: any) {
-      setActionError(err.response?.data?.error || err.message || 'Failed to record payment');
+      setActionError(err.response?.data?.error || err.message || 'Payment collection failed');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Open complete delivery modal
-  const openCompleteModal = (d: Delivery) => {
-    const fin = getDeliveryFinancials(d);
+  // Open Complete Delivery Modal
+  const openComplete = (d: Delivery) => {
+    const fin = getFinancials(d);
     setCompleteDelivery(d);
     setRecipientName(d.order_details?.customer_details?.owner_name || 'Staff');
-    setDeliveryNotes('');
     setIncludePayment(false);
-    setCompletePayAmount(fin.todayAmount.toString());
+    setCompletePayAmount(fin.todayAmount > 0 ? String(fin.todayAmount) : '');
     setCompletePayMethod('CASH');
-    setCompletePayRef('');
     setActionError(null);
   };
 
-  // Submit delivery completion
-  const handleCompleteDelivery = async (e: React.FormEvent) => {
+  // Submit Complete Delivery
+  const handleConfirmComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!completeDelivery) return;
 
-    if (!recipientName.trim()) {
-      setActionError('Recipient / Staff name is required.');
-      return;
-    }
-
     try {
       setSubmitting(true);
       setActionError(null);
+      const shopName = completeDelivery.order_details?.customer_details?.name || 'Shop';
 
       // 1. Complete delivery in backend
       await deliveryService.completeDelivery(completeDelivery.id, {
-        recipient_name: recipientName.trim(),
-        notes: deliveryNotes.trim() || undefined,
+        recipient_name: recipientName.trim() || 'Staff',
       });
 
-      // 2. If payment included
-      if (includePayment && parseFloat(completePayAmount) > 0) {
-        const payNum = parseFloat(completePayAmount);
-        const fin = getDeliveryFinancials(completeDelivery);
-        const remaining = Math.max(0, fin.totalDue - payNum).toFixed(2);
-
-        const recordedPay = await paymentService.recordPayment({
-          customer_id: completeDelivery.order_details?.customer || '',
-          order_id: completeDelivery.order,
-          amount: payNum.toFixed(2),
-          payment_method: completePayMethod,
-          reference_number: completePayRef.trim() || undefined,
-          notes: `Collected upon delivery #${completeDelivery.delivery_number}`,
-        });
-
-        setPaymentSuccessData({
-          customerName: completeDelivery.order_details?.customer_details?.name || 'Customer Shop',
-          customerPhone: completeDelivery.order_details?.customer_details?.phone,
-          paymentNumber: recordedPay.payment_number,
-          amount: payNum.toFixed(2),
-          paymentMethod: completePayMethod,
-          remainingBalance: remaining,
-          date: new Date().toLocaleDateString(),
-        });
+      // 2. If payment was collected at time of delivery
+      if (includePayment) {
+        const pAmt = parseFloat(completePayAmount);
+        if (!isNaN(pAmt) && pAmt > 0) {
+          await paymentService.recordPayment({
+            customer_id: completeDelivery.order_details?.customer || '',
+            order_id: completeDelivery.order,
+            amount: pAmt.toFixed(2),
+            payment_method: completePayMethod,
+            notes: `Collected upon delivery at ${shopName}`,
+          });
+        }
       }
 
+      setSuccessToast(`✓ Delivery completed for ${shopName}`);
       setCompleteDelivery(null);
-      fetchData();
+      await fetchDeliveries(true);
     } catch (err: any) {
-      setActionError(err.response?.data?.error || err.message || 'Failed to complete delivery.');
+      setActionError(err.response?.data?.error || err.message || 'Delivery completion failed');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Open Skip / Not Delivered modal
-  const openSkipModal = (d: Delivery) => {
-    setSkipDelivery(d);
-    setSkipReason(NOT_DELIVERED_REASONS[0]);
-    setSkipNotes('');
-    setActionError(null);
-  };
-
-  // Submit Skip / Not Delivered
-  const handleConfirmSkip = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Submit Skip Delivery
+  const handleConfirmSkip = async () => {
     if (!skipDelivery) return;
-
     try {
       setSubmitting(true);
       setActionError(null);
+      const shopName = skipDelivery.order_details?.customer_details?.name || 'Shop';
 
       await deliveryService.markNotDelivered(skipDelivery.id, {
         failed_reason: skipReason,
-        notes: skipNotes.trim() || undefined,
       });
 
+      setSuccessToast(`Delivery marked as skipped for ${shopName}`);
       setSkipDelivery(null);
-      fetchData();
+      await fetchDeliveries(true);
     } catch (err: any) {
-      setActionError(err.response?.data?.error || err.message || 'Failed to record stop status.');
+      setActionError(err.response?.data?.error || err.message || 'Failed to skip delivery');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Stock calculations across route deliveries
-  const totalAssignedKubbus = deliveries.reduce((acc, d) => acc + getStopQuantities(d).kubbus, 0);
-  const totalAssignedRomali = deliveries.reduce((acc, d) => acc + getStopQuantities(d).romali, 0);
-
-  const deliveredKubbus = deliveries
-    .filter((d) => d.status === 'DELIVERED')
-    .reduce((acc, d) => acc + getStopQuantities(d).kubbus, 0);
-  const deliveredRomali = deliveries
-    .filter((d) => d.status === 'DELIVERED')
-    .reduce((acc, d) => acc + getStopQuantities(d).romali, 0);
-
-  const allocatedKubbus = shift?.metrics?.assigned_kubbus || totalAssignedKubbus;
-  const allocatedRomali = shift?.metrics?.assigned_romali || totalAssignedRomali;
-
-  const currentKubbusLoaded = shift?.is_opened
-    ? shift.kubbus_loaded
-    : (parseInt(kubbusTakeInput, 10) || allocatedKubbus);
-  const currentRomaliLoaded = shift?.is_opened
-    ? shift.romali_loaded
-    : (parseInt(romaliTakeInput, 10) || allocatedRomali);
-
-  const remainingKubbusInVan = Math.max(0, currentKubbusLoaded - deliveredKubbus);
-  const remainingRomaliInVan = Math.max(0, currentRomaliLoaded - deliveredRomali);
-
-  // Financial metrics for shift handover
-  const shiftCash = parseFloat(paymentSummary?.cash_total || shift?.cash_collected || '0');
-  const shiftExpenses = parseFloat(shift?.expenses_total || '0');
-  const shiftNetHandover = Math.max(0, shiftCash - shiftExpenses);
-
-  // Handle Day Opening Submission
-  const handleOpenDay = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!checkKubbus || !checkRomali) {
-      setOpenDayError('Please verify and check both Kubbus and Romali checkboxes before opening shift.');
-      return;
-    }
-    const kLoaded = parseInt(kubbusTakeInput, 10);
-    const rLoaded = parseInt(romaliTakeInput, 10);
-    if (isNaN(kLoaded) || kLoaded < 0 || isNaN(rLoaded) || rLoaded < 0) {
-      setOpenDayError('Please enter valid quantities for loaded stock.');
-      return;
-    }
-
-    try {
-      setSubmittingOpenDay(true);
-      setOpenDayError(null);
-      const updatedShift = await driverShiftService.openDay({
-        kubbus_loaded: kLoaded,
-        romali_loaded: rLoaded,
-        opening_notes: openNotes.trim() || undefined,
-      });
-      setShift(updatedShift);
-    } catch (err: any) {
-      setOpenDayError(err.response?.data?.error || err.message || 'Failed to open day shift.');
-    } finally {
-      setSubmittingOpenDay(false);
-    }
-  };
-
-  // Open Day Close Modal
-  const openCloseDayModal = () => {
-    setKubbusReturnInput(String(remainingKubbusInVan));
-    setRomaliReturnInput(String(remainingRomaliInVan));
-    setCloseNotes('');
-    setCloseDayError(null);
-    setIsDayCloseModalOpen(true);
-  };
-
-  // Confirm Day Close Submission
-  const handleConfirmCloseDay = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const kRet = parseInt(kubbusReturnInput, 10);
-    const rRet = parseInt(romaliReturnInput, 10);
-    if (isNaN(kRet) || kRet < 0 || isNaN(rRet) || rRet < 0) {
-      setCloseDayError('Please enter valid returned quantities (0 or more).');
-      return;
-    }
-
-    try {
-      setSubmittingCloseDay(true);
-      setCloseDayError(null);
-      const updatedShift = await driverShiftService.closeDay({
-        kubbus_returned: kRet,
-        romali_returned: rRet,
-        closing_notes: closeNotes.trim() || undefined,
-      });
-      setShift(updatedShift);
-      setIsDayCloseModalOpen(false);
-      fetchData();
-    } catch (err: any) {
-      setCloseDayError(err.response?.data?.error || err.message || 'Failed to close day shift.');
-    } finally {
-      setSubmittingCloseDay(false);
-    }
-  };
-
-  // Filtered deliveries
-  const totalStops = deliveries.length;
-  const deliveredCount = deliveries.filter((d) => d.status === 'DELIVERED').length;
-  const notDeliveredCount = deliveries.filter((d) => d.status === 'NOT_DELIVERED').length;
-  const pendingCount = deliveries.filter((d) => d.status !== 'DELIVERED' && d.status !== 'NOT_DELIVERED').length;
-
-  const filteredDeliveries = deliveries.filter((d) => {
-    if (statusFilter === 'PENDING' && (d.status === 'DELIVERED' || d.status === 'NOT_DELIVERED')) return false;
-    if (statusFilter === 'DELIVERED' && d.status !== 'DELIVERED') return false;
-    if (statusFilter === 'NOT_DELIVERED' && d.status !== 'NOT_DELIVERED') return false;
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const shopName = d.order_details?.customer_details?.name?.toLowerCase() || '';
-      const address = d.order_details?.customer_details?.address?.toLowerCase() || '';
-      const phone = d.order_details?.customer_details?.phone?.toLowerCase() || '';
-      return shopName.includes(q) || address.includes(q) || phone.includes(q);
-    }
-
-    return true;
-  });
-
   return (
-    <div style={{ paddingBottom: '1.5rem' }}>
-      {/* 1. Simple Mobile Header Card */}
+    <div style={{ padding: '0.65rem 0.5rem 5rem 0.5rem', maxWidth: '640px', margin: '0 auto' }}>
+      {/* Toast Notification */}
+      {successToast && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '1rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            background: '#064e3b',
+            color: '#ecfdf5',
+            padding: '0.65rem 1.15rem',
+            borderRadius: '999px',
+            fontSize: '0.86rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.28)',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <CheckCircle2 size={16} color="#34d399" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
+      {/* ── Compact Sticky-Ready Header ── */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #dc2626 100%)',
-          color: 'white',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1rem 1.1rem',
-          marginBottom: '0.85rem',
-          boxShadow: '0 4px 14px rgba(185, 28, 28, 0.25)',
+          background: 'var(--surface, #ffffff)',
+          border: '1px solid var(--border, #e2e8f0)',
+          borderRadius: '12px',
+          padding: '0.75rem 0.9rem',
+          marginBottom: '0.65rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
           <div>
-            <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fef08a', fontWeight: 800 }}>
-              TODAY'S ROUTE
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              TODAY'S DELIVERIES
             </span>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 900, margin: '0.1rem 0' }}>
-              {summary?.route_name || user?.assigned_route_name || 'Assigned Route'}
-            </h2>
+            <h1 style={{ fontSize: '1.15rem', fontWeight: 900, color: 'var(--text-main, #0f172a)', margin: '0.1rem 0 0 0' }}>
+              {user?.assigned_route_name || 'Assigned Route'}
+            </h1>
           </div>
+
           <button
-            onClick={fetchData}
+            type="button"
+            onClick={() => fetchDeliveries(true)}
+            disabled={refreshing || loading}
+            aria-label="Refresh deliveries"
             style={{
-              background: 'rgba(0,0,0,0.25)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              color: 'white',
-              padding: '0.4rem 0.65rem',
+              background: 'var(--bg-main, #f8fafc)',
+              border: '1px solid var(--border, #cbd5e1)',
               borderRadius: '8px',
+              padding: '0.45rem 0.65rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.3rem',
+              gap: '0.35rem',
               fontSize: '0.75rem',
-              fontWeight: 600,
+              fontWeight: 700,
+              color: 'var(--text-main, #334155)',
+              cursor: 'pointer',
             }}
           >
-            <RefreshCw size={13} />
-            <span>Refresh</span>
+            <RefreshCw size={13} className={refreshing ? 'spinner' : ''} />
+            <span>Sync</span>
           </button>
         </div>
 
-        {/* 4 Mini Progress Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', marginTop: '0.85rem' }}>
-          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.4rem', borderRadius: '6px', textAlign: 'center' }}>
-            <span style={{ fontSize: '0.65rem', color: '#fecaca', display: 'block' }}>TOTAL</span>
-            <strong style={{ fontSize: '1.15rem' }}>{totalStops}</strong>
-          </div>
-          <div style={{ background: 'rgba(5, 150, 105, 0.35)', padding: '0.4rem', borderRadius: '6px', textAlign: 'center' }}>
-            <span style={{ fontSize: '0.65rem', color: '#a7f3d0', display: 'block' }}>DONE</span>
-            <strong style={{ fontSize: '1.15rem', color: '#6ee7b7' }}>{deliveredCount}</strong>
-          </div>
-          <div style={{ background: 'rgba(217, 119, 6, 0.35)', padding: '0.4rem', borderRadius: '6px', textAlign: 'center' }}>
-            <span style={{ fontSize: '0.65rem', color: '#fef08a', display: 'block' }}>PENDING</span>
-            <strong style={{ fontSize: '1.15rem', color: '#fde047' }}>{pendingCount}</strong>
-          </div>
-          <div style={{ background: 'rgba(220, 38, 38, 0.35)', padding: '0.4rem', borderRadius: '6px', textAlign: 'center' }}>
-            <span style={{ fontSize: '0.65rem', color: '#fca5a5', display: 'block' }}>FAILED</span>
-            <strong style={{ fontSize: '1.15rem', color: '#f87171' }}>{notDeliveredCount}</strong>
-          </div>
+        {/* Compact 3-Tab Filter Pills */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.35rem', marginBottom: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('ALL')}
+            style={{
+              padding: '0.45rem 0.3rem',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: statusFilter === 'ALL' ? '#0f172a' : 'var(--bg-main, #f1f5f9)',
+              color: statusFilter === 'ALL' ? '#ffffff' : 'var(--text-muted, #64748b)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            All ({counts.total})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('PENDING')}
+            style={{
+              padding: '0.45rem 0.3rem',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: statusFilter === 'PENDING' ? '#b45309' : 'var(--bg-main, #f1f5f9)',
+              color: statusFilter === 'PENDING' ? '#ffffff' : '#b45309',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Pending ({counts.pending})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('DELIVERED')}
+            style={{
+              padding: '0.45rem 0.3rem',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: statusFilter === 'DELIVERED' ? '#059669' : 'var(--bg-main, #f1f5f9)',
+              color: statusFilter === 'DELIVERED' ? '#ffffff' : '#059669',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Done ({counts.delivered})
+          </button>
         </div>
 
-        {/* Quick Collection Snapshot: Cash & GPay */}
+        {/* Minimal Search Bar */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '0.4rem',
-            marginTop: '0.65rem',
-            paddingTop: '0.65rem',
-            borderTop: '1px solid rgba(255,255,255,0.18)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            background: 'var(--bg-main, #f8fafc)',
+            border: '1px solid var(--border, #cbd5e1)',
+            borderRadius: '8px',
+            padding: '0.35rem 0.65rem',
           }}
         >
-          <div
-            onClick={() => navigate('/driver/summary')}
+          <Search size={14} color="#94a3b8" />
+          <input
+            type="text"
+            placeholder="Search shop name or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             style={{
-              background: 'rgba(0,0,0,0.22)',
-              borderRadius: '8px',
-              padding: '0.45rem 0.65rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
+              border: 'none',
+              background: 'transparent',
+              outline: 'none',
+              width: '100%',
+              fontSize: '0.82rem',
+              color: 'var(--text-main, #0f172a)',
             }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <Banknote size={15} style={{ color: '#86efac' }} />
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#dcfce7', textTransform: 'uppercase' }}>
-                Today Cash
-              </span>
-            </div>
-            <strong style={{ fontSize: '0.98rem', color: '#ffffff', fontWeight: 900 }}>
-              {formatCurrency(paymentSummary?.cash_total || '0')}
-            </strong>
-          </div>
-
-          <div
-            onClick={() => navigate('/driver/summary')}
-            style={{
-              background: 'rgba(0,0,0,0.22)',
-              borderRadius: '8px',
-              padding: '0.45rem 0.65rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <QrCode size={15} style={{ color: '#fef08a' }} />
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#fef08a', textTransform: 'uppercase' }}>
-                Today GPay
-              </span>
-            </div>
-            <strong style={{ fontSize: '0.98rem', color: '#ffffff', fontWeight: 900 }}>
-              {formatCurrency(paymentSummary?.upi_total || '0')}
-            </strong>
-          </div>
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#94a3b8' }}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ============================================================ */}
-      {/* 2. DAY OPEN / DAY CLOSE CONTROLS & STOCK VERIFICATION        */}
-      {/* ============================================================ */}
-
-      {/* CASE A: DAY NOT OPENED - DRIVER MUST VERIFY STOCK TO UNLOCK SHOP LIST */}
-      {!shift?.is_opened && (
-        <div
-          style={{
-            background: 'var(--surface)',
-            border: '2px solid #dc2626',
-            borderRadius: '12px',
-            padding: '1.1rem',
-            marginBottom: '1rem',
-            boxShadow: '0 4px 16px rgba(220, 38, 38, 0.12)',
-          }}
-        >
-          {/* Card Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '10px',
-                background: '#fef2f2',
-                color: '#dc2626',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Sunrise size={24} />
-            </div>
-            <div>
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                DAY OPENING • VEHICLE STOCK TAKE
-              </span>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                Verify & Take Route Stock
-              </h3>
-            </div>
-          </div>
-
-          <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: '0.9rem', lineHeight: '1.35' }}>
-            Please check the bakery stock loaded into your vehicle today. Verify piece counts (ps) and confirm to open shift and view your customer shop delivery list.
-          </p>
-
-          {openDayError && (
-            <div
-              style={{
-                background: 'var(--danger-bg)',
-                color: 'var(--danger)',
-                padding: '0.65rem 0.85rem',
-                borderRadius: '8px',
-                marginBottom: '0.85rem',
-                fontSize: '0.84rem',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
-            >
-              <AlertCircle size={16} />
-              <span>{openDayError}</span>
-            </div>
-          )}
-
-          {/* Side-by-side / Stacked Stock Cards for Kubbus & Romali */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '0.9rem' }}>
-            {/* Kubbus Box */}
-            <div
-              style={{
-                background: checkKubbus ? '#fef2f2' : '#f8fafc',
-                border: checkKubbus ? '1.5px solid #f87171' : '1px solid #cbd5e1',
-                borderRadius: '10px',
-                padding: '0.75rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#991b1b', textTransform: 'uppercase' }}>
-                  🥖 Kubbus (ps)
-                </span>
-                <span style={{ fontSize: '0.7rem', background: '#fee2e2', color: '#991b1b', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
-                  Assigned
-                </span>
-              </div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#991b1b', marginBottom: '0.45rem' }}>
-                {allocatedKubbus} <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>ps</span>
-              </div>
-
-              {/* Checkbox */}
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  marginBottom: '0.45rem',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={checkKubbus}
-                  onChange={(e) => setCheckKubbus(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: '#dc2626' }}
-                />
-                <span>Take stock verified</span>
-              </label>
-
-              {/* Editable pieces taken (in case of buffer) */}
-              <div>
-                <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem' }}>
-                  Loaded into Van (ps):
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  className="form-input"
-                  style={{ height: '34px', fontSize: '0.88rem', fontWeight: 800, padding: '0.2rem 0.5rem' }}
-                  value={kubbusTakeInput}
-                  onChange={(e) => setKubbusTakeInput(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Romali Box */}
-            <div
-              style={{
-                background: checkRomali ? '#fffbeb' : '#f8fafc',
-                border: checkRomali ? '1.5px solid #fde68a' : '1px solid #cbd5e1',
-                borderRadius: '10px',
-                padding: '0.75rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#92400e', textTransform: 'uppercase' }}>
-                  🫓 Romali (ps)
-                </span>
-                <span style={{ fontSize: '0.7rem', background: '#fef3c7', color: '#92400e', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
-                  Assigned
-                </span>
-              </div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#92400e', marginBottom: '0.45rem' }}>
-                {allocatedRomali} <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>ps</span>
-              </div>
-
-              {/* Checkbox */}
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  marginBottom: '0.45rem',
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={checkRomali}
-                  onChange={(e) => setCheckRomali(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: '#dc2626' }}
-                />
-                <span>Take stock verified</span>
-              </label>
-
-              {/* Editable pieces taken (in case of buffer) */}
-              <div>
-                <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.15rem' }}>
-                  Loaded into Van (ps):
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  className="form-input"
-                  style={{ height: '34px', fontSize: '0.88rem', fontWeight: 800, padding: '0.2rem 0.5rem' }}
-                  value={romaliTakeInput}
-                  onChange={(e) => setRomaliTakeInput(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Optional Opening Notes */}
-          <div style={{ marginBottom: '0.9rem' }}>
-            <input
-              type="text"
-              className="form-input"
-              style={{ height: '36px', fontSize: '0.82rem' }}
-              placeholder="Vehicle odometer or crate notes (optional)..."
-              value={openNotes}
-              onChange={(e) => setOpenNotes(e.target.value)}
-            />
-          </div>
-
-          {/* Confirm Stock & Open Day Button */}
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{
-              width: '100%',
-              minHeight: '48px',
-              fontSize: '1rem',
-              fontWeight: 800,
-              background: 'linear-gradient(135deg, #b91c1c 0%, #dc2626 100%)',
-              borderColor: '#991b1b',
-              boxShadow: '0 4px 12px rgba(220, 38, 38, 0.35)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-            }}
-            disabled={submittingOpenDay}
-            onClick={() => handleOpenDay()}
-          >
-            <Unlock size={19} />
-            <span>{submittingOpenDay ? 'Confirming Stock & Opening...' : 'Confirm Stock & Open Day (Show Shop List)'}</span>
-          </button>
+      {/* Loading Spinner */}
+      {loading && deliveries.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+          <div className="spinner" style={{ margin: '0 auto 0.75rem', width: 28, height: 28 }} />
+          <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Loading today's shop list...</span>
         </div>
       )}
 
-      {/* LOCKED STATE BANNER: When day is not opened, shop list is protected */}
-      {!shift?.is_opened && (
+      {/* Empty State */}
+      {!loading && filteredDeliveries.length === 0 && (
         <div
           style={{
-            background: '#fff1f2',
-            border: '2px dashed #fca5a5',
+            background: 'var(--surface, #ffffff)',
             borderRadius: '12px',
-            padding: '2.5rem 1.25rem',
+            padding: '2.5rem 1rem',
             textAlign: 'center',
-            marginBottom: '1rem',
+            border: '1px dashed var(--border, #cbd5e1)',
           }}
         >
-          <div
-            style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: '#fee2e2',
-              color: '#dc2626',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 0.85rem',
-            }}
-          >
-            <Lock size={28} />
-          </div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#991b1b', margin: '0 0 0.4rem' }}>
-            {totalStops} Delivery Shop Stops Locked
+          <Store size={36} color="#94a3b8" style={{ margin: '0 auto 0.5rem' }} />
+          <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: 'var(--text-main, #0f172a)' }}>
+            No Deliveries Found
           </h3>
-          <p style={{ color: '#7f1d1d', fontSize: '0.88rem', maxWidth: '380px', margin: '0 auto 1rem', lineHeight: '1.4' }}>
-            Delivery stops and billing actions are locked until you check and confirm your vehicle stock above. Click <strong>"Confirm Stock & Open Day"</strong> to unlock your shops!
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)', margin: 0 }}>
+            {searchQuery ? 'Try clearing your search query' : 'No stops assigned for this status filter.'}
           </p>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ fontSize: '0.85rem', fontWeight: 700, borderColor: '#fca5a5', color: '#991b1b' }}
-            onClick={() => {
-              setCheckKubbus(true);
-              setCheckRomali(true);
-              handleOpenDay();
-            }}
-          >
-            Quick 1-Tap Accept Stock & Unlock List
-          </button>
         </div>
       )}
 
-      {/* CASE B: DAY IS OPENED - SHOW ACTIVE SHIFT TRACKER OR CLOSED SUMMARY */}
-      {shift?.is_opened && !shift?.is_closed && (
-        <div
-          style={{
-            background: 'linear-gradient(135deg, #18181b 0%, #27272a 100%)',
-            color: 'white',
-            borderRadius: '12px',
-            padding: '0.85rem 1rem',
-            marginBottom: '0.85rem',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}
-        >
-          {/* Header Row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <span
-                style={{
-                  background: '#059669',
-                  color: '#ffffff',
-                  fontSize: '0.68rem',
-                  fontWeight: 900,
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
-              >
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffffff', display: 'inline-block' }} />
-                DAY OPEN
-              </span>
-              <span style={{ fontSize: '0.74rem', color: '#a1a1aa' }}>
-                Started {shift.opened_at ? formatDateTime(shift.opened_at) : 'Today'}
-              </span>
-            </div>
+      {/* ── DRIVER SHOPS / DELIVERIES LIST ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+        {filteredDeliveries.map((delivery, index) => {
+          const shop = delivery.order_details?.customer_details;
+          const fin = getFinancials(delivery);
+          const isDelivered = delivery.status === 'DELIVERED';
+          const isNotDelivered = delivery.status === 'NOT_DELIVERED';
+          const isPending = !isDelivered && !isNotDelivered;
+          const stopNumber = delivery.stop_number || index + 1;
 
-            <button
-              type="button"
-              onClick={openCloseDayModal}
+          return (
+            <div
+              key={delivery.id}
               style={{
-                background: '#dc2626',
-                color: '#ffffff',
-                border: 'none',
-                padding: '0.35rem 0.75rem',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)',
+                background: 'var(--bg-card, #ffffff)',
+                border: `1px solid ${isDelivered ? '#86efac' : isNotDelivered ? '#fca5a5' : 'var(--border)'}`,
+                borderRadius: '6px',
+                padding: '0.85rem 0.9rem',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              <Lock size={13} />
-              <span>Day Closing / End Shift</span>
-            </button>
-          </div>
-
-          {/* Live Van Stock Tracking */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.55rem 0.75rem', borderRadius: '8px' }}>
-            <div>
-              <span style={{ fontSize: '0.68rem', color: '#fca5a5', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>
-                🥖 Kubbus Stock in Van
-              </span>
-              <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.1rem' }}>
-                <span style={{ color: '#ffffff' }}>{remainingKubbusInVan} ps left</span>
-                <span style={{ fontSize: '0.72rem', color: '#a1a1aa', fontWeight: 500, marginLeft: '0.35rem' }}>
-                  ({currentKubbusLoaded} taken • {deliveredKubbus} del.)
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <span style={{ fontSize: '0.68rem', color: '#fef08a', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>
-                🫓 Romali Stock in Van
-              </span>
-              <div style={{ fontSize: '0.95rem', fontWeight: 800, marginTop: '0.1rem' }}>
-                <span style={{ color: '#ffffff' }}>{remainingRomaliInVan} ps left</span>
-                <span style={{ fontSize: '0.72rem', color: '#a1a1aa', fontWeight: 500, marginLeft: '0.35rem' }}>
-                  ({currentRomaliLoaded} taken • {deliveredRomali} del.)
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CASE C: DAY IS CLOSED */}
-      {shift?.is_closed && (
-        <div
-          style={{
-            background: '#f8fafc',
-            border: '2px solid #64748b',
-            borderRadius: '12px',
-            padding: '0.9rem 1.1rem',
-            marginBottom: '0.85rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <ShieldCheck size={18} color="#059669" />
-              <strong style={{ fontSize: '0.95rem', color: '#1e293b' }}>DAY CLOSED & SHIFT SETTLED</strong>
-            </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {shift.closed_at ? formatDateTime(shift.closed_at) : 'Completed'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginTop: '0.35rem', color: 'var(--text-secondary)' }}>
-            <span>Net Cash Handover to Counter:</span>
-            <strong style={{ color: '#059669', fontSize: '1.05rem' }}>{formatCurrency(shift.net_cash_handover || '0')}</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginTop: '0.2rem', color: 'var(--text-secondary)' }}>
-            <span>Returned to Bakery:</span>
-            <strong>{shift.kubbus_returned} ps Kubbus • {shift.romali_returned} ps Romali</strong>
-          </div>
-        </div>
-      )}
-
-      {/* RENDER SHOP LIST ONLY WHEN DAY IS CONFIRMED / OPENED */}
-      {shift?.is_opened && (
-        <>
-          {/* Quick Search & Filter Tabs */}
-          <div style={{ marginBottom: '0.85rem' }}>
-            <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
-              <Search size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                type="text"
-                className="form-input"
-                style={{ paddingLeft: '2.4rem', height: '42px', fontSize: '0.9rem', borderRadius: '10px' }}
-                placeholder="Search shop name or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-
-            {/* 4 Clean Filter Pills */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.3rem' }}>
-              {(['ALL', 'PENDING', 'DELIVERED', 'NOT_DELIVERED'] as const).map((tab) => {
-                const isActive = statusFilter === tab;
-                const label = tab === 'NOT_DELIVERED' ? 'FAILED' : tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setStatusFilter(tab)}
-                    style={{
-                      padding: '0.45rem 0.2rem',
-                      fontSize: '0.74rem',
-                      fontWeight: isActive ? 800 : 600,
-                      borderRadius: '8px',
-                      border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
-                      background: isActive ? 'var(--primary)' : 'var(--surface)',
-                      color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-      {/* 3. Delivery / Customer Cards List */}
-      {loading ? (
-        <div style={{ padding: '3rem', textAlign: 'center' }}>
-          <div className="spinner" style={{ margin: '0 auto' }} />
-        </div>
-      ) : filteredDeliveries.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {filteredDeliveries.map((d) => {
-            const isDelivered = d.status === 'DELIVERED';
-            const isNotDelivered = d.status === 'NOT_DELIVERED';
-            const customer = d.order_details?.customer_details;
-            const items = d.order_details?.items || [];
-            const phone = customer?.phone;
-            const address = customer?.address;
-            const isExpanded = Boolean(expandedCards[d.id]);
-            const fin = getDeliveryFinancials(d);
-            const stopQty = getStopQuantities(d);
-
-            return (
-              <div
-                key={d.id}
-                style={{
-                  background: 'var(--surface)',
-                  borderRadius: '12px',
-                  border: isDelivered ? '1.5px solid #86efac' : isNotDelivered ? '1.5px solid #fca5a5' : '1.5px solid var(--border)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                  overflow: 'hidden',
-                }}
-              >
-                {/* Compact Card Header: Clickable to expand */}
-                <div
-                  onClick={() => toggleExpand(d.id)}
-                  style={{
-                    padding: '0.85rem 1rem',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.4rem',
-                  }}
-                >
-                  {/* Row 1: Shop Name (PROMINENT) & Status Pill */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                    <h3
-                      style={{
-                        fontSize: '1.18rem',
-                        fontWeight: 900,
-                        color: 'var(--text-primary)',
-                        margin: 0,
-                        letterSpacing: '-0.01em',
-                      }}
-                    >
-                      {customer?.name || 'Customer Shop'}
-                    </h3>
-
-                    <div>
-                      {isDelivered ? (
-                        <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
-                          Delivered
-                        </span>
-                      ) : isNotDelivered ? (
-                        <span className="badge badge-danger" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
-                          Failed
-                        </span>
-                      ) : (
-                        <span className="badge badge-warning" style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}>
-                          Pending
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Row 1.5: Prominent Stock Required for this Stop (Kubbus & Romali in ps) */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.1rem', flexWrap: 'wrap' }}>
-                    <span
-                      style={{
-                        background: '#fef2f2',
-                        color: '#991b1b',
-                        border: '1px solid #fecaca',
-                        padding: '0.18rem 0.55rem',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        fontWeight: 800,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                      }}
-                    >
-                      🥖 Kubbus: <strong>{stopQty.kubbus} ps</strong>
-                    </span>
-                    <span
-                      style={{
-                        background: '#fffbeb',
-                        color: '#92400e',
-                        border: '1px solid #fde68a',
-                        padding: '0.18rem 0.55rem',
-                        borderRadius: '6px',
-                        fontSize: '0.8rem',
-                        fontWeight: 800,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                      }}
-                    >
-                      🫓 Romali: <strong>{stopQty.romali} ps</strong>
-                    </span>
-                  </div>
-
-                  {/* Row 2: Important Numbers at a glance + Call & Map buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.86rem' }}>
-                      <span style={{ color: 'var(--text-secondary)' }}>
-                        Today: <strong style={{ color: '#991b1b', fontWeight: 800 }}>{formatCurrency(fin.todayAmount)}</strong>
-                      </span>
-                      {fin.previousOutstanding > 0 && (
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          • Due: <strong style={{ color: '#dc2626', fontWeight: 800 }}>{formatCurrency(fin.previousOutstanding)}</strong>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Quick Call & Map (stops propagation so it doesn't just toggle) */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      {phone && (
-                        <a
-                          href={`tel:${phone}`}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            background: '#ecfdf5',
-                            color: '#059669',
-                            border: '1px solid #a7f3d0',
-                            borderRadius: '50%',
-                            width: '34px',
-                            height: '34px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          title="Call Shop"
-                        >
-                          <Phone size={15} />
-                        </a>
-                      )}
-                      {address && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenMaps(address);
-                          }}
-                          style={{
-                            background: '#fef2f2',
-                            color: '#dc2626',
-                            border: '1px solid #fecaca',
-                            borderRadius: '50%',
-                            width: '34px',
-                            height: '34px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                          title="Open Google Maps"
-                        >
-                          <Navigation size={15} />
-                        </button>
-                      )}
-                      <div style={{ color: 'var(--text-muted)', marginLeft: '0.2rem' }}>
-                        {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* EXPANDABLE SECTION ("View More" Style) */}
-                {isExpanded && (
+              {/* Card Top Row: Stop Number, Shop Name, Phone, Maps */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.65rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem', flex: 1, minWidth: 0 }}>
+                  {/* Sequence circle */}
                   <div
                     style={{
-                      borderTop: '1px solid var(--border)',
-                      padding: '0.9rem 1rem',
-                      background: 'var(--surface-sunken)',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '4px',
+                      background: isDelivered ? '#15803d' : isNotDelivered ? '#b91c1c' : '#0f172a',
+                      color: 'white',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
                     }}
                   >
-                    {/* Address & Items */}
-                    <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem' }}>
-                      {address && (
-                        <div style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem', marginBottom: '0.35rem' }}>
-                          <MapPin size={13} color="var(--primary)" />
-                          <span>{address}</span>
-                        </div>
-                      )}
+                    {isDelivered ? <Check size={14} /> : stopNumber}
+                  </div>
 
-                      {/* Items */}
-                      <div style={{ background: 'var(--surface)', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', marginTop: '0.4rem' }}>
-                        <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: '0.2rem' }}>
-                          ORDER ITEMS (PIECES / PS)
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <strong
+                        style={{
+                          fontSize: '0.94rem',
+                          fontWeight: 800,
+                          color: 'var(--text-primary, #0f172a)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {shop?.name || 'Customer Shop'}
+                      </strong>
+
+                      {/* Status Tag */}
+                      {isDelivered && (
+                        <span
+                          style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            background: '#dcfce7',
+                            color: '#15803d',
+                            padding: '0.1rem 0.45rem',
+                            borderRadius: '4px',
+                            border: '1px solid #86efac',
+                          }}
+                        >
+                          DELIVERED
                         </span>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.88rem' }}>
-                          {items.length > 0
-                            ? items.map((it) => `${it.product_details?.name || 'Item'} × ${it.quantity} ps`).join('  •  ')
-                            : 'Wholesale Bakery Supply'}
-                        </div>
-                      </div>
+                      )}
+                      {isNotDelivered && (
+                        <span
+                          style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            background: '#fee2e2',
+                            color: '#b91c1c',
+                            padding: '0.1rem 0.45rem',
+                            borderRadius: '4px',
+                            border: '1px solid #fca5a5',
+                          }}
+                        >
+                          SKIPPED
+                        </span>
+                      )}
+                      {isPending && (
+                        <span
+                          style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            background: '#fef3c7',
+                            color: '#b45309',
+                            padding: '0.1rem 0.45rem',
+                            borderRadius: '4px',
+                            border: '1px solid #fde68a',
+                          }}
+                        >
+                          PENDING
+                        </span>
+                      )}
                     </div>
 
-                    {/* Prominent 4-Line Payment Breakdown Box */}
-                    <div
+                    {shop?.address && (
+                      <p
+                        style={{
+                          fontSize: '0.74rem',
+                          color: 'var(--text-muted, #64748b)',
+                          margin: '0.15rem 0 0 0',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {shop.address}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Call & Map Icons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                  {shop?.phone && (
+                    <a
+                      href={`tel:${shop.phone}`}
+                      aria-label="Call shop"
                       style={{
-                        background: 'white',
-                        borderRadius: '10px',
-                        border: '1px solid #cbd5e1',
-                        padding: '0.75rem 0.9rem',
-                        marginBottom: '0.85rem',
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '6px',
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        border: '1px solid #bfdbfe',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textDecoration: 'none',
                       }}
                     >
-                      {fin.previousOutstanding > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.3rem', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
-                          <span style={{ color: 'var(--text-secondary)' }}>Previous Outstanding</span>
-                          <strong style={{ color: '#d97706' }}>{formatCurrency(fin.previousOutstanding)}</strong>
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Today's Bill</span>
-                        <strong style={{ color: '#991b1b' }}>{formatCurrency(fin.todayAmount)}</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.4rem', fontSize: '0.92rem' }}>
-                        <strong style={{ color: 'var(--text-primary)' }}>Total Due</strong>
-                        <strong style={{ color: '#dc2626', fontSize: '1.05rem', fontWeight: 900 }}>
-                          {formatCurrency(fin.totalDue)}
-                        </strong>
-                      </div>
-                    </div>
-
-                    {/* Delivery Status Details */}
-                    {isDelivered && (
-                      <div style={{ fontSize: '0.78rem', color: '#065f46', background: '#ecfdf5', padding: '0.5rem 0.75rem', borderRadius: '6px', marginBottom: '0.75rem' }}>
-                        ✓ Delivered to <strong>{d.recipient_name || 'Staff'}</strong>
-                        {d.delivered_at && ` at ${formatDateTime(d.delivered_at)}`}
-                      </div>
-                    )}
-
-                    {isNotDelivered && (
-                      <div style={{ fontSize: '0.78rem', color: '#991b1b', background: '#fef2f2', padding: '0.5rem 0.75rem', borderRadius: '6px', marginBottom: '0.75rem' }}>
-                        ✕ Skipped: <strong>{d.failed_reason}</strong>
-                      </div>
-                    )}
-
-                    {/* Action Buttons: Big & Thumb-Friendly */}
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      {!isDelivered && !isNotDelivered && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            style={{
-                              flex: 2,
-                              minHeight: '44px',
-                              fontSize: '0.9rem',
-                              fontWeight: 700,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.4rem',
-                            }}
-                            onClick={() => openCompleteModal(d)}
-                          >
-                            <Check size={18} />
-                            <span>Mark Delivered</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{
-                              flex: 1.5,
-                              minHeight: '44px',
-                              fontSize: '0.9rem',
-                              fontWeight: 700,
-                              color: '#059669',
-                              borderColor: '#a7f3d0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.35rem',
-                            }}
-                            onClick={() => openCollectPaymentModal(d)}
-                          >
-                            <HandCoins size={17} />
-                            <span>Collect ₹</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{
-                              flex: 1,
-                              minHeight: '44px',
-                              fontSize: '0.85rem',
-                              color: '#dc2626',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                            onClick={() => openSkipModal(d)}
-                          >
-                            Skip
-                          </button>
-                        </>
-                      )}
-
-                      {isDelivered && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            style={{
-                              flex: 1,
-                              minHeight: '44px',
-                              fontSize: '0.88rem',
-                              fontWeight: 700,
-                              color: '#059669',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.4rem',
-                            }}
-                            onClick={() => openCollectPaymentModal(d)}
-                          >
-                            <HandCoins size={17} />
-                            <span>Collect Payment</span>
-                          </button>
-
-                          {isWhatsAppEnabled && (
-                            <button
-                              type="button"
-                              className="btn btn-secondary"
-                              style={{
-                                flex: 1,
-                                minHeight: '44px',
-                                fontSize: '0.88rem',
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.4rem',
-                              }}
-                              onClick={() => {
-                                const msg = generatePaymentReceiptMessage({
-                                  customerName: customer?.name || 'Customer Shop',
-                                  paymentNumber: d.delivery_number,
-                                  amount: d.order_details?.total_amount || '0',
-                                  paymentMethod: 'CASH',
-                                  date: new Date().toLocaleDateString(),
-                                  remainingBalance: customer?.current_balance,
-                                });
-                                openWhatsApp(phone, msg);
-                              }}
-                            >
-                              <MessageSquare size={16} color="#059669" />
-                              <span>WhatsApp</span>
-                            </button>
-                          )}
-                        </>
-                      )}
-
-                      {isNotDelivered && (
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{
-                            flex: 1,
-                            minHeight: '44px',
-                            fontSize: '0.88rem',
-                            fontWeight: 700,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '0.4rem',
-                          }}
-                          onClick={() => openCompleteModal(d)}
-                        >
-                          <RotateCcw size={16} />
-                          <span>Retry Delivery Now</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div style={{ textAlign: 'center', padding: '3rem 1rem', background: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          <Truck size={36} color="var(--text-muted)" style={{ margin: '0 auto 0.5rem' }} />
-          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>No deliveries matching current filter.</p>
-        </div>
-      )}
-      </>
-      )}
-
-      {/* ============================================================ */}
-      {/* 4. MODAL: STANDALONE PAYMENT COLLECTION (PROMPT 5, 6, 7, 8)  */}
-      {/* ============================================================ */}
-      {paymentDelivery && (() => {
-        const fin = getDeliveryFinancials(paymentDelivery);
-        const collectedNum = parseFloat(collectAmount) || 0;
-        // Prompt 6 & 7: Current Outstanding = Total Due - Amount Collected
-        const calculatedRemaining = Math.max(0, fin.totalDue - collectedNum);
-
-        return (
-          <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '440px', padding: '1.25rem' }}>
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#059669', fontWeight: 800 }}>
-                    COLLECT PAYMENT
-                  </span>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                    {paymentDelivery.order_details?.customer_details?.name || 'Customer Shop'}
-                  </h3>
+                      <Phone size={15} />
+                    </a>
+                  )}
+                  {shop?.address && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Navigate to shop"
+                      style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '6px',
+                        background: '#f0fdf4',
+                        color: '#15803d',
+                        border: '1px solid #bbf7d0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <Navigation size={15} />
+                    </a>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPaymentDelivery(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}
-                >
-                  <X size={22} />
-                </button>
               </div>
 
-              {actionError && (
-                <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                  {actionError}
-                </div>
-              )}
-
-              {/* CRYSTAL CLEAR 4-LINE FINANCIAL AUDIT BOX (PROMPT 5 & 7) */}
+              {/* ── CRITICAL FINANCIAL DATA: Clear POS Ledger Breakdown ── */}
               <div
                 style={{
                   background: '#f8fafc',
-                  border: '2px solid #cbd5e1',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  marginBottom: '1.1rem',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '4px',
+                  padding: '0.45rem 0.75rem',
+                  marginBottom: '0.65rem',
                 }}
               >
-                {/* 1. Previous Outstanding (shown if exists) */}
-                {fin.previousOutstanding > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.45rem', fontSize: '0.9rem' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Previous Outstanding</span>
-                    <strong style={{ color: '#d97706', fontSize: '1rem' }}>{formatCurrency(fin.previousOutstanding)}</strong>
-                  </div>
-                )}
-
-                {/* 2. Today's Amount */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.45rem', fontSize: '0.9rem' }}>
-                  <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Today's Amount</span>
-                  <strong style={{ color: '#991b1b', fontSize: '1rem' }}>{formatCurrency(fin.todayAmount)}</strong>
-                </div>
-
-                {/* Total Due Subtotal */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.55rem', borderBottom: '1.5px dashed #94a3b8', fontSize: '0.85rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Total Amount Due</span>
-                  <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>{formatCurrency(fin.totalDue)}</span>
-                </div>
-
-                {/* 3. Amount Collected Input Preview */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.55rem', paddingBottom: '0.55rem', borderBottom: '2px solid #059669' }}>
-                  <span style={{ fontWeight: 800, color: '#059669', fontSize: '0.95rem' }}>Amount Collected</span>
-                  <span style={{ fontWeight: 900, color: '#059669', fontSize: '1.25rem' }}>
-                    {formatCurrency(collectedNum)}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
+                  <span style={{ color: '#475569', fontWeight: 600 }}>Previous Due</span>
+                  <span style={{ fontWeight: 700, color: fin.previousOutstanding > 0 ? '#b91c1c' : '#334155' }}>
+                    {formatCompactINR(fin.previousOutstanding)}
                   </span>
                 </div>
-
-                {/* 4. CURRENT OUTSTANDING (IMMEDIATE LIVE CALCULATION) */}
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    paddingTop: '0.65rem',
-                    background: calculatedRemaining > 0 ? '#fef2f2' : '#ecfdf5',
-                    padding: '0.6rem 0.75rem',
-                    borderRadius: '8px',
-                    marginTop: '0.5rem',
-                  }}
-                >
-                  <span style={{ fontWeight: 800, color: calculatedRemaining > 0 ? '#991b1b' : '#065f46', fontSize: '0.9rem' }}>
-                    Current Outstanding
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
+                  <span style={{ color: '#475569', fontWeight: 600 }}>Current Bill</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                    {formatCompactINR(fin.todayAmount)}
                   </span>
-                  <strong style={{ fontSize: '1.3rem', fontWeight: 900, color: calculatedRemaining > 0 ? '#dc2626' : '#059669' }}>
-                    {formatCurrency(calculatedRemaining)}
-                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
+                  <span style={{ color: '#475569', fontWeight: 600 }}>Collected</span>
+                  <span style={{ fontWeight: 700, color: fin.collectedAmount > 0 ? '#15803d' : '#64748b' }}>
+                    {formatCompactINR(fin.collectedAmount)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.22rem 0 0.05rem', fontSize: '0.86rem' }}>
+                  <span style={{ color: '#0f172a', fontWeight: 700 }}>Remaining</span>
+                  <span style={{ fontWeight: 800, color: fin.remainingAmount > 0 ? '#b91c1c' : '#15803d', fontSize: '0.94rem' }}>
+                    {formatCompactINR(fin.remainingAmount)}
+                  </span>
                 </div>
               </div>
 
-              {/* Form Input for Amount Collected */}
-              <form onSubmit={handleConfirmPayment}>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label className="form-label" style={{ fontWeight: 700 }}>
-                    Enter Collected Amount (₹) *
-                  </label>
+              {/* ── DRIVER ACTION BUTTONS (Optimized for 1-Handed Mobile Touch) ── */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                {isPending && (
+                  <>
+                    {/* Primary 1: Collect Payment */}
+                    <button
+                      type="button"
+                      onClick={() => openCollect(delivery)}
+                      style={{
+                        flex: 1,
+                        height: '44px',
+                        minHeight: '44px',
+                        background: '#ffffff',
+                        color: '#0f172a',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.35rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <HandCoins size={16} color="#b91c1c" />
+                      <span>Collect Payment</span>
+                    </button>
+
+                    {/* Primary 2: Complete Delivery */}
+                    <button
+                      type="button"
+                      onClick={() => openComplete(delivery)}
+                      style={{
+                        flex: 1.15,
+                        height: '44px',
+                        minHeight: '44px',
+                        background: '#15803d',
+                        color: '#ffffff',
+                        border: '1px solid #166534',
+                        borderRadius: '6px',
+                        fontSize: '0.88rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.35rem',
+                        cursor: 'pointer',
+                        boxShadow: 'var(--shadow-sm)',
+                      }}
+                    >
+                      <Check size={18} />
+                      <span>Delivered</span>
+                    </button>
+
+                    {/* Skip */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSkipDelivery(delivery);
+                        setSkipReason(SKIP_REASONS[0]);
+                        setActionError(null);
+                      }}
+                      title="Skip Stop"
+                      style={{
+                        height: '44px',
+                        minHeight: '44px',
+                        padding: '0 0.75rem',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        color: '#64748b',
+                        fontSize: '0.76rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Skip
+                    </button>
+                  </>
+                )}
+
+                {isDelivered && (
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.78rem', color: '#15803d', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <CheckCircle2 size={16} color="#15803d" />
+                      Delivered
+                    </span>
+
+                    {/* Allow collecting any remaining overdue balance */}
+                    {fin.remainingAmount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => openCollect(delivery)}
+                        style={{
+                          height: '38px',
+                          minHeight: '38px',
+                          padding: '0 0.85rem',
+                          background: '#f0fdf4',
+                          color: '#15803d',
+                          border: '1px solid #86efac',
+                          borderRadius: '6px',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                        }}
+                      >
+                        <HandCoins size={14} />
+                        <span>Collect Remaining</span>
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
+                        All settled ✓
+                      </span>
+                    )}
+                  </div>
+                )}
+
+
+                {isNotDelivered && (
+                  <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.76rem', color: '#dc2626', fontWeight: 600 }}>
+                      Skipped: {delivery.failed_reason || 'Shop closed'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openComplete(delivery)}
+                      style={{
+                        minHeight: '36px',
+                        padding: '0 0.75rem',
+                        background: '#0f172a',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '7px',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Retry Deliver
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ===================================================================== */}
+      {/* ── MODAL 1: SIMPLE PAYMENT / COLLECTION (Touch-Friendly Bottom Sheet) ─ */}
+      {/* ===================================================================== */}
+      {paymentDelivery && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.55)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+          onClick={() => !submitting && setPaymentDelivery(null)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              background: 'var(--bg-card, #ffffff)',
+              borderRadius: '8px 8px 0 0',
+              padding: '1.25rem 1.25rem 2rem 1.25rem',
+              boxShadow: 'var(--shadow-lg)',
+              border: '1px solid var(--border)',
+              borderBottom: 'none',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>
+                  COLLECT PAYMENT
+                </span>
+                <h3 style={{ margin: '0.1rem 0 0 0', fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+                  {paymentDelivery.order_details?.customer_details?.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaymentDelivery(null)}
+                disabled={submitting}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {actionError && (
+              <div
+                style={{
+                  padding: '0.55rem 0.85rem',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  marginBottom: '0.85rem',
+                }}
+              >
+                {actionError}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmPayment}>
+              {/* Quick Amount Selector Pills */}
+              {(() => {
+                const fin = getFinancials(paymentDelivery);
+                return (
+                  <div style={{ display: 'flex', gap: '0.45rem', marginBottom: '0.85rem' }}>
+                    {fin.todayAmount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setCollectAmount(String(fin.todayAmount))}
+                        style={{
+                          flex: 1,
+                          padding: '0.4rem',
+                          borderRadius: '8px',
+                          border: collectAmount === String(fin.todayAmount) ? '2px solid #059669' : '1px solid #cbd5e1',
+                          background: collectAmount === String(fin.todayAmount) ? '#ecfdf5' : '#f8fafc',
+                          color: '#065f46',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Bill: ₹{fin.todayAmount}
+                      </button>
+                    )}
+                    {fin.totalDue > 0 && fin.totalDue !== fin.todayAmount && (
+                      <button
+                        type="button"
+                        onClick={() => setCollectAmount(String(fin.totalDue))}
+                        style={{
+                          flex: 1,
+                          padding: '0.4rem',
+                          borderRadius: '8px',
+                          border: collectAmount === String(fin.totalDue) ? '2px solid #059669' : '1px solid #cbd5e1',
+                          background: collectAmount === String(fin.totalDue) ? '#ecfdf5' : '#f8fafc',
+                          color: '#065f46',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Total Due: ₹{fin.totalDue}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Amount Input */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  Amount to Collect (₹)
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 800, fontSize: '1.2rem', color: '#64748b' }}>
+                    ₹
+                  </span>
                   <input
                     type="number"
                     step="0.01"
-                    className="form-input"
-                    style={{ fontSize: '1.35rem', fontWeight: 800, height: '52px', color: '#059669', textAlign: 'center' }}
-                    placeholder="0.00"
-                    value={collectAmount}
-                    onChange={(e) => setCollectAmount(e.target.value)}
+                    min="1"
                     required
                     autoFocus
+                    value={collectAmount}
+                    onChange={(e) => setCollectAmount(e.target.value)}
+                    placeholder="0.00"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 0.75rem 0.75rem 2.2rem',
+                      borderRadius: '10px',
+                      border: '2px solid #cbd5e1',
+                      fontSize: '1.25rem',
+                      fontWeight: 800,
+                      color: '#0f172a',
+                      outline: 'none',
+                    }}
                   />
+                </div>
+              </div>
 
-                  {/* Fast Preset Tap Buttons */}
-                  <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.45rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => setCollectAmount(fin.totalDue.toString())}
-                      style={{
-                        flex: 1,
-                        padding: '0.35rem',
-                        fontSize: '0.74rem',
-                        fontWeight: 700,
-                        background: '#f1f5f9',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Full ₹{fin.totalDue}
-                    </button>
-                    {fin.todayAmount > 0 && fin.todayAmount !== fin.totalDue && (
+              {/* Payment Method: Cash vs GPay (Large Touch Targets) */}
+              <div style={{ marginBottom: '1.15rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  Payment Method
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setCollectMethod('CASH')}
+                    style={{
+                      minHeight: '48px',
+                      borderRadius: '10px',
+                      border: collectMethod === 'CASH' ? '2.5px solid #059669' : '1.5px solid #cbd5e1',
+                      background: collectMethod === 'CASH' ? '#ecfdf5' : '#ffffff',
+                      color: collectMethod === 'CASH' ? '#047857' : '#475569',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.45rem',
+                      fontWeight: 800,
+                      fontSize: '0.92rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Banknote size={20} />
+                    <span>CASH</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCollectMethod('GPAY_UPI')}
+                    style={{
+                      minHeight: '48px',
+                      borderRadius: '10px',
+                      border: collectMethod === 'GPAY_UPI' ? '2.5px solid #2563eb' : '1.5px solid #cbd5e1',
+                      background: collectMethod === 'GPAY_UPI' ? '#eff6ff' : '#ffffff',
+                      color: collectMethod === 'GPAY_UPI' ? '#1d4ed8' : '#475569',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.45rem',
+                      fontWeight: 800,
+                      fontSize: '0.92rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <QrCode size={20} />
+                    <span>GPay / UPI</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  width: '100%',
+                  height: '46px',
+                  minHeight: '46px',
+                  borderRadius: '6px',
+                  background: '#15803d',
+                  color: 'white',
+                  border: '1px solid #166534',
+                  fontSize: '0.94rem',
+                  fontWeight: 700,
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+              >
+                {submitting ? (
+                  <>
+                    <div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                    <span>Recording Payment...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} />
+                    <span>Confirm ₹{collectAmount || '0'} Collected</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* ── MODAL 2: COMPLETE DELIVERY ACTION ──────────────────────────────── */}
+      {/* ===================================================================== */}
+      {completeDelivery && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.55)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+          onClick={() => !submitting && setCompleteDelivery(null)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              background: 'var(--bg-card, #ffffff)',
+              borderRadius: '8px 8px 0 0',
+              padding: '1.25rem 1.25rem 2rem 1.25rem',
+              boxShadow: 'var(--shadow-lg)',
+              border: '1px solid var(--border)',
+              borderBottom: 'none',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div>
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>
+                  COMPLETE DELIVERY
+                </span>
+                <h3 style={{ margin: '0.1rem 0 0 0', fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main, #0f172a)' }}>
+                  {completeDelivery.order_details?.customer_details?.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCompleteDelivery(null)}
+                disabled={submitting}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {actionError && (
+              <div
+                style={{
+                  padding: '0.55rem 0.85rem',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  marginBottom: '0.85rem',
+                }}
+              >
+                {actionError}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmComplete}>
+              {/* Recipient Input */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  Received by (Owner / Staff Name)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  placeholder="e.g. Shop Owner / Manager"
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: '1.5px solid #cbd5e1',
+                    fontSize: '0.92rem',
+                    color: '#0f172a',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* Optional: Collect Payment Checkbox */}
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '10px',
+                  padding: '0.75rem 0.85rem',
+                  marginBottom: '1.15rem',
+                }}
+              >
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.86rem', fontWeight: 700, color: '#0f172a' }}>
+                  <input
+                    type="checkbox"
+                    checked={includePayment}
+                    onChange={(e) => setIncludePayment(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+                  />
+                  <span>Also collect payment now (₹{getFinancials(completeDelivery).todayAmount})</span>
+                </label>
+
+                {includePayment && (
+                  <div style={{ marginTop: '0.65rem', paddingTop: '0.65rem', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem', marginBottom: '0.5rem' }}>
                       <button
                         type="button"
-                        onClick={() => setCollectAmount(fin.todayAmount.toString())}
+                        onClick={() => setCompletePayMethod('CASH')}
                         style={{
-                          flex: 1,
-                          padding: '0.35rem',
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          background: '#f1f5f9',
-                          border: '1px solid #cbd5e1',
+                          padding: '0.45rem',
                           borderRadius: '6px',
+                          border: completePayMethod === 'CASH' ? '2px solid #059669' : '1px solid #cbd5e1',
+                          background: completePayMethod === 'CASH' ? '#ecfdf5' : '#ffffff',
+                          color: completePayMethod === 'CASH' ? '#047857' : '#475569',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
                           cursor: 'pointer',
                         }}
                       >
-                        Today's ₹{fin.todayAmount}
+                        Cash
                       </button>
-                    )}
-                    {fin.previousOutstanding > 0 && (
                       <button
                         type="button"
-                        onClick={() => setCollectAmount(fin.previousOutstanding.toString())}
+                        onClick={() => setCompletePayMethod('GPAY_UPI')}
                         style={{
-                          flex: 1,
-                          padding: '0.35rem',
-                          fontSize: '0.74rem',
-                          fontWeight: 700,
-                          background: '#f1f5f9',
-                          border: '1px solid #cbd5e1',
+                          padding: '0.45rem',
                           borderRadius: '6px',
+                          border: completePayMethod === 'GPAY_UPI' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                          background: completePayMethod === 'GPAY_UPI' ? '#eff6ff' : '#ffffff',
+                          color: completePayMethod === 'GPAY_UPI' ? '#1d4ed8' : '#475569',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
                           cursor: 'pointer',
                         }}
                       >
-                        Due ₹{fin.previousOutstanding}
+                        GPay / UPI
                       </button>
-                    )}
-                  </div>
-                </div>
+                    </div>
 
-                {/* Payment Method Toggle (Cash vs UPI) */}
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <label className="form-label" style={{ fontWeight: 700 }}>
-                    Payment Mode
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                    <button
-                      type="button"
-                      onClick={() => setCollectMethod('CASH')}
-                      style={{
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        border: collectMethod === 'CASH' ? '2px solid #059669' : '1px solid var(--border)',
-                        background: collectMethod === 'CASH' ? '#ecfdf5' : 'var(--surface)',
-                        color: collectMethod === 'CASH' ? '#065f46' : 'var(--text-secondary)',
-                        fontWeight: 800,
-                        fontSize: '0.9rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.4rem',
-                        minHeight: '46px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Banknote size={18} />
-                      <span>CASH</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setCollectMethod('GPAY_UPI')}
-                      style={{
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        border: collectMethod === 'GPAY_UPI' ? '2px solid var(--primary)' : '1px solid var(--border)',
-                        background: collectMethod === 'GPAY_UPI' ? '#fef2f2' : 'var(--surface)',
-                        color: collectMethod === 'GPAY_UPI' ? 'var(--primary-dark)' : 'var(--text-secondary)',
-                        fontWeight: 800,
-                        fontSize: '0.9rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.4rem',
-                        minHeight: '46px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <QrCode size={18} />
-                      <span>GPAY / UPI</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* If UPI, reference ID */}
-                {collectMethod === 'GPAY_UPI' && (
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label className="form-label">UPI Reference Number</label>
                     <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. 12-digit transaction ID"
-                      value={collectRef}
-                      onChange={(e) => setCollectRef(e.target.value)}
+                      type="number"
+                      step="0.01"
+                      value={completePayAmount}
+                      onChange={(e) => setCompletePayAmount(e.target.value)}
+                      placeholder="Amount"
+                      style={{
+                        width: '100%',
+                        padding: '0.45rem 0.65rem',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '0.88rem',
+                        fontWeight: 700,
+                      }}
                     />
                   </div>
                 )}
-
-                {/* Submit Buttons */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ flex: 1, minHeight: '48px', fontSize: '0.9rem' }}
-                    onClick={() => setPaymentDelivery(null)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    style={{
-                      flex: 2,
-                      minHeight: '48px',
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      background: '#059669',
-                      borderColor: '#047857',
-                    }}
-                    disabled={submitting}
-                  >
-                    {submitting ? 'Recording...' : `Confirm ₹${collectedNum || 0}`}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ============================================================ */}
-      {/* 5. MODAL: COMPLETE DELIVERY (PROMPT 5)                       */}
-      {/* ============================================================ */}
-      {completeDelivery && (() => {
-        const fin = getDeliveryFinancials(completeDelivery);
-        const collectedNum = includePayment ? (parseFloat(completePayAmount) || 0) : 0;
-        const calculatedRemaining = Math.max(0, fin.totalDue - collectedNum);
-
-        return (
-          <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '440px', padding: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                <div>
-                  <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--primary)', fontWeight: 800 }}>
-                    CONFIRM DELIVERY
-                  </span>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                    {completeDelivery.order_details?.customer_details?.name || 'Customer Shop'}
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setCompleteDelivery(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                  <X size={22} />
-                </button>
               </div>
 
-              {actionError && (
-                <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                  {actionError}
-                </div>
-              )}
-
-              <form onSubmit={handleCompleteDelivery}>
-                <div className="form-group" style={{ marginBottom: '1rem' }}>
-                  <label className="form-label" style={{ fontWeight: 700 }}>
-                    Recipient / Staff Name *
-                  </label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    style={{ minHeight: '44px', fontSize: '0.95rem' }}
-                    placeholder="Person who accepted goods"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                {/* Optional Payment Collection Toggle */}
-                <div
-                  style={{
-                    background: includePayment ? '#f0fdf4' : '#f8fafc',
-                    border: includePayment ? '1.5px solid #86efac' : '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    padding: '0.85rem',
-                    marginBottom: '1rem',
-                  }}
-                >
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>
-                    <input
-                      type="checkbox"
-                      checked={includePayment}
-                      onChange={(e) => setIncludePayment(e.target.checked)}
-                      style={{ width: '18px', height: '18px', accentColor: '#059669' }}
-                    />
-                    <span>Collect Payment Right Now?</span>
-                  </label>
-
-                  {includePayment && (
-                    <div style={{ marginTop: '0.75rem' }}>
-                      {/* Live 4-Row Financial Card */}
-                      <div
-                        style={{
-                          background: 'white',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          padding: '0.65rem 0.8rem',
-                          marginBottom: '0.75rem',
-                          fontSize: '0.82rem',
-                        }}
-                      >
-                        {fin.previousOutstanding > 0 && (
-                          <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.25rem' }}>
-                            <span>Previous Outstanding:</span>
-                            <strong style={{ color: '#d97706' }}>{formatCurrency(fin.previousOutstanding)}</strong>
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.25rem' }}>
-                          <span>Today's Bill:</span>
-                          <strong style={{ color: '#991b1b' }}>{formatCurrency(fin.todayAmount)}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.25rem', borderBottom: '1px dashed #cbd5e1' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>Total Due:</span>
-                          <strong>{formatCurrency(fin.totalDue)}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.35rem', color: calculatedRemaining > 0 ? '#dc2626' : '#059669' }}>
-                          <span style={{ fontWeight: 700 }}>Current Outstanding:</span>
-                          <strong style={{ fontSize: '0.95rem' }}>{formatCurrency(calculatedRemaining)}</strong>
-                        </div>
-                      </div>
-
-                      <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                        <label className="form-label">Amount Collected (₹)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="form-input"
-                          style={{ height: '46px', fontSize: '1.2rem', fontWeight: 800, textAlign: 'center', color: '#059669' }}
-                          value={completePayAmount}
-                          onChange={(e) => setCompletePayAmount(e.target.value)}
-                        />
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', marginTop: '0.5rem' }}>
-                        <button
-                          type="button"
-                          onClick={() => setCompletePayMethod('CASH')}
-                          style={{
-                            padding: '0.5rem',
-                            borderRadius: '6px',
-                            border: completePayMethod === 'CASH' ? '2px solid #059669' : '1px solid #cbd5e1',
-                            background: completePayMethod === 'CASH' ? '#ecfdf5' : 'white',
-                            fontWeight: 700,
-                            fontSize: '0.82rem',
-                          }}
-                        >
-                          CASH
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCompletePayMethod('GPAY_UPI')}
-                          style={{
-                            padding: '0.5rem',
-                            borderRadius: '6px',
-                            border: completePayMethod === 'GPAY_UPI' ? '2px solid var(--primary)' : '1px solid #cbd5e1',
-                            background: completePayMethod === 'GPAY_UPI' ? '#fef2f2' : 'white',
-                            fontWeight: 700,
-                            fontSize: '0.82rem',
-                          }}
-                        >
-                          UPI / GPAY
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ flex: 1, minHeight: '48px' }}
-                    onClick={() => setCompleteDelivery(null)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    style={{ flex: 2, minHeight: '48px', fontSize: '0.95rem', fontWeight: 800 }}
-                    disabled={submitting}
-                  >
-                    {submitting ? 'Confirming...' : 'Mark Delivered'}
-                  </button>
-                </div>
-              </form>
-            </div>
+              {/* Confirm Complete Button */}
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{
+                  width: '100%',
+                  height: '46px',
+                  minHeight: '46px',
+                  borderRadius: '6px',
+                  background: '#15803d',
+                  color: 'white',
+                  border: '1px solid #166534',
+                  fontSize: '0.94rem',
+                  fontWeight: 700,
+                  cursor: submitting ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+              >
+                {submitting ? (
+                  <>
+                    <div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                    <span>Confirming Delivery...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} />
+                    <span>Mark Delivery Completed</span>
+                  </>
+                )}
+              </button>
+            </form>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
-      {/* ============================================================ */}
-      {/* 6. MODAL: SKIP / NOT DELIVERED (PROMPT 6)                     */}
-      {/* ============================================================ */}
+      {/* ===================================================================== */}
+      {/* ── MODAL 3: SKIP STOP / NOT DELIVERED ─────────────────────────────── */}
+      {/* ===================================================================== */}
       {skipDelivery && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '420px', padding: '1.25rem' }}>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.55)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+          onClick={() => !submitting && setSkipDelivery(null)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              background: 'var(--bg-card, #ffffff)',
+              borderRadius: '8px 8px 0 0',
+              padding: '1.25rem 1.25rem 2rem 1.25rem',
+              boxShadow: 'var(--shadow-lg)',
+              border: '1px solid var(--border)',
+              borderBottom: 'none',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
               <div>
-                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#dc2626', fontWeight: 800 }}>
-                  SKIP DELIVERY STOP
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#b91c1c', textTransform: 'uppercase' }}>
+                  SKIP STOP / NOT DELIVERED
                 </span>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                  {skipDelivery.order_details?.customer_details?.name || 'Customer Shop'}
+                <h3 style={{ margin: '0.1rem 0 0 0', fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary, #0f172a)' }}>
+                  {skipDelivery.order_details?.customer_details?.name}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSkipDelivery(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                disabled={submitting}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '4px',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
               >
-                <X size={22} />
+                <X size={18} />
               </button>
             </div>
 
-            {actionError && (
-              <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                {actionError}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '0.5rem' }}>
+                Select Reason
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {SKIP_REASONS.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setSkipReason(r)}
+                    style={{
+                      textAlign: 'left',
+                      padding: '0.6rem 0.85rem',
+                      borderRadius: '6px',
+                      border: skipReason === r ? '2px solid #b91c1c' : '1px solid #cbd5e1',
+                      background: skipReason === r ? '#fef2f2' : '#ffffff',
+                      color: skipReason === r ? '#b91c1c' : '#334155',
+                      fontWeight: skipReason === r ? 700 : 500,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {r}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
-            <form onSubmit={handleConfirmSkip}>
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label" style={{ fontWeight: 700 }}>
-                  Reason for Non-Delivery *
-                </label>
-                <select
-                  className="form-select"
-                  style={{ minHeight: '44px', fontSize: '0.9rem' }}
-                  value={skipReason}
-                  onChange={(e) => setSkipReason(e.target.value)}
-                  required
-                >
-                  {NOT_DELIVERED_REASONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                <label className="form-label">Driver Explanation Notes (Optional)</label>
-                <textarea
-                  className="form-textarea"
-                  rows={2}
-                  placeholder="e.g. Shop closed until 4pm"
-                  value={skipNotes}
-                  onChange={(e) => setSkipNotes(e.target.value)}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ flex: 1, minHeight: '44px' }}
-                  onClick={() => setSkipDelivery(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-danger"
-                  style={{ flex: 1.5, minHeight: '44px', fontWeight: 800 }}
-                  disabled={submitting}
-                >
-                  {submitting ? 'Recording...' : 'Confirm Skip'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* 7. MODAL: PAYMENT CONFIRMATION & WHATSAPP RECEIPT SHARE      */}
-      {/* ============================================================ */}
-      {paymentSuccessData && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '420px', padding: '1.5rem', textAlign: 'center' }}>
-            <div
+            <button
+              type="button"
+              onClick={handleConfirmSkip}
+              disabled={submitting}
               style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: '50%',
-                background: '#ecfdf5',
-                color: '#059669',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1rem',
+                width: '100%',
+                height: '46px',
+                minHeight: '46px',
+                borderRadius: '6px',
+                background: '#b91c1c',
+                color: 'white',
+                border: '1px solid #991b1b',
+                fontSize: '0.92rem',
+                fontWeight: 700,
+                cursor: submitting ? 'not-allowed' : 'pointer',
               }}
             >
-              <CheckCircle2 size={36} />
-            </div>
-
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 900, margin: '0 0 0.25rem', color: 'var(--text-primary)' }}>
-              Payment Recorded!
-            </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0 0 1.25rem' }}>
-              Receipt #{paymentSuccessData.paymentNumber}
-            </p>
-
-            {/* Financial Summary Card */}
-            <div
-              style={{
-                background: '#f8fafc',
-                border: '1px solid #cbd5e1',
-                borderRadius: '10px',
-                padding: '1rem',
-                marginBottom: '1.25rem',
-                textAlign: 'left',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Customer Shop</span>
-                <strong>{paymentSuccessData.customerName}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Amount Collected</span>
-                <strong style={{ color: '#059669', fontSize: '1.1rem' }}>{formatCurrency(paymentSuccessData.amount)}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.4rem', borderTop: '1px dashed #cbd5e1', fontSize: '0.9rem' }}>
-                <span style={{ fontWeight: 700 }}>Current Outstanding</span>
-                <strong style={{ color: '#dc2626', fontSize: '1.15rem' }}>
-                  {formatCurrency(paymentSuccessData.remainingBalance)}
-                </strong>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {isWhatsAppEnabled && (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{
-                    minHeight: '48px',
-                    fontSize: '0.95rem',
-                    fontWeight: 800,
-                    background: '#047857',
-                    borderColor: '#065f46',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.4rem',
-                  }}
-                  onClick={() => {
-                    const msg = generatePaymentReceiptMessage({
-                      customerName: paymentSuccessData.customerName,
-                      paymentNumber: paymentSuccessData.paymentNumber,
-                      amount: paymentSuccessData.amount,
-                      paymentMethod: paymentSuccessData.paymentMethod,
-                      date: paymentSuccessData.date,
-                      remainingBalance: paymentSuccessData.remainingBalance,
-                    });
-                    openWhatsApp(paymentSuccessData.customerPhone, msg);
-                  }}
-                >
-                  <MessageSquare size={18} />
-                  <span>Share WhatsApp Receipt</span>
-                </button>
-              )}
-
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ minHeight: '44px' }}
-                onClick={() => setPaymentSuccessData(null)}
-              >
-                Close & Next Stop
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============================================================ */}
-      {/* 8. MODAL: DRIVER DAY CLOSING & NET CASH HANDOVER             */}
-      {/* ============================================================ */}
-      {isDayCloseModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '460px', padding: '1.25rem' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <div
-                  style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '8px',
-                    background: '#fef2f2',
-                    color: '#dc2626',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Lock size={20} />
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#dc2626', fontWeight: 800 }}>
-                    END SHIFT
-                  </span>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-                    Day Closing & Handover
-                  </h3>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsDayCloseModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem' }}
-              >
-                <X size={22} />
-              </button>
-            </div>
-
-            {closeDayError && (
-              <div style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '0.65rem 0.85rem', borderRadius: '8px', marginBottom: '0.85rem', fontSize: '0.84rem' }}>
-                {closeDayError}
-              </div>
-            )}
-
-            <form onSubmit={handleConfirmCloseDay}>
-              {/* SECTION 1: STOCK RECONCILIATION */}
-              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.85rem', marginBottom: '0.9rem' }}>
-                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 800, display: 'block', marginBottom: '0.5rem' }}>
-                  1. STOCK RECONCILIATION (PIECES / PS)
-                </span>
-
-                {/* Kubbus Row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px dashed #e2e8f0' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.88rem', color: '#991b1b', display: 'block' }}>🥖 Kubbus (ps)</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      Taken: <strong>{currentKubbusLoaded}</strong> • Delivered: <strong>{deliveredKubbus}</strong>
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>Returned (ps):</label>
-                    <input
-                      type="number"
-                      min="0"
-                      className="form-input"
-                      style={{ width: '80px', height: '32px', fontSize: '0.88rem', fontWeight: 800, textAlign: 'center' }}
-                      value={kubbusReturnInput}
-                      onChange={(e) => setKubbusReturnInput(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Romali Row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.88rem', color: '#92400e', display: 'block' }}>🫓 Romali (ps)</strong>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      Taken: <strong>{currentRomaliLoaded}</strong> • Delivered: <strong>{deliveredRomali}</strong>
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <label style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>Returned (ps):</label>
-                    <input
-                      type="number"
-                      min="0"
-                      className="form-input"
-                      style={{ width: '80px', height: '32px', fontSize: '0.88rem', fontWeight: 800, textAlign: 'center' }}
-                      value={romaliReturnInput}
-                      onChange={(e) => setRomaliReturnInput(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 2: CASH & EXPENSE RECONCILIATION */}
-              <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '0.85rem', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 800, display: 'block', marginBottom: '0.5rem' }}>
-                  2. COLLECTIONS & HANDOVER TO OFFICE
-                </span>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', paddingBottom: '0.35rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Cash Collected Today</span>
-                  <strong style={{ color: '#059669' }}>{formatCurrency(paymentSummary?.cash_total || '0')}</strong>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', paddingBottom: '0.35rem' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>GPay / UPI Collected Today</span>
-                  <strong style={{ color: '#991b1b' }}>{formatCurrency(paymentSummary?.upi_total || '0')}</strong>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', paddingBottom: '0.45rem', borderBottom: '1px dashed #cbd5e1' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Driver Route Expenses</span>
-                  <strong style={{ color: '#dc2626' }}>- {formatCurrency(shift?.expenses_total || '0')}</strong>
-                </div>
-
-                {/* Net Cash Handover Highlight Box */}
-                <div
-                  style={{
-                    background: '#ecfdf5',
-                    border: '1.5px solid #6ee7b7',
-                    borderRadius: '8px',
-                    padding: '0.65rem 0.8rem',
-                    marginTop: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <Banknote size={18} color="#059669" />
-                    <span style={{ fontWeight: 800, color: '#065f46', fontSize: '0.88rem' }}>
-                      Net Cash Handover:
-                    </span>
-                  </div>
-                  <strong style={{ fontSize: '1.25rem', fontWeight: 900, color: '#059669' }}>
-                    {formatCurrency(shiftNetHandover.toFixed(2))}
-                  </strong>
-                </div>
-              </div>
-
-              {/* SECTION 3: CLOSING NOTES */}
-              <div className="form-group" style={{ marginBottom: '1.1rem' }}>
-                <label className="form-label" style={{ fontSize: '0.82rem' }}>Shift Closing Notes (Optional)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Handed cash to cashier, crates stacked"
-                  value={closeNotes}
-                  onChange={(e) => setCloseNotes(e.target.value)}
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  style={{ flex: 1, minHeight: '44px' }}
-                  onClick={() => setIsDayCloseModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  style={{
-                    flex: 2,
-                    minHeight: '44px',
-                    fontWeight: 800,
-                    background: 'linear-gradient(135deg, #b91c1c 0%, #dc2626 100%)',
-                    borderColor: '#991b1b',
-                  }}
-                  disabled={submittingCloseDay}
-                >
-                  {submittingCloseDay ? 'Settling Shift...' : 'Confirm Day Closing & Handover'}
-                </button>
-              </div>
-            </form>
+              {submitting ? 'Saving...' : 'Confirm Skip Stop'}
+            </button>
           </div>
         </div>
       )}

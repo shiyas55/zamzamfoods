@@ -5,6 +5,7 @@ export interface CreateOrderPayload {
   customer_id: string;
   driver_id?: string | null;
   order_date?: string;
+  order_number?: string;
   shop_expense?: string;
   shop_expense_notes?: string;
   notes?: string;
@@ -81,6 +82,10 @@ export const orderService = {
 
   async reopenOrder(id: string, reason: string): Promise<Order> {
     return apiClient.post<Order>(`/orders/${id}/reopen/`, { reason });
+  },
+
+  async deleteOrder(id: string): Promise<void> {
+    return apiClient.delete(`/orders/${id}/`);
   },
 };
 

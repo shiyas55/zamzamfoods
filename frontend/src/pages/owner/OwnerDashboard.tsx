@@ -388,8 +388,8 @@ export const OwnerDashboard: React.FC = () => {
                 className="card"
                 style={{
                   padding: '1.15rem',
-                  border: '2px solid #f59e0b',
-                  background: 'linear-gradient(to right bottom, #fffbeb, #ffffff)',
+                  border: '1px solid #f59e0b',
+                  background: '#fffbeb',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>

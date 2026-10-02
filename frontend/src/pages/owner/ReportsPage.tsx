@@ -810,7 +810,7 @@ export const ReportsPage: React.FC = () => {
                   </span>
                 </div>
 
-                <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', color: 'white', padding: '1.25rem', borderRadius: 'var(--radius-lg)' }}>
+                <div style={{ background: '#0f172a', color: 'white', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid #1e293b' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8' }}>Net Cashflow Handover</span>
                   <p style={{ fontSize: '1.85rem', fontWeight: 800, color: '#facc15', marginTop: '0.3rem' }}>
                     {formatCurrency(financialSummary.net_collection)}

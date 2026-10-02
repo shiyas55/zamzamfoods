@@ -174,11 +174,11 @@ export const DriverSummaryPage: React.FC = () => {
             {/* 1. TODAY'S CASH CARD */}
             <div
               style={{
-                background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
-                padding: '1.15rem 1rem',
-                borderRadius: '14px',
-                border: '2px solid #a7f3d0',
-                boxShadow: '0 2px 10px rgba(5, 150, 105, 0.1)',
+                background: '#ecfdf5',
+                padding: '1rem',
+                borderRadius: '6px',
+                border: '1px solid #a7f3d0',
+                boxShadow: 'var(--shadow-sm)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -191,9 +191,9 @@ export const DriverSummaryPage: React.FC = () => {
                   </span>
                   <div
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
+                      width: 26,
+                      height: 26,
+                      borderRadius: '4px',
                       background: '#059669',
                       color: 'white',
                       display: 'flex',
@@ -201,11 +201,11 @@ export const DriverSummaryPage: React.FC = () => {
                       justifyContent: 'center',
                     }}
                   >
-                    <Banknote size={16} />
+                    <Banknote size={15} />
                   </div>
                 </div>
 
-                <div style={{ fontSize: '1.55rem', fontWeight: 900, color: '#065f46', lineHeight: 1.1, margin: '0.2rem 0' }}>
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#065f46', lineHeight: 1.1, margin: '0.2rem 0' }}>
                   {formatCurrency(paymentSummary?.cash_total || '0')}
                 </div>
               </div>
@@ -219,11 +219,11 @@ export const DriverSummaryPage: React.FC = () => {
             {/* 2. TODAY'S GPAY / UPI CARD */}
             <div
               style={{
-                background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-                padding: '1.15rem 1rem',
-                borderRadius: '14px',
-                border: '2px solid #fecaca',
-                boxShadow: '0 2px 10px rgba(37, 99, 235, 0.1)',
+                background: '#fef2f2',
+                padding: '1rem',
+                borderRadius: '6px',
+                border: '1px solid #fecaca',
+                boxShadow: 'var(--shadow-sm)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -236,9 +236,9 @@ export const DriverSummaryPage: React.FC = () => {
                   </span>
                   <div
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
+                      width: 26,
+                      height: 26,
+                      borderRadius: '4px',
                       background: 'var(--primary)',
                       color: 'white',
                       display: 'flex',
@@ -246,11 +246,11 @@ export const DriverSummaryPage: React.FC = () => {
                       justifyContent: 'center',
                     }}
                   >
-                    <QrCode size={16} />
+                    <QrCode size={15} />
                   </div>
                 </div>
 
-                <div style={{ fontSize: '1.55rem', fontWeight: 900, color: 'var(--primary-dark)', lineHeight: 1.1, margin: '0.2rem 0' }}>
+                <div style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--primary-dark)', lineHeight: 1.1, margin: '0.2rem 0' }}>
                   {formatCurrency(paymentSummary?.upi_total || '0')}
                 </div>
               </div>
@@ -265,14 +265,12 @@ export const DriverSummaryPage: React.FC = () => {
           {/* Cash Handover & Settlement Card */}
           <div
             style={{
-              background: cashBalance < 0
-                ? 'linear-gradient(135deg, #450a0a 0%, #1e1b4b 100%)'
-                : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              background: cashBalance < 0 ? '#450a0a' : '#0f172a',
               color: 'white',
-              borderRadius: '16px',
+              borderRadius: '6px',
               padding: '1.25rem',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-              border: cashBalance < 0 ? '1.5px solid #dc2626' : '1px solid #334155',
+              boxShadow: 'var(--shadow-sm)',
+              border: cashBalance < 0 ? '1px solid #dc2626' : '1px solid #334155',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
