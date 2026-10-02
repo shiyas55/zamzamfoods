@@ -135,18 +135,38 @@ export const CreateOrderPage: React.FC = () => {
     if (saved === 'CUSTOMER_LINK' || saved === 'MANAGER' || saved === 'ALL') return saved;
     return 'ALL';
   });
-  const [orderSort, setOrderSort] = useState<
-    'ROUTE' | 'CREATE_TIME_DESC' | 'CREATE_TIME_ASC' | 'SHOP_CREATE_DESC' | 'SHOP_CREATE_ASC' | 'CUSTOMER_NAME'
-  >(() => {
+  const [orderSort, setOrderSort] = useState<'SHOP_CREATE_ASC' | 'CUSTOM'>(() => {
     const saved = localStorage.getItem('zamzam_fast_order_sort');
-    if (
-      saved &&
-      ['ROUTE', 'CREATE_TIME_DESC', 'CREATE_TIME_ASC', 'SHOP_CREATE_DESC', 'SHOP_CREATE_ASC', 'CUSTOMER_NAME'].includes(saved)
-    ) {
-      return saved as any;
+    if (saved === 'CUSTOM' || saved === 'SHOP_CREATE_ASC') {
+      return saved;
     }
-    return 'ROUTE';
+    return 'SHOP_CREATE_ASC';
   });
+
+  // Custom sort order: array of row IDs in user-defined order (drag & drop)
+  const [customSortOrder, setCustomSortOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('zamzam_fast_custom_sort_order');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  // Track unsaved custom sort changes and save success feedback
+  const [hasUnsavedCustomOrder, setHasUnsavedCustomOrder] = useState<boolean>(false);
+  const [saveCustomOrderSuccess, setSaveCustomOrderSuccess] = useState<boolean>(false);
+  // Whether custom order is in edit mode (showing drag/move handles, edit, remove, and save button)
+  const [isCustomEditing, setIsCustomEditing] = useState<boolean>(false);
+
+  // Show only shops with orders placed for the current date
+  const [showOrdersOnly, setShowOrdersOnly] = useState<boolean>(() => {
+    return localStorage.getItem('zamzam_show_orders_only') === 'true';
+  });
+
+  // Drag-and-drop state
+  const dragRowId = useRef<string | null>(null);
+  const dragOverRowId = useRef<string | null>(null);
+  const [isDragging, setIsDragging] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
 
   // Auto-sync filter & sort preferences to localStorage on change
   useEffect(() => {
@@ -160,6 +180,10 @@ export const CreateOrderPage: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('zamzam_fast_order_source_filter', sourceFilter);
   }, [sourceFilter]);
+
+  useEffect(() => {
+    localStorage.setItem('zamzam_show_orders_only', String(showOrdersOnly));
+  }, [showOrdersOnly]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
   const [whatsAppNavToken, setWhatsAppNavToken] = useState<number>(0);
@@ -803,71 +827,36 @@ export const CreateOrderPage: React.FC = () => {
       return true;
     });
 
-    return filtered.sort((a, b) => {
-      // Helper to determine if a row has an order created or entered today
-      const hasOrderA = Boolean(a.orderId || a.submittedAt || a.createdAt);
-      const hasOrderB = Boolean(b.orderId || b.submittedAt || b.createdAt);
+    // Apply orders-only filter
+    const afterOrderFilter = showOrdersOnly
+      ? filtered.filter((r) => Boolean(r.orderId || r.submittedAt || r.createdAt || r.kubbusQty !== '0' || r.romaliQty !== '0'))
+      : filtered;
 
-      if (orderSort === 'CREATE_TIME_ASC') {
-        // "Order first created first" (Oldest created order on top)
-        if (hasOrderA && !hasOrderB) return -1;
-        if (!hasOrderA && hasOrderB) return 1;
-        if (hasOrderA && hasOrderB) {
-          const timeA = new Date(a.submittedAt || a.createdAt || 0).getTime();
-          const timeB = new Date(b.submittedAt || b.createdAt || 0).getTime();
-          if (timeA !== timeB) return timeA - timeB;
-        }
-        // Fallback for shops without orders: sort by shop registered date (oldest first) or stop #
-        if (!hasOrderA && !hasOrderB) {
-          if (a.customerCreatedAt && b.customerCreatedAt) {
-            const tA = new Date(a.customerCreatedAt).getTime();
-            const tB = new Date(b.customerCreatedAt).getTime();
-            if (tA !== tB) return tA - tB;
-          }
-        }
-      } else if (orderSort === 'CREATE_TIME_DESC') {
-        // "Order last created first" (Newest created order on top)
-        if (hasOrderA && !hasOrderB) return -1;
-        if (!hasOrderA && hasOrderB) return 1;
-        if (hasOrderA && hasOrderB) {
-          const timeA = new Date(a.submittedAt || a.createdAt || 0).getTime();
-          const timeB = new Date(b.submittedAt || b.createdAt || 0).getTime();
-          if (timeB !== timeA) return timeB - timeA;
-        }
-        // Fallback for shops without orders: sort by shop registered date (newest first) or stop #
-        if (!hasOrderA && !hasOrderB) {
-          if (a.customerCreatedAt && b.customerCreatedAt) {
-            const tA = new Date(a.customerCreatedAt).getTime();
-            const tB = new Date(b.customerCreatedAt).getTime();
-            if (tB !== tA) return tB - tA;
-          }
-        }
-      } else if (orderSort === 'SHOP_CREATE_DESC') {
-        // Shop list based on shop registration/create time (newest shop first)
-        const tA = new Date(a.customerCreatedAt || 0).getTime();
-        const tB = new Date(b.customerCreatedAt || 0).getTime();
-        if (tB !== tA) return tB - tA;
-        return a.customerName.localeCompare(b.customerName);
-      } else if (orderSort === 'SHOP_CREATE_ASC') {
-        // Shop list based on shop registration/create time (first created shop first)
-        const tA = new Date(a.customerCreatedAt || 0).getTime();
-        const tB = new Date(b.customerCreatedAt || 0).getTime();
-        if (tA !== 0 && tB !== 0 && tA !== tB) return tA - tB;
-        if (tA !== 0 && tB === 0) return -1;
-        if (tA === 0 && tB !== 0) return 1;
-        return a.customerName.localeCompare(b.customerName);
-      } else if (orderSort === 'CUSTOMER_NAME') {
-        return a.customerName.localeCompare(b.customerName);
-      }
+    // Helper function for shop registered oldest first (Shop Registered: Oldest)
+    const sortByShopRegisteredOldest = (a: OrderRow, b: OrderRow) => {
+      const tA = new Date(a.customerCreatedAt || 0).getTime();
+      const tB = new Date(b.customerCreatedAt || 0).getTime();
+      if (tA !== 0 && tB !== 0 && tA !== tB) return tA - tB;
+      if (tA !== 0 && tB === 0) return -1;
+      if (tA === 0 && tB !== 0) return 1;
+      return a.customerName.localeCompare(b.customerName);
+    };
 
-      if (a.listOrder !== undefined && b.listOrder !== undefined) {
-        return a.listOrder - b.listOrder;
-      }
-      if (a.listOrder !== undefined) return -1;
-      if (b.listOrder !== undefined) return 1;
-      return 0;
-    });
-  }, [rows, routeFilter, sourceFilter, searchQuery, orderSort, routes, customers]);
+    // Apply custom sort if selected
+    if (orderSort === 'CUSTOM' && customSortOrder.length > 0) {
+      return [...afterOrderFilter].sort((a, b) => {
+        const iA = customSortOrder.indexOf(a.rowId);
+        const iB = customSortOrder.indexOf(b.rowId);
+        if (iA !== -1 && iB !== -1) return iA - iB;
+        if (iA !== -1) return -1;
+        if (iB !== -1) return 1;
+        return sortByShopRegisteredOldest(a, b);
+      });
+    }
+
+    // Default & SHOP_CREATE_ASC: sort by Shop Registered (Oldest)
+    return [...afterOrderFilter].sort(sortByShopRegisteredOldest);
+  }, [rows, routeFilter, sourceFilter, searchQuery, orderSort, routes, customers, customSortOrder, showOrdersOnly]);
 
   // Synchronize single shared search state: auto-highlight matching customer across billing and WhatsApp
   useEffect(() => {
@@ -1471,49 +1460,89 @@ export const CreateOrderPage: React.FC = () => {
     return customers.filter((c) => !existingIds.has(c.id)).length;
   }, [rows, customers]);
 
-  // Dynamic Column Sequence for Keyboard Navigation
-  const getColSequence = useCallback((): string[] => {
-    const pCols = products.length > 0 ? products.map((p) => `prod_${p.id}`) : ['kubbus', 'romali'];
-    return [...pCols, 'cash', 'gpay'];
+  // Dynamic Product Column Sequence for Fast Order Entry (Kubbus -> Romali -> Next Shop)
+  const getProductCols = useCallback((): string[] => {
+    return products.length > 0 ? products.map((p) => `prod_${p.id}`) : ['kubbus', 'romali'];
   }, [products]);
 
+  // Dynamic Column Sequence for Keyboard Navigation
+  const getColSequence = useCallback((): string[] => {
+    const pCols = getProductCols();
+    return [...pCols, 'cash', 'gpay'];
+  }, [getProductCols]);
+
   /**
-   * Ultra-Fast Dynamic Keyboard Entry Logic:
-   * Enter / Tab: cycles through each dynamic product -> Cash -> GPay -> Next row's first product
-   * Arrow Up / Down: jumps vertically between shops on the same column
+   * Ultra-Fast Product Keyboard Entry:
+   * Enter / Tab on products:
+   *   - Kubbus -> Romali Roti -> Next Shop's Kubbus! (Skips Cash & GPay)
+   * Enter / Tab on Cash:
+   *   - Cash -> GPay -> Next Shop's Cash
+   * Shift + Tab:
+   *   - Moves backwards between products / shops
+   * Arrow Up / Down:
+   *   - Jumps vertically between shops on the same column
    */
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
     visibleIndex: number,
     col: string
   ) => {
-    const cols = getColSequence();
-    const colIdx = cols.indexOf(col);
-    const firstCol = cols[0];
+    const prodCols = getProductCols();
+    const isProdCol = prodCols.includes(col);
 
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
       e.preventDefault();
-      if (colIdx >= 0 && colIdx < cols.length - 1) {
-        focusCell(visibleIndex, cols[colIdx + 1]);
-      } else if (colIdx === cols.length - 1) {
-        if (visibleIndex < visibleRows.length - 1) {
-          focusCell(visibleIndex + 1, firstCol);
+      if (isProdCol) {
+        const pIdx = prodCols.indexOf(col);
+        if (pIdx >= 0 && pIdx < prodCols.length - 1) {
+          // Go to next product of the SAME shop (e.g. Kubbus -> Romali Roti)
+          focusCell(visibleIndex, prodCols[pIdx + 1]);
+        } else if (pIdx === prodCols.length - 1) {
+          // LAST product of this shop -> jump straight to NEXT SHOP's first product (e.g. Romali -> Next Shop's Kubbus)!
+          if (visibleIndex < visibleRows.length - 1) {
+            focusCell(visibleIndex + 1, prodCols[0]);
+          }
         }
+        return;
+      }
+
+      // If user is manually focused on Cash or GPay:
+      if (col === 'cash') {
+        focusCell(visibleIndex, 'gpay');
+        return;
+      }
+      if (col === 'gpay') {
+        if (visibleIndex < visibleRows.length - 1) {
+          focusCell(visibleIndex + 1, 'cash');
+        }
+        return;
       }
       return;
     }
 
-    if (e.key === 'Tab' && !e.shiftKey) {
-      if (colIdx >= 0 && colIdx < cols.length - 1) {
+    if (e.key === 'Tab' && e.shiftKey) {
+      if (isProdCol) {
         e.preventDefault();
-        focusCell(visibleIndex, cols[colIdx + 1]);
-      } else if (colIdx === cols.length - 1) {
-        if (visibleIndex < visibleRows.length - 1) {
-          e.preventDefault();
-          focusCell(visibleIndex + 1, firstCol);
+        const pIdx = prodCols.indexOf(col);
+        if (pIdx > 0) {
+          // Previous product of same shop
+          focusCell(visibleIndex, prodCols[pIdx - 1]);
+        } else if (pIdx === 0 && visibleIndex > 0) {
+          // Previous shop's last product
+          focusCell(visibleIndex - 1, prodCols[prodCols.length - 1]);
         }
+        return;
       }
-      return;
+      if (col === 'gpay') {
+        e.preventDefault();
+        focusCell(visibleIndex, 'cash');
+        return;
+      }
+      if (col === 'cash') {
+        e.preventDefault();
+        focusCell(visibleIndex, prodCols[prodCols.length - 1]);
+        return;
+      }
     }
 
     if (e.key === 'ArrowDown') {
@@ -1531,6 +1560,64 @@ export const CreateOrderPage: React.FC = () => {
       }
       return;
     }
+  };
+
+  // Move row up or down in Custom Order
+  const handleMoveCustomRow = (rowId: string, direction: 'UP' | 'DOWN') => {
+    const currentOrder = customSortOrder.length > 0
+      ? [...customSortOrder]
+      : visibleRows.map((r) => r.rowId);
+
+    visibleRows.forEach((r) => {
+      if (!currentOrder.includes(r.rowId)) {
+        currentOrder.push(r.rowId);
+      }
+    });
+
+    const currentIndex = currentOrder.indexOf(rowId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'UP' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= currentOrder.length) return;
+
+    const updated = [...currentOrder];
+    const temp = updated[currentIndex];
+    updated[currentIndex] = updated[targetIndex];
+    updated[targetIndex] = temp;
+
+    setCustomSortOrder(updated);
+    localStorage.setItem('zamzam_fast_custom_sort_order', JSON.stringify(updated));
+    setHasUnsavedCustomOrder(true);
+  };
+
+  // Set & Save Custom Order permanently and lock/hide edit options
+  const handleSaveCustomOrder = () => {
+    const currentOrder = visibleRows.map((r) => r.rowId);
+    setCustomSortOrder(currentOrder);
+    localStorage.setItem('zamzam_fast_custom_sort_order', JSON.stringify(currentOrder));
+    setHasUnsavedCustomOrder(false);
+    setSaveCustomOrderSuccess(true);
+    setIsCustomEditing(false); // Hides edit options and remove buttons on save
+    setSuccessBanner(`Custom shop order saved and locked successfully (${currentOrder.length} shops)! Edit options hidden.`);
+    setTimeout(() => {
+      setSaveCustomOrderSuccess(false);
+    }, 2500);
+  };
+
+  // Reset Custom Order back to Shop Registered (Oldest)
+  const handleResetToOldest = () => {
+    const resetOrder = [...visibleRows].sort((a, b) => {
+      const tA = new Date(a.customerCreatedAt || 0).getTime();
+      const tB = new Date(b.customerCreatedAt || 0).getTime();
+      if (tA !== 0 && tB !== 0 && tA !== tB) return tA - tB;
+      if (tA !== 0 && tB === 0) return -1;
+      if (tA === 0 && tB !== 0) return 1;
+      return a.customerName.localeCompare(b.customerName);
+    }).map((r) => r.rowId);
+    setCustomSortOrder(resetOrder);
+    localStorage.setItem('zamzam_fast_custom_sort_order', JSON.stringify(resetOrder));
+    setHasUnsavedCustomOrder(false);
+    setSuccessBanner('Reset custom order back to Shop Registered (Oldest).');
   };
 
   // Add 1 Custom Row
@@ -2051,49 +2138,49 @@ export const CreateOrderPage: React.FC = () => {
         flexDirection: 'column',
       }}
     >
-      {/* 1. Page Header (Single-line compact) */}
+      {/* 1. Page Header (Ultra-compact single-line) */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '0.65rem',
+          marginBottom: '0.15rem',
           flexShrink: 0,
-          gap: '0.75rem',
+          gap: '0.35rem',
           flexWrap: 'wrap',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem' }}>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, lineHeight: 1.15 }}>
             Fast Wholesale Order Entry
           </h2>
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-            Enter: {products.length > 0 ? products.map((p) => p.name).join(' → ') : 'Products'} → Next Shop
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>
+            {products.length > 0 ? products.map((p) => p.name).join(' → ') : 'Products'} → Next Shop
           </span>
           {ordersLoading && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <div className="spinner" style={{ width: 12, height: 12 }} />
-              Loading database orders...
+            <span style={{ fontSize: '0.68rem', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <div className="spinner" style={{ width: 10, height: 10 }} />
+              Loading...
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {/* Driver Confirmation Toggle */}
           <label
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.4rem',
+              gap: '0.3rem',
               cursor: 'pointer',
-              fontSize: '0.8rem',
+              fontSize: '0.76rem',
               fontWeight: 700,
               color: autoConfirmDriver ? '#dc2626' : 'var(--text-secondary)',
               background: autoConfirmDriver ? '#fee2e2' : 'var(--bg-card)',
               border: autoConfirmDriver ? '1.5px solid #dc2626' : '1px solid var(--border)',
-              padding: '0 0.65rem',
-              borderRadius: '8px',
-              height: '34px',
+              padding: '0 0.5rem',
+              borderRadius: '6px',
+              height: '28px',
               userSelect: 'none',
               transition: 'all 0.15s ease',
             }}
@@ -2103,9 +2190,9 @@ export const CreateOrderPage: React.FC = () => {
               type="checkbox"
               checked={autoConfirmDriver}
               onChange={(e) => setAutoConfirmDriver(e.target.checked)}
-              style={{ accentColor: '#dc2626', width: '15px', height: '15px', cursor: 'pointer' }}
+              style={{ accentColor: '#dc2626', width: '13px', height: '13px', cursor: 'pointer' }}
             />
-            <Truck size={15} color={autoConfirmDriver ? '#dc2626' : 'var(--text-muted)'} />
+            <Truck size={13} color={autoConfirmDriver ? '#dc2626' : 'var(--text-muted)'} />
             <span>Confirm to Driver</span>
           </label>
 
@@ -2114,19 +2201,20 @@ export const CreateOrderPage: React.FC = () => {
             className="btn btn-secondary btn-sm"
             onClick={() => setIsAutoEntryModalOpen(true)}
             style={{
-              height: '34px',
-              padding: '0 0.75rem',
+              height: '28px',
+              padding: '0 0.55rem',
               fontWeight: 700,
+              fontSize: '0.76rem',
               background: '#fef3c7',
               color: '#b45309',
               borderColor: '#fde68a',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.35rem',
+              gap: '0.25rem',
             }}
             title="Auto-fill order quantities from yesterday's orders or bulk presets"
           >
-            <Zap size={15} color="#d97706" />
+            <Zap size={13} color="#d97706" />
             <span>Auto Entry</span>
           </button>
 
@@ -2134,9 +2222,9 @@ export const CreateOrderPage: React.FC = () => {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={handleOpenNewCustomerModal}
-            style={{ height: '34px', padding: '0 0.75rem' }}
+            style={{ height: '28px', padding: '0 0.55rem', fontSize: '0.76rem' }}
           >
-            <UserPlus size={15} />
+            <UserPlus size={13} />
             <span>New Shop</span>
           </button>
 
@@ -2146,19 +2234,20 @@ export const CreateOrderPage: React.FC = () => {
               className="btn btn-secondary btn-sm"
               onClick={() => setIsOpenDayModalOpen(true)}
               style={{
-                height: '34px',
-                padding: '0 0.75rem',
+                height: '28px',
+                padding: '0 0.55rem',
                 fontWeight: 700,
+                fontSize: '0.76rem',
                 color: '#b45309',
                 borderColor: '#fcd34d',
                 background: '#fffbeb',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '0.4rem',
+                gap: '0.25rem',
               }}
               title="Record opening cash float for business day"
             >
-              <Sunrise size={15} />
+              <Sunrise size={13} />
               <span>Open Day</span>
             </button>
           )}
@@ -2168,9 +2257,9 @@ export const CreateOrderPage: React.FC = () => {
             className="btn btn-primary btn-sm"
             disabled={isSubmittingAll || pendingOrdersCount === 0}
             onClick={handleSubmitAllOrders}
-            style={{ height: '34px', padding: '0 1rem', fontWeight: 800 }}
+            style={{ height: '28px', padding: '0 0.75rem', fontWeight: 800, fontSize: '0.78rem' }}
           >
-            <Save size={15} />
+            <Save size={13} />
             <span>
               {isSubmittingAll
                 ? `Submitting (${submitProgress?.current}/${submitProgress?.total})...`
@@ -2184,15 +2273,15 @@ export const CreateOrderPage: React.FC = () => {
 
       {/* Notifications */}
       {error && (
-        <div className="alert alert-error" style={{ marginBottom: '0.5rem', padding: '0.4rem 0.75rem', fontSize: '0.82rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <AlertCircle size={16} />
+        <div className="alert alert-error" style={{ marginBottom: '0.2rem', padding: '0.25rem 0.55rem', fontSize: '0.78rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <AlertCircle size={14} />
           <span>{error}</span>
         </div>
       )}
 
       {successBanner && (
-        <div className="alert alert-success" style={{ marginBottom: '0.5rem', padding: '0.4rem 0.75rem', fontSize: '0.82rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <CheckCircle2 size={16} />
+        <div className="alert alert-success" style={{ marginBottom: '0.25rem', padding: '0.3rem 0.65rem', fontSize: '0.8rem', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <CheckCircle2 size={14} />
           <span>{successBanner}</span>
         </div>
       )}
@@ -2202,22 +2291,22 @@ export const CreateOrderPage: React.FC = () => {
         className="billing-stat-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(auto-fit, minmax(170px, 1fr))`,
-          gap: '0.65rem',
-          marginBottom: '0.65rem',
+          gridTemplateColumns: `repeat(auto-fit, minmax(155px, 1fr))`,
+          gap: '0.3rem',
+          marginBottom: '0.2rem',
           flexShrink: 0,
           width: '100%',
         }}
       >
         {/* Card 1: Orders summary */}
-        <div className="card" style={{ padding: '0.5rem 0.85rem', borderLeft: '4px solid #dc2626' }}>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
+        <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #dc2626' }}>
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
             Dispatch Orders ({orderDate})
           </span>
-          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626', marginTop: '0.1rem', lineHeight: 1.15 }}>
+          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#dc2626', marginTop: '0.02rem', lineHeight: 1.15 }}>
             {sheetStats.validShopsCount} Shops
           </div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+          <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>
             {formatCurrency(sheetStats.totalBill)} total bill
           </div>
         </div>
@@ -2236,14 +2325,14 @@ export const CreateOrderPage: React.FC = () => {
                 : 0);
 
             return (
-              <div key={p.id} className="card" style={{ padding: '0.5rem 0.85rem', borderLeft: `4px solid ${cardColor}` }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
+              <div key={p.id} className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: `3.5px solid ${cardColor}` }}>
+                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
                   Total {p.name}
                 </span>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: cardColor, marginTop: '0.1rem', lineHeight: 1.15 }}>
-                  {qty} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>ps</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: cardColor, marginTop: '0.02rem', lineHeight: 1.15 }}>
+                  {qty} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>
                   {p.packet_size ? `${p.packet_size} • ` : ''}₹{parseFloat(p.unit_price).toFixed(2)}/ps
                 </div>
               </div>
@@ -2251,48 +2340,48 @@ export const CreateOrderPage: React.FC = () => {
           })
         ) : (
           <>
-            <div className="card" style={{ padding: '0.5rem 0.85rem', borderLeft: '4px solid #f59e0b' }}>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
+            <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #f59e0b' }}>
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
                 Total Kubbus
               </span>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#b45309', marginTop: '0.1rem', lineHeight: 1.15 }}>
-                {sheetStats.totalKubbus} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>ps</span>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#b45309', marginTop: '0.02rem', lineHeight: 1.15 }}>
+                {sheetStats.totalKubbus} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Single pieces (ps)</div>
+              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>Single pieces (ps)</div>
             </div>
-            <div className="card" style={{ padding: '0.5rem 0.85rem', borderLeft: '4px solid #dc2626' }}>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
+            <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #dc2626' }}>
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
                 Total Romali
               </span>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#dc2626', marginTop: '0.1rem', lineHeight: 1.15 }}>
-                {sheetStats.totalRomali} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>ps</span>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#dc2626', marginTop: '0.02rem', lineHeight: 1.15 }}>
+                {sheetStats.totalRomali} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>Wholesale pieces</div>
+              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>Wholesale pieces</div>
             </div>
           </>
         )}
 
         {/* If 3 or more products, also show Total Pieces summary card */}
         {products.length >= 3 && (
-          <div className="card" style={{ padding: '0.5rem 0.85rem', borderLeft: '4px solid #6366f1' }}>
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
+          <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #6366f1' }}>
+            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
               Total All Pieces
             </span>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#4f46e5', marginTop: '0.1rem', lineHeight: 1.15 }}>
-              {sheetStats.totalPieces} <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>ps</span>
+            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#4f46e5', marginTop: '0.02rem', lineHeight: 1.15 }}>
+              {sheetStats.totalPieces} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+            <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>
               Across {products.length} products
             </div>
           </div>
         )}
 
         {/* Card 4: Green border stripe */}
-        <div className="card" style={{ padding: '0.5rem 0.85rem', borderLeft: '4px solid #10b981' }}>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-            Collections & Balance
+        <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #10b981' }}>
+          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
+            Collections &amp; Balance
           </span>
-          <div style={{ fontSize: '0.75rem', marginTop: '0.2rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+          <div style={{ fontSize: '0.7rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column', gap: '0.05rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Collected:</span>
               <strong style={{ color: '#10b981' }}>{formatCurrency(sheetStats.totalCash + sheetStats.totalGPay)}</strong>
@@ -2305,24 +2394,29 @@ export const CreateOrderPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Compact Filter Bar */}
+      {/* 3. Compact Filter Bar - Single stream without wasted vertical space */}
       <div
         className="billing-filter-bar"
         style={{
-          gap: '0.5rem',
-          marginBottom: '0.65rem',
+          display: 'flex',
+          gap: '0.25rem',
           alignItems: 'center',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          marginBottom: '0.2rem',
           flexShrink: 0,
+          scrollbarWidth: 'none',
         }}
       >
         {/* Route Select */}
         <select
           className="form-select"
-          style={{ minWidth: '180px', flex: '0 0 200px', height: '34px', padding: '0.25rem 0.65rem', fontSize: '0.84rem' }}
+          style={{ width: '130px', minWidth: '115px', flex: '0 0 auto', height: '28px', padding: '0 0.35rem', fontSize: '0.74rem' }}
           value={routeFilter}
           onChange={(e) => setRouteFilter(e.target.value)}
         >
-          <option value="ALL">All Routes ({customers.length} Shops)</option>
+          <option value="ALL">All Routes ({customers.length})</option>
           {routes.map((r) => {
             const count = customers.filter(
               (c) =>
@@ -2333,7 +2427,7 @@ export const CreateOrderPage: React.FC = () => {
             const displayName = r.name.charAt(0).toUpperCase() + r.name.slice(1);
             return (
               <option key={r.id} value={r.id}>
-                {displayName} ({count} Shops)
+                {displayName} ({count})
               </option>
             );
           })}
@@ -2343,27 +2437,130 @@ export const CreateOrderPage: React.FC = () => {
         <input
           type="date"
           className="form-input"
-          style={{ width: '145px', flex: '0 0 145px', height: '34px', padding: '0.25rem 0.65rem', fontSize: '0.84rem' }}
+          style={{ width: '112px', flex: '0 0 auto', height: '28px', padding: '0 0.35rem', fontSize: '0.74rem' }}
           value={orderDate}
           onChange={(e) => handleDateChange(e.target.value)}
           title="Select dispatch date to load or enter orders"
         />
 
-        {/* Order Sorting Dropdown */}
+        {/* Order Sorting Dropdown - Small, side-by-side with Route and Date */}
         <select
           className="form-select"
-          style={{ minWidth: '220px', flex: '0 0 auto', height: '34px', padding: '0.25rem 0.65rem', fontSize: '0.84rem' }}
+          style={{ width: '130px', minWidth: '115px', flex: '0 0 auto', height: '28px', padding: '0 0.35rem', fontSize: '0.74rem' }}
           value={orderSort}
-          onChange={(e) => setOrderSort(e.target.value as any)}
-          title="Sort order rows by route, order creation time, or shop registration date"
+          onClick={() => {
+            if (orderSort === 'CUSTOM' && !isCustomEditing) {
+              setIsCustomEditing(true);
+            }
+          }}
+          onChange={(e) => {
+            const nextSort = e.target.value as 'SHOP_CREATE_ASC' | 'CUSTOM';
+            if (nextSort === 'CUSTOM') {
+              if (customSortOrder.length === 0) {
+                // When custom is clicked, initialize custom order same as shop registered oldest
+                const oldestOrder = [...visibleRows].sort((a, b) => {
+                  const tA = new Date(a.customerCreatedAt || 0).getTime();
+                  const tB = new Date(b.customerCreatedAt || 0).getTime();
+                  if (tA !== 0 && tB !== 0 && tA !== tB) return tA - tB;
+                  if (tA !== 0 && tB === 0) return -1;
+                  if (tA === 0 && tB !== 0) return 1;
+                  return a.customerName.localeCompare(b.customerName);
+                }).map((r) => r.rowId);
+                setCustomSortOrder(oldestOrder);
+                localStorage.setItem('zamzam_fast_custom_sort_order', JSON.stringify(oldestOrder));
+              }
+              setIsCustomEditing(true); // When custom clicked, that time come!
+            } else {
+              setIsCustomEditing(false);
+            }
+            setOrderSort(nextSort);
+          }}
+          title="Sort order rows by shop registered date (oldest) or drag custom order"
         >
-          <option value="ROUTE">Sort: Route / Stop # (Default)</option>
-          <option value="CREATE_TIME_ASC">Sort: Order Time (Oldest / First Created First)</option>
-          <option value="CREATE_TIME_DESC">Sort: Order Time (Newest / Last Created First)</option>
-          <option value="SHOP_CREATE_DESC">Sort: Shop Registered (Newest First)</option>
-          <option value="SHOP_CREATE_ASC">Sort: Shop Registered (Oldest First)</option>
-          <option value="CUSTOMER_NAME">Sort: Customer / Shop Name (A-Z)</option>
+          <option value="SHOP_CREATE_ASC">Sort: Oldest</option>
+          <option value="CUSTOM">
+            {orderSort === 'CUSTOM' && !isCustomEditing
+              ? '✋ Custom Order'
+              : '✋ Custom (Drag)'}
+          </option>
         </select>
+        {orderSort === 'CUSTOM' && isCustomEditing && (
+          <div style={{ display: 'inline-flex', gap: '0.25rem', alignItems: 'center', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={handleSaveCustomOrder}
+              style={{
+                height: '28px',
+                padding: '0 0.5rem',
+                background: saveCustomOrderSuccess ? '#16a34a' : '#15803d',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 'var(--radius)',
+                fontSize: '0.74rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.2rem',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 1px 3px rgba(21, 128, 61, 0.4)',
+              }}
+              title="Save custom order and hide all edit & remove options"
+            >
+              <Save size={12} />
+              <span>{saveCustomOrderSuccess ? '✓ Saved' : '💾 Save'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleResetToOldest}
+              style={{
+                height: '28px',
+                padding: '0 0.35rem',
+                background: '#f8fafc',
+                color: '#475569',
+                border: '1px solid #cbd5e1',
+                borderRadius: 'var(--radius)',
+                fontSize: '0.74rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.2rem',
+                whiteSpace: 'nowrap',
+              }}
+              title="Reset order back to Shop Registered (Oldest)"
+            >
+              🔄 Reset
+            </button>
+          </div>
+        )}
+
+        {/* Action filter buttons */}
+        <button
+          type="button"
+          onClick={() => setShowOrdersOnly((prev) => !prev)}
+          style={{
+            height: '28px',
+            padding: '0 0.5rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+            fontWeight: 700,
+            fontSize: '0.74rem',
+            borderRadius: 'var(--radius)',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            flex: '0 0 auto',
+            background: showOrdersOnly ? '#1e40af' : '#f8fafc',
+            color: showOrdersOnly ? '#fff' : '#64748b',
+            border: showOrdersOnly ? '1.5px solid #1e40af' : '1px solid #e2e8f0',
+            transition: 'all 0.15s ease',
+          }}
+          title={showOrdersOnly ? 'Showing only shops with orders — click to show all shops' : 'Click to show only shops with orders placed today'}
+        >
+          <span>📋</span>
+          <span>{showOrdersOnly ? 'Orders Only ✓' : 'Orders Only'}</span>
+        </button>
 
         {/* Refresh Orders Button with Last Updated indicator */}
         <button
@@ -2371,12 +2568,12 @@ export const CreateOrderPage: React.FC = () => {
           className="btn btn-secondary btn-sm"
           onClick={() => loadOrdersForDate(orderDate, customers, drivers, false)}
           disabled={ordersLoading || isSyncing}
-          style={{ height: '34px', padding: '0 0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
+          style={{ height: '28px', padding: '0 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600, fontSize: '0.74rem', flex: '0 0 auto' }}
           title={`Click to refresh orders. Last refreshed: ${lastUpdatedTime}`}
         >
-          <RefreshCw size={14} className={ordersLoading || isSyncing ? 'spinner' : ''} />
+          <RefreshCw size={12} className={ordersLoading || isSyncing ? 'spinner' : ''} />
           <span>Refresh</span>
-          <span style={{ fontSize: '0.72rem', opacity: 0.7, fontWeight: 'normal' }}>({lastUpdatedTime})</span>
+          <span style={{ fontSize: '0.68rem', opacity: 0.7, fontWeight: 'normal' }}>({lastUpdatedTime})</span>
         </button>
 
         {/* User-Controlled Auto-Sync Toggle (Defaults to OFF to prevent table reloading while typing) */}
@@ -2384,8 +2581,8 @@ export const CreateOrderPage: React.FC = () => {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.4rem',
-            fontSize: '0.78rem',
+            gap: '0.3rem',
+            fontSize: '0.74rem',
             cursor: 'pointer',
             userSelect: 'none',
             color: autoSyncEnabled ? '#065f46' : '#64748b',
@@ -2393,8 +2590,9 @@ export const CreateOrderPage: React.FC = () => {
             background: autoSyncEnabled ? '#ecfdf5' : '#f8fafc',
             border: autoSyncEnabled ? '1px solid #a7f3d0' : '1px solid #e2e8f0',
             borderRadius: '4px',
-            padding: '0 0.65rem',
-            height: '34px',
+            padding: '0 0.45rem',
+            height: '28px',
+            flex: '0 0 auto',
           }}
           title="Auto-Sync is disabled by default to keep the order entry table completely stable without auto-reloading. Check to enable background sync every 60s."
         >
@@ -2402,7 +2600,7 @@ export const CreateOrderPage: React.FC = () => {
             type="checkbox"
             checked={autoSyncEnabled}
             onChange={(e) => setAutoSyncEnabled(e.target.checked)}
-            style={{ cursor: 'pointer', accentColor: '#059669', width: '13px', height: '13px' }}
+            style={{ cursor: 'pointer', accentColor: '#059669', width: '12px', height: '12px' }}
           />
           <span>Auto-Sync</span>
           {autoSyncEnabled && (
@@ -2430,11 +2628,11 @@ export const CreateOrderPage: React.FC = () => {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.4rem',
-            height: '34px',
-            padding: '0 0.8rem',
+            gap: '0.25rem',
+            height: '28px',
+            padding: '0 0.45rem',
             borderRadius: 'var(--radius)',
-            fontSize: '0.82rem',
+            fontSize: '0.74rem',
             fontWeight: 800,
             cursor: selfOrdersCount > 0 || sourceFilter === 'CUSTOMER_LINK' ? 'pointer' : 'default',
             background: sourceFilter === 'CUSTOMER_LINK' ? '#059669' : selfOrdersCount > 0 ? '#ecfdf5' : '#f8fafc',
@@ -2442,16 +2640,17 @@ export const CreateOrderPage: React.FC = () => {
             border: sourceFilter === 'CUSTOMER_LINK' ? '1.5px solid #059669' : selfOrdersCount > 0 ? '1.5px solid #10b981' : '1px solid #cbd5e1',
             boxShadow: sourceFilter === 'CUSTOMER_LINK' ? '0 2px 8px rgba(16, 185, 129, 0.35)' : '0 1px 3px rgba(0,0,0,0.05)',
             whiteSpace: 'nowrap',
+            flex: '0 0 auto',
             transition: 'all 0.15s ease',
           }}
           title={selfOrdersCount > 0 ? "Click to filter table to Customer Self-Orders placed online" : "No self-orders placed online yet for this date"}
         >
-          <Smartphone size={15} color={sourceFilter === 'CUSTOMER_LINK' ? '#ffffff' : selfOrdersCount > 0 ? '#059669' : '#94a3b8'} />
+          <Smartphone size={12} color={sourceFilter === 'CUSTOMER_LINK' ? '#ffffff' : selfOrdersCount > 0 ? '#059669' : '#94a3b8'} />
           <span>{selfOrdersCount} Self-Order{selfOrdersCount === 1 ? '' : 's'}</span>
           {sourceFilter === 'CUSTOMER_LINK' ? (
-            <X size={13} />
+            <X size={12} />
           ) : selfOrdersCount > 0 ? (
-            <span style={{ fontSize: '0.7rem', opacity: 0.85, background: '#10b981', color: '#fff', padding: '0.1rem 0.35rem', borderRadius: '3px' }}>Filter</span>
+            <span style={{ fontSize: '0.66rem', opacity: 0.85, background: '#10b981', color: '#fff', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>Filter</span>
           ) : null}
         </button>
 
@@ -2464,14 +2663,15 @@ export const CreateOrderPage: React.FC = () => {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0 0.65rem',
-              height: '34px',
+              gap: '0.25rem',
+              padding: '0 0.45rem',
+              height: '28px',
               borderRadius: 'var(--radius)',
-              fontSize: '0.78rem',
+              fontSize: '0.74rem',
               fontWeight: 700,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
+              flex: '0 0 auto',
               background: dayStatus.is_closed ? '#fef2f2' : dayStatus.is_opened ? '#f0fdf4' : '#fffbeb',
               color: dayStatus.is_closed ? '#b91c1c' : dayStatus.is_opened ? '#166534' : '#b45309',
               border: `1px solid ${dayStatus.is_closed ? '#fca5a5' : dayStatus.is_opened ? '#86efac' : '#fcd34d'}`,
@@ -2488,12 +2688,12 @@ export const CreateOrderPage: React.FC = () => {
         )}
 
         {/* Customer/Shop Search Input with Connected WhatsApp Dropdown List */}
-        <div ref={searchContainerRef} style={{ position: 'relative', flex: '1 1 240px', minWidth: '220px' }}>
+        <div ref={searchContainerRef} style={{ position: 'relative', flex: '1 1 180px', minWidth: '160px' }}>
           <Search
-            size={14}
+            size={13}
             style={{
               position: 'absolute',
-              left: '10px',
+              left: '8px',
               top: '50%',
               transform: 'translateY(-50%)',
               color: 'var(--text-muted)',
@@ -2504,7 +2704,7 @@ export const CreateOrderPage: React.FC = () => {
           <input
             type="text"
             className="form-input"
-            style={{ paddingLeft: '30px', height: '34px', paddingRight: '28px', fontSize: '0.84rem', width: '100%' }}
+            style={{ paddingLeft: '26px', height: '28px', paddingRight: '24px', fontSize: '0.78rem', width: '100%' }}
             placeholder="Search by shop name, customer, or phone..."
             value={searchQuery}
             onChange={(e) => {
@@ -2668,7 +2868,7 @@ export const CreateOrderPage: React.FC = () => {
               setRouteFilter('ALL');
               setSearchQuery('');
             }}
-            style={{ height: '34px', padding: '0 0.65rem', fontSize: '0.8rem' }}
+            style={{ height: '28px', padding: '0 0.55rem', fontSize: '0.76rem' }}
           >
             Clear Filters
           </button>
@@ -2681,103 +2881,50 @@ export const CreateOrderPage: React.FC = () => {
             className="billing-whatsapp-mobile-trigger btn btn-sm"
             onClick={() => setMobileWhatsAppOpen(true)}
             style={{
-              height: '34px',
-              padding: '0 0.65rem',
+              height: '28px',
+              padding: '0 0.55rem',
               background: '#ecfdf5',
               border: '1.5px solid #10b981',
               color: '#047857',
               fontWeight: 700,
-              fontSize: '0.8rem',
+              fontSize: '0.78rem',
               borderRadius: 'var(--radius)',
               cursor: 'pointer',
             }}
             title="Open WhatsApp Customer Chat"
           >
-            <MessageCircle size={15} color="#059669" />
+            <MessageCircle size={13} color="#059669" />
             <span>WhatsApp{activeCustomer ? ` (${activeCustomer.name.slice(0, 10)})` : ''}</span>
           </button>
         )}
       </div>
 
-      {/* Day Status Action Alert Banner */}
-      {dayStatus && !dayStatus.is_opened && !dayStatus.is_closed && (
-        <div
-          style={{
-            padding: '0.5rem 0.85rem',
-            background: '#fffbeb',
-            border: '1.5px solid #fcd34d',
-            borderRadius: 'var(--radius)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '0.5rem',
-            flexShrink: 0,
-            gap: '1rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#92400e' }}>
-            <Sun size={20} color="#b45309" />
-            <div>
-              <span style={{ fontSize: '0.86rem', fontWeight: 800 }}>
-                Business Day ({orderDate}) is Not Yet Opened
-              </span>
-              <span style={{ fontSize: '0.78rem', color: '#b45309', display: 'block' }}>
-                You can enter and save wholesale orders directly. Click Open Day to record your morning cash float.
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => setIsOpenDayModalOpen(true)}
-            style={{
-              background: '#b45309',
-              borderColor: '#b45309',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              height: '32px',
-              fontSize: '0.82rem',
-              fontWeight: 800,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Sunrise size={15} />
-            <span>Open Day Cash Float</span>
-          </button>
-        </div>
-      )}
-
       {dayStatus?.is_closed && (
         <div
           style={{
-            padding: '0.5rem 0.85rem',
+            padding: '0.2rem 0.65rem',
             background: '#fef2f2',
-            border: '1.5px solid #fca5a5',
+            border: '1px solid #fca5a5',
             borderRadius: 'var(--radius)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: '0.5rem',
+            marginBottom: '0.25rem',
             flexShrink: 0,
+            gap: '0.5rem',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#991b1b' }}>
-            <Lock size={20} color="#dc2626" />
-            <div>
-              <span style={{ fontSize: '0.86rem', fontWeight: 800 }}>
-                Business Day ({orderDate}) is CLOSED.
-              </span>
-              <span style={{ fontSize: '0.78rem', color: '#b91c1c', display: 'block' }}>
-                Financial records for this day are locked and cannot be edited. Only the Owner can reopen.
-              </span>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#991b1b' }}>
+            <Lock size={13} color="#dc2626" />
+            <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>
+              Business Day ({orderDate}) is CLOSED (Records locked)
+            </span>
           </div>
           <button
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => navigate('/manager/daily-closing')}
-            style={{ height: '32px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+            style={{ height: '24px', padding: '0 0.55rem', fontSize: '0.74rem', whiteSpace: 'nowrap' }}
           >
             View Daily Closing
           </button>
@@ -3067,15 +3214,18 @@ export const CreateOrderPage: React.FC = () => {
           <table className="data-table" style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse' }}>
             <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-card)' }}>
               <tr>
-                <th style={{ width: '42px', minWidth: '40px', textAlign: 'center', padding: '0.5rem 0.35rem' }}>#</th>
-                <th style={{ minWidth: '180px', maxWidth: '240px', padding: '0.5rem 0.65rem' }}>Shop Name</th>
-                <th style={{ minWidth: '120px', padding: '0.5rem 0.65rem' }}>Route & Driver</th>
-                <th style={{ minWidth: '85px', textAlign: 'right', padding: '0.5rem 0.65rem', whiteSpace: 'nowrap' }}>Prev. Due</th>
+                {orderSort === 'CUSTOM' && isCustomEditing && (
+                  <th style={{ width: '42px', minWidth: '42px', padding: '0.35rem 0.2rem', textAlign: 'center' }} title="Drag or click ▲/▼ to reorder shops">Order</th>
+                )}
+                <th style={{ width: '38px', minWidth: '36px', textAlign: 'center', padding: '0.35rem 0.25rem' }}>#</th>
+                <th style={{ minWidth: '180px', maxWidth: '240px', padding: '0.35rem 0.55rem' }}>Shop Name</th>
+                <th style={{ minWidth: '110px', padding: '0.35rem 0.55rem' }}>Route & Driver</th>
+                <th style={{ minWidth: '80px', textAlign: 'right', padding: '0.35rem 0.55rem', whiteSpace: 'nowrap' }}>Prev. Due</th>
                 {products.length > 0 ? (
                   products.map((p) => (
                     <th
                       key={p.id}
-                      style={{ minWidth: '88px', textAlign: 'right', padding: '0.5rem 0.45rem', whiteSpace: 'nowrap' }}
+                      style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.4rem', whiteSpace: 'nowrap' }}
                       title={`${p.name} (Unit price: ₹${parseFloat(p.unit_price).toFixed(2)})`}
                     >
                       {p.name} ({p.packet_size ? p.packet_size : 'ps'})
@@ -3083,22 +3233,22 @@ export const CreateOrderPage: React.FC = () => {
                   ))
                 ) : (
                   <>
-                    <th style={{ minWidth: '88px', textAlign: 'right', padding: '0.5rem 0.45rem', whiteSpace: 'nowrap' }}>Kubbus (ps)</th>
-                    <th style={{ minWidth: '88px', textAlign: 'right', padding: '0.5rem 0.45rem', whiteSpace: 'nowrap' }}>Romali (ps)</th>
+                    <th style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.4rem', whiteSpace: 'nowrap' }}>Kubbus (ps)</th>
+                    <th style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.4rem', whiteSpace: 'nowrap' }}>Romali (ps)</th>
                   </>
                 )}
-                <th style={{ minWidth: '88px', textAlign: 'right', padding: '0.5rem 0.45rem', whiteSpace: 'nowrap' }}>Cash (₹)</th>
-                <th style={{ minWidth: '88px', textAlign: 'right', padding: '0.5rem 0.45rem', whiteSpace: 'nowrap' }}>GPay (₹)</th>
-                <th style={{ minWidth: '90px', textAlign: 'right', padding: '0.5rem 0.65rem', whiteSpace: 'nowrap' }}>Bill Total</th>
-                <th style={{ minWidth: '95px', textAlign: 'right', padding: '0.5rem 0.65rem', whiteSpace: 'nowrap' }} title="Total Balance = Prev. Due + Today's Bill - Today's Payments">Balance</th>
-                <th style={{ width: '90px', minWidth: '85px', textAlign: 'center', padding: '0.5rem 0.45rem' }}>Status</th>
-                <th style={{ width: '44px', minWidth: '40px', textAlign: 'center', padding: '0.5rem 0.35rem' }}>Action</th>
+                <th style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.4rem', whiteSpace: 'nowrap' }}>Cash (₹)</th>
+                <th style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.4rem', whiteSpace: 'nowrap' }}>GPay (₹)</th>
+                <th style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.55rem', whiteSpace: 'nowrap' }}>Bill Total</th>
+                <th style={{ minWidth: '88px', textAlign: 'right', padding: '0.35rem 0.55rem', whiteSpace: 'nowrap' }} title="Total Balance = Prev. Due + Today's Bill - Today's Payments">Balance</th>
+                <th style={{ width: '82px', minWidth: '78px', textAlign: 'center', padding: '0.35rem 0.4rem' }}>Status</th>
+                <th style={{ width: '40px', minWidth: '36px', textAlign: 'center', padding: '0.35rem 0.25rem' }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {loading || (ordersLoading && rows.length === 0) ? (
                 <tr>
-                  <td colSpan={10 + (products.length > 0 ? products.length : 2)} style={{ padding: '3rem', textAlign: 'center' }}>
+                  <td colSpan={(orderSort === 'CUSTOM' && isCustomEditing ? 10 : 9) + (products.length > 0 ? products.length : 2)} style={{ padding: '3rem', textAlign: 'center' }}>
                     <div className="spinner" style={{ margin: '0 auto 0.5rem' }} />
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                       Loading orders for {orderDate}...
@@ -3107,7 +3257,7 @@ export const CreateOrderPage: React.FC = () => {
                 </tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={10 + (products.length > 0 ? products.length : 2)} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <td colSpan={(orderSort === 'CUSTOM' && isCustomEditing ? 10 : 9) + (products.length > 0 ? products.length : 2)} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                     <div style={{ maxWidth: '420px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.65rem' }}>
                       <Store size={40} color="var(--primary)" style={{ opacity: 0.8 }} />
                       <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
@@ -3136,17 +3286,68 @@ export const CreateOrderPage: React.FC = () => {
                 visibleRows.map((row, index) => {
                   const fin = getRowFinancials(row);
                   const isRowActive = fin.hasOrder || fin.cash > 0 || fin.gpay > 0;
+                  const isDraggedOver = dragOver === row.rowId;
+                  const isBeingDragged = isDragging === row.rowId;
 
                   return (
                     <tr
                       key={row.rowId}
+                      draggable={orderSort === 'CUSTOM' && isCustomEditing}
+                      onDragStart={orderSort === 'CUSTOM' && isCustomEditing ? (e) => {
+                        dragRowId.current = row.rowId;
+                        setIsDragging(row.rowId);
+                        e.dataTransfer.effectAllowed = 'move';
+                      } : undefined}
+                      onDragOver={orderSort === 'CUSTOM' && isCustomEditing ? (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragRowId.current !== row.rowId) {
+                          dragOverRowId.current = row.rowId;
+                          setDragOver(row.rowId);
+                        }
+                      } : undefined}
+                      onDragEnd={orderSort === 'CUSTOM' && isCustomEditing ? () => {
+                        if (dragRowId.current && dragOverRowId.current && dragRowId.current !== dragOverRowId.current) {
+                          setCustomSortOrder((prev) => {
+                            const currentOrder = prev.length > 0 ? prev : visibleRows.map((r) => r.rowId);
+                            const fromIdx = currentOrder.indexOf(dragRowId.current!);
+                            const toIdx = currentOrder.indexOf(dragOverRowId.current!);
+                            if (fromIdx === -1 || toIdx === -1) {
+                              // Build fresh from visible rows
+                              const fresh = visibleRows.map((r) => r.rowId);
+                              const fi = fresh.indexOf(dragRowId.current!);
+                              const ti = fresh.indexOf(dragOverRowId.current!);
+                              if (fi !== -1 && ti !== -1) {
+                                fresh.splice(fi, 1);
+                                fresh.splice(ti, 0, dragRowId.current!);
+                              }
+                              localStorage.setItem('zamzam_fast_custom_sort_order', JSON.stringify(fresh));
+                              return fresh;
+                            }
+                            const updated = [...currentOrder];
+                            updated.splice(fromIdx, 1);
+                            updated.splice(toIdx, 0, dragRowId.current!);
+                            localStorage.setItem('zamzam_fast_custom_sort_order', JSON.stringify(updated));
+                            setHasUnsavedCustomOrder(true);
+                            return updated;
+                          });
+                        }
+                        dragRowId.current = null;
+                        dragOverRowId.current = null;
+                        setIsDragging(null);
+                        setDragOver(null);
+                      } : undefined}
                       onClick={() => {
                         if (isWhatsAppEnabled && row.customerId) handleSelectCustomerForWhatsApp(row.customerId);
                       }}
                       style={{
-                        cursor: (isWhatsAppEnabled && row.customerId) ? 'pointer' : 'default',
+                        cursor: (orderSort === 'CUSTOM' && isCustomEditing) ? 'grab' : (isWhatsAppEnabled && row.customerId) ? 'pointer' : 'default',
+                        opacity: isBeingDragged ? 0.45 : 1,
+                        transition: 'opacity 0.15s, background 0.12s',
                         background:
-                          (isWhatsAppEnabled && activeCustomer?.id === row.customerId)
+                          isDraggedOver
+                            ? 'rgba(79, 70, 229, 0.10)'
+                            : (isWhatsAppEnabled && activeCustomer?.id === row.customerId)
                             ? 'rgba(16, 185, 129, 0.12)'
                             : row.orderSource === 'CUSTOMER_LINK'
                             ? '#f0fdf4'
@@ -3158,16 +3359,108 @@ export const CreateOrderPage: React.FC = () => {
                             ? '#f8fafc'
                             : undefined,
                         borderLeft:
-                          (isWhatsAppEnabled && activeCustomer?.id === row.customerId)
+                          isDraggedOver
+                            ? '3px solid #4f46e5'
+                            : (isWhatsAppEnabled && activeCustomer?.id === row.customerId)
                             ? '4px solid #059669'
                             : row.orderSource === 'CUSTOMER_LINK'
                             ? '4px solid #10b981'
                             : undefined,
+                        outline: isDraggedOver ? '1px dashed #4f46e5' : undefined,
                       }}
                     >
+                      {/* Drag & Move Handle (only in CUSTOM sort mode when editing) */}
+                      {orderSort === 'CUSTOM' && isCustomEditing && (
+                        <td
+                          style={{
+                            textAlign: 'center',
+                            padding: '0.12rem 0.2rem',
+                            userSelect: 'none',
+                            lineHeight: 1,
+                            whiteSpace: 'nowrap',
+                            minWidth: '42px',
+                          }}
+                        >
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', justifyContent: 'center' }}>
+                            <span
+                              style={{ cursor: 'grab', color: '#6366f1', fontSize: '0.95rem', fontWeight: 900 }}
+                              title="Drag up or down to reorder"
+                            >
+                              ⠿
+                            </span>
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '1px' }}>
+                              <button
+                                type="button"
+                                disabled={index === 0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMoveCustomRow(row.rowId, 'UP');
+                                }}
+                                style={{
+                                  padding: 0,
+                                  width: '16px',
+                                  height: '11px',
+                                  lineHeight: '9px',
+                                  fontSize: '0.52rem',
+                                  background: index === 0 ? '#f1f5f9' : '#e0e7ff',
+                                  color: index === 0 ? '#cbd5e1' : '#4338ca',
+                                  border: '1px solid #c7d2fe',
+                                  borderRadius: '2px',
+                                  cursor: index === 0 ? 'default' : 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                                title="Move shop UP"
+                              >
+                                ▲
+                              </button>
+                              <button
+                                type="button"
+                                disabled={index === visibleRows.length - 1}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMoveCustomRow(row.rowId, 'DOWN');
+                                }}
+                                style={{
+                                  padding: 0,
+                                  width: '16px',
+                                  height: '11px',
+                                  lineHeight: '9px',
+                                  fontSize: '0.52rem',
+                                  background: index === visibleRows.length - 1 ? '#f1f5f9' : '#e0e7ff',
+                                  color: index === visibleRows.length - 1 ? '#cbd5e1' : '#4338ca',
+                                  border: '1px solid #c7d2fe',
+                                  borderRadius: '2px',
+                                  cursor: index === visibleRows.length - 1 ? 'default' : 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                                title="Move shop DOWN"
+                              >
+                                ▼
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      )}
                       {/* Index / List Order */}
-                      <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.76rem', padding: '0.35rem 0.25rem' }}>
-                        {row.listOrder !== undefined ? (
+                      <td style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.74rem', padding: '0.25rem 0.2rem' }}>
+                        {orderSort === 'CUSTOM' ? (
+                          <span
+                            title={`Custom Stop #${index + 1}`}
+                            style={{
+                              fontWeight: 800,
+                              color: '#4f46e5',
+                              background: '#eef2ff',
+                              padding: '0.1rem 0.35rem',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            #{index + 1}
+                          </span>
+                        ) : row.listOrder !== undefined ? (
                           <span
                             title={`Delivery Stop #${row.listOrder}`}
                             style={{
@@ -3185,8 +3478,8 @@ export const CreateOrderPage: React.FC = () => {
                         )}
                       </td>
 
-                      {/* Shop Name */}
-                      <td style={{ padding: '0.4rem 0.65rem', minWidth: '180px', maxWidth: '260px' }}>
+                      {/* Shop Name - Compact single-row layout */}
+                      <td style={{ padding: '0.18rem 0.4rem', minWidth: '170px', maxWidth: '250px' }}>
                         {row.isCustomRow && !row.customerId ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                             <select
@@ -3213,326 +3506,69 @@ export const CreateOrderPage: React.FC = () => {
                           </div>
                         ) : (
                           <>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.35rem', flexWrap: 'wrap' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0, flexWrap: 'wrap' }}>
-                                <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.86rem', lineHeight: 1.25, wordBreak: 'break-word', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                  <span>{row.customerName || 'Walk-in Customer'}</span>
-                                  {row.customerId && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleOpenCustomerEdit(row.customerId);
-                                      }}
-                                      title={`Edit details for ${row.customerName} (phone, route, address, credit limit)`}
-                                      style={{
-                                        fontSize: '0.62rem',
-                                        padding: '0.08rem 0.35rem',
-                                        background: '#f8fafc',
-                                        color: '#0284c7',
-                                        border: '1px solid #bae6fd',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '2px',
-                                        lineHeight: 1,
-                                        fontWeight: 600,
-                                      }}
-                                    >
-                                      <Edit2 size={10} />
-                                      <span>Edit</span>
-                                    </button>
-                                  )}
-                                </div>
-                                {row.orderNumber ? (
-                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
-                                    <span
-                                      title={`Order Number: ${row.orderNumber}`}
-                                      style={{
-                                        fontSize: '0.66rem',
-                                        fontWeight: 800,
-                                        background: '#eff6ff',
-                                        color: '#1d4ed8',
-                                        border: '1px solid #bfdbfe',
-                                        borderRadius: '4px',
-                                        padding: '0.06rem 0.35rem',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '2px',
-                                        whiteSpace: 'nowrap',
-                                      }}
-                                    >
-                                      #{row.orderNumber}
-                                    </span>
-                                    {(row.createdAt || row.submittedAt) && (
-                                      <span
-                                        title={`Order Created / Submitted: ${new Date(row.submittedAt || row.createdAt!).toLocaleString()}`}
-                                        style={{
-                                          fontSize: '0.66rem',
-                                          fontWeight: 600,
-                                          color: '#334155',
-                                          background: '#f8fafc',
-                                          border: '1px solid #e2e8f0',
-                                          borderRadius: '4px',
-                                          padding: '0.05rem 0.35rem',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '3px',
-                                          whiteSpace: 'nowrap',
-                                        }}
-                                      >
-                                        <Clock size={10} style={{ color: '#0284c7' }} />
-                                        {formatOrderTime(row.submittedAt || row.createdAt)}
-                                      </span>
-                                    )}
-                                    {(orderSort === 'SHOP_CREATE_DESC' || orderSort === 'SHOP_CREATE_ASC') && row.customerCreatedAt && (
-                                      <span
-                                        title={`Shop Registered: ${new Date(row.customerCreatedAt).toLocaleString()}`}
-                                        style={{
-                                          fontSize: '0.66rem',
-                                          fontWeight: 600,
-                                          color: '#475569',
-                                          background: '#f8fafc',
-                                          border: '1px solid #cbd5e1',
-                                          borderRadius: '4px',
-                                          padding: '0.05rem 0.35rem',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '3px',
-                                          whiteSpace: 'nowrap',
-                                        }}
-                                      >
-                                        <Store size={10} style={{ color: '#64748b' }} />
-                                        Reg: {new Date(row.customerCreatedAt).toLocaleDateString([], { day: '2-digit', month: 'short' })}
-                                      </span>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const val = window.prompt(`Enter Order # for ${row.customerName || 'this shop'}:`, '');
-                                        if (val !== null) {
-                                          handleSetRowOrderDetails(row.rowId, val.trim() || undefined);
-                                        }
-                                      }}
-                                      style={{
-                                        fontSize: '0.62rem',
-                                        padding: '0.05rem 0.3rem',
-                                        background: 'transparent',
-                                        color: 'var(--text-muted)',
-                                        border: '1px dashed var(--border)',
-                                        borderRadius: '3px',
-                                        cursor: 'pointer',
-                                      }}
-                                      title="Assign custom order number for today"
-                                    >
-                                      + Ord#
-                                    </button>
-                                    {(orderSort === 'SHOP_CREATE_DESC' || orderSort === 'SHOP_CREATE_ASC') && row.customerCreatedAt && (
-                                      <span
-                                        title={`Shop Registered: ${new Date(row.customerCreatedAt).toLocaleString()}`}
-                                        style={{
-                                          fontSize: '0.66rem',
-                                          fontWeight: 600,
-                                          color: '#475569',
-                                          background: '#f8fafc',
-                                          border: '1px solid #cbd5e1',
-                                          borderRadius: '4px',
-                                          padding: '0.05rem 0.35rem',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '3px',
-                                          whiteSpace: 'nowrap',
-                                        }}
-                                      >
-                                        <Store size={10} style={{ color: '#64748b' }} />
-                                        Reg: {new Date(row.customerCreatedAt).toLocaleDateString([], { day: '2-digit', month: 'short' })}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                                {row.isCustomRow && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setRows((prev) =>
-                                        prev.map((r) =>
-                                          r.rowId === row.rowId
-                                            ? { ...r, customerId: '', customerName: '', customerOwner: '', customerRoute: 'Walk-in / Custom', customerBalance: '0' }
-                                            : r
-                                        )
-                                      );
-                                    }}
-                                    style={{
-                                      fontSize: '0.62rem',
-                                      padding: '0.05rem 0.3rem',
-                                      background: '#fef3c7',
-                                      color: '#b45309',
-                                      border: '1px solid #fde68a',
-                                      borderRadius: '3px',
-                                      cursor: 'pointer',
-                                    }}
-                                    title="Change customer shop"
-                                  >
-                                    Change
-                                  </button>
-                                )}
-                                {isWhatsAppEnabled && activeCustomer?.id === row.customerId && (
-                                  <span
-                                    title="Active in WhatsApp panel"
-                                    style={{
-                                      fontSize: '0.64rem',
-                                      background: '#dcfce7',
-                                      color: '#15803d',
-                                      padding: '0.08rem 0.35rem',
-                                      borderRadius: '4px',
-                                      fontWeight: 800,
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '2px',
-                                      border: '1px solid #86efac',
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                  >
-                                    💬 WhatsApp
-                                  </span>
-                                )}
-                              </div>
-                              {row.customerId && isSelfOrderEnabled && (
-                                <a
-                                  href={`/customer/${row.customerId}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title="Open Customer Self-Order Screen"
-                                  style={{
-                                    color: '#059669',
-                                    fontSize: '0.67rem',
-                                    fontWeight: 600,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '0.15rem',
-                                    textDecoration: 'none',
-                                    background: '#ecfdf5',
-                                    border: '1px solid #a7f3d0',
-                                    padding: '0.08rem 0.35rem',
-                                    borderRadius: '4px',
-                                    flexShrink: 0,
-                                    whiteSpace: 'nowrap',
-                                  }}
+                            {/* Compact single-row: Name + Edit + mini-badges all inline */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.22rem', flexWrap: 'wrap', lineHeight: 1.2 }}>
+                              <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '155px' }} title={row.customerName}>
+                                {row.customerName || 'Walk-in'}
+                              </span>
+                              {row.customerId && (orderSort !== 'CUSTOM' || isCustomEditing) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleOpenCustomerEdit(row.customerId); }}
+                                  title={`Edit ${row.customerName}`}
+                                  style={{ fontSize: '0.58rem', padding: '0.03rem 0.22rem', background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', borderRadius: '3px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '1px', fontWeight: 600, flexShrink: 0 }}
                                 >
-                                  <ExternalLink size={10} />
-                                  <span>Self-Order</span>
+                                  <Edit2 size={9} /><span>Edit</span>
+                                </button>
+                              )}
+                              {row.orderNumber ? (
+                                <span title={`Order #${row.orderNumber}`} style={{ fontSize: '0.6rem', fontWeight: 800, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '3px', padding: '0.03rem 0.25rem', whiteSpace: 'nowrap', flexShrink: 0 }}>#{row.orderNumber}</span>
+                              ) : (
+                                <button type="button" onClick={() => { const v = window.prompt(`Order # for ${row.customerName || 'shop'}:`, ''); if (v !== null) handleSetRowOrderDetails(row.rowId, v.trim() || undefined); }} style={{ fontSize: '0.58rem', padding: '0.03rem 0.22rem', background: 'transparent', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: '3px', cursor: 'pointer', flexShrink: 0 }} title="Add order#">+Ord#</button>
+                              )}
+                              {(orderSort === 'SHOP_CREATE_ASC' || orderSort === 'CUSTOM') && row.customerCreatedAt && (
+                                <span style={{ fontSize: '0.59rem', color: '#475569', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '0.03rem 0.25rem', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                                  <Store size={9} style={{ color: '#64748b' }} />Reg: {new Date(row.customerCreatedAt).toLocaleDateString([], { day: '2-digit', month: 'short' })}
+                                </span>
+                              )}
+                              {row.customerId && isSelfOrderEnabled && (
+                                <a href={`/customer/${row.customerId}`} target="_blank" rel="noopener noreferrer" title="Self-Order link" onClick={(e) => e.stopPropagation()} style={{ fontSize: '0.59rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '1px', textDecoration: 'none', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '0.03rem 0.22rem', borderRadius: '3px', color: '#059669', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  <ExternalLink size={9} /><span>Self-Order</span>
                                 </a>
                               )}
-                            </div>
-                            {row.orderSource === 'CUSTOMER_LINK' && (
-                              <div style={{ marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                <span
-                                  className="badge badge-success"
-                                  style={{
-                                    fontSize: '0.68rem',
-                                    padding: '0.12rem 0.45rem',
-                                    background: '#dcfce7',
-                                    color: '#15803d',
-                                    border: '1px solid #86efac',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    fontWeight: 700,
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  <Smartphone size={10} />
-                                  <span>Customer Self-Order</span>
-                                  {(row.submittedAt || row.createdAt) && (
-                                    <span style={{ fontSize: '0.64rem', color: '#166534', fontWeight: 600 }}>
-                                      • {formatOrderTime(row.submittedAt || row.createdAt)}
-                                    </span>
+                              {row.orderSource === 'CUSTOMER_LINK' && (
+                                <span style={{ fontSize: '0.6rem', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '3px', padding: '0.03rem 0.25rem', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                                  <Smartphone size={9} />
+                                  <span>Self-Order{(row.submittedAt || row.createdAt) ? ` ${formatOrderTime(row.submittedAt || row.createdAt)}` : ''}</span>
+                                  {!unlockedSelfOrderIds.has(row.rowId) && (
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); setSelfOrderModalRow(row); setSelfOrderPendingField('kubbus'); }} style={{ fontSize: '0.57rem', padding: '0.02rem 0.18rem', background: '#fff', color: '#047857', border: '1px solid #10b981', borderRadius: '2px', cursor: 'pointer', fontWeight: 700, lineHeight: 1 }} title="Edit">Edit</button>
                                   )}
+                                  {unlockedSelfOrderIds.has(row.rowId) && <span style={{ fontSize: '0.57rem', color: '#b45309', fontWeight: 700 }}>Unlocked</span>}
                                 </span>
-
-                                {unlockedSelfOrderIds.has(row.rowId) ? (
-                                  <span
-                                    style={{
-                                      fontSize: '0.68rem',
-                                      padding: '0.12rem 0.45rem',
-                                      background: '#fef3c7',
-                                      color: '#b45309',
-                                      border: '1px solid #fde68a',
-                                      borderRadius: '4px',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '3px',
-                                      fontWeight: 700,
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                  >
-                                    <Edit size={10} />
-                                    <span>Unlocked</span>
-                                  </span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelfOrderModalRow(row);
-                                      setSelfOrderPendingField('kubbus');
-                                    }}
-                                    style={{
-                                      fontSize: '0.68rem',
-                                      padding: '0.12rem 0.45rem',
-                                      background: '#ffffff',
-                                      color: '#047857',
-                                      border: '1px solid #10b981',
-                                      borderRadius: '4px',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '3px',
-                                      fontWeight: 700,
-                                      cursor: 'pointer',
-                                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                    title="Click to unlock and edit this customer self-order"
-                                  >
-                                    <Edit size={10} />
-                                    <span>Edit Order</span>
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                            {row.customerOwner && (
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.1, marginTop: '0.15rem' }}>
-                                {row.customerOwner}
-                              </div>
-                            )}
+                              )}
+                              {row.isCustomRow && (
+                                <button type="button" onClick={() => setRows((prev) => prev.map((r) => r.rowId === row.rowId ? { ...r, customerId: '', customerName: '', customerOwner: '', customerRoute: 'Walk-in / Custom', customerBalance: '0' } : r))} style={{ fontSize: '0.58rem', padding: '0.03rem 0.22rem', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '3px', cursor: 'pointer', flexShrink: 0 }} title="Change shop">Change</button>
+                              )}
+                              {isWhatsAppEnabled && activeCustomer?.id === row.customerId && (
+                                <span style={{ fontSize: '0.59rem', background: '#dcfce7', color: '#15803d', padding: '0.03rem 0.25rem', borderRadius: '3px', fontWeight: 800, flexShrink: 0, border: '1px solid #86efac', whiteSpace: 'nowrap' }}>💬 WA</span>
+                              )}
+                              {row.customerOwner && (
+                                <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90px' }}>{row.customerOwner}</span>
+                              )}
+                            </div>
                           </>
                         )}
                       </td>
 
-                      {/* Route & Driver Badge */}
-                      <td style={{ padding: '0.4rem 0.65rem', minWidth: '120px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem', padding: '0.12rem 0.45rem', alignSelf: 'flex-start', whiteSpace: 'nowrap' }}>
-                            {row.customerRoute || 'Pandikkad'}
+                      {/* Route & Driver Badge - compact */}
+                      <td style={{ padding: '0.18rem 0.45rem', minWidth: '105px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+                          <span className="badge badge-neutral" style={{ fontSize: '0.67rem', padding: '0.06rem 0.35rem', alignSelf: 'flex-start', whiteSpace: 'nowrap' }}>
+                            {row.customerRoute || 'No Route'}
                           </span>
                           {row.driverName && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                color: autoConfirmDriver ? '#047857' : 'var(--text-muted)',
-                                fontWeight: 600,
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                whiteSpace: 'nowrap',
-                              }}
-                              title={`Driver assigned for delivery: ${row.driverName}`}
-                            >
-                              <Truck size={11} />
-                              {row.driverName}
+                            <span style={{ fontSize: '0.63rem', color: autoConfirmDriver ? '#047857' : 'var(--text-muted)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '2px', whiteSpace: 'nowrap' }} title={`Driver: ${row.driverName}`}>
+                              <Truck size={10} />{row.driverName}
                             </span>
                           )}
                         </div>
@@ -3543,9 +3579,9 @@ export const CreateOrderPage: React.FC = () => {
                         style={{
                           textAlign: 'right',
                           fontWeight: 700,
-                          fontSize: '0.84rem',
-                          padding: '0.4rem 0.65rem',
-                          minWidth: '85px',
+                          fontSize: '0.82rem',
+                          padding: '0.18rem 0.45rem',
+                          minWidth: '80px',
                           whiteSpace: 'nowrap',
                           color: parseFloat(row.customerBalance || '0') > 0 ? '#dc2626' : 'var(--text-secondary)',
                         }}
@@ -3569,7 +3605,7 @@ export const CreateOrderPage: React.FC = () => {
                             (row.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(row.rowId));
 
                           return (
-                            <td key={prod.id} style={{ textAlign: 'right', padding: '0.25rem 0.45rem', minWidth: '88px' }}>
+                            <td key={prod.id} style={{ textAlign: 'right', padding: '0.12rem 0.35rem', minWidth: '80px' }}>
                               <input
                                 ref={(el) => {
                                   inputRefs.current[`${index}_prod_${prod.id}`] = el;
@@ -3598,12 +3634,12 @@ export const CreateOrderPage: React.FC = () => {
                                 onChange={(e) => handleProductQtyChange(row.rowId, prod.id, e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(e, index, `prod_${prod.id}`)}
                                 style={{
-                                  width: '78px',
-                                  height: '32px',
+                                  width: '72px',
+                                  height: '28px',
                                   textAlign: 'right',
                                   fontWeight: 800,
-                                  padding: '0.2rem 0.4rem',
-                                  fontSize: '0.88rem',
+                                  padding: '0.15rem 0.35rem',
+                                  fontSize: '0.86rem',
                                   display: 'inline-block',
                                   cursor: isLocked ? 'pointer' : 'text',
                                   borderColor: cellQty ? 'var(--primary)' : undefined,
@@ -3623,7 +3659,7 @@ export const CreateOrderPage: React.FC = () => {
                       ) : (
                         <>
                           {/* Fallback Kubbus Input */}
-                          <td style={{ textAlign: 'right', padding: '0.25rem 0.45rem', minWidth: '88px' }}>
+                          <td style={{ textAlign: 'right', padding: '0.12rem 0.35rem', minWidth: '80px' }}>
                             <input
                               ref={(el) => {
                                 inputRefs.current[`${index}_kubbus`] = el;
@@ -3655,12 +3691,12 @@ export const CreateOrderPage: React.FC = () => {
                               onChange={(e) => handleCellChange(row.rowId, 'kubbusQty', e.target.value)}
                               onKeyDown={(e) => handleKeyDown(e, index, 'kubbus')}
                               style={{
-                                width: '78px',
-                                height: '32px',
+                                width: '72px',
+                                height: '28px',
                                 textAlign: 'right',
                                 fontWeight: 800,
-                                padding: '0.2rem 0.4rem',
-                                fontSize: '0.88rem',
+                                padding: '0.15rem 0.35rem',
+                                fontSize: '0.86rem',
                                 display: 'inline-block',
                                 cursor: (
                                   (row.status === 'LOCKED' && !unlockedSelfOrderIds.has(row.rowId)) ||
@@ -3683,7 +3719,7 @@ export const CreateOrderPage: React.FC = () => {
                           </td>
 
                           {/* Fallback Romali Roti Input */}
-                          <td style={{ textAlign: 'right', padding: '0.25rem 0.45rem', minWidth: '88px' }}>
+                          <td style={{ textAlign: 'right', padding: '0.12rem 0.35rem', minWidth: '80px' }}>
                             <input
                               ref={(el) => {
                                 inputRefs.current[`${index}_romali`] = el;
@@ -3715,12 +3751,12 @@ export const CreateOrderPage: React.FC = () => {
                               onChange={(e) => handleCellChange(row.rowId, 'romaliQty', e.target.value)}
                               onKeyDown={(e) => handleKeyDown(e, index, 'romali')}
                               style={{
-                                width: '78px',
-                                height: '32px',
+                                width: '72px',
+                                height: '28px',
                                 textAlign: 'right',
                                 fontWeight: 800,
-                                padding: '0.2rem 0.4rem',
-                                fontSize: '0.88rem',
+                                padding: '0.15rem 0.35rem',
+                                fontSize: '0.86rem',
                                 display: 'inline-block',
                                 cursor: (
                                   (row.status === 'LOCKED' && !unlockedSelfOrderIds.has(row.rowId)) ||
@@ -3745,7 +3781,7 @@ export const CreateOrderPage: React.FC = () => {
                       )}
 
                       {/* Cash Input */}
-                      <td style={{ textAlign: 'right', padding: '0.25rem 0.45rem', minWidth: '88px' }}>
+                      <td style={{ textAlign: 'right', padding: '0.12rem 0.35rem', minWidth: '80px' }}>
                         <input
                           ref={(el) => {
                             inputRefs.current[`${index}_cash`] = el;
@@ -3762,12 +3798,12 @@ export const CreateOrderPage: React.FC = () => {
                           onChange={(e) => handleCellChange(row.rowId, 'cashAmount', e.target.value)}
                           onKeyDown={(e) => handleKeyDown(e, index, 'cash')}
                           style={{
-                            width: '78px',
-                            height: '32px',
+                            width: '72px',
+                            height: '28px',
                             textAlign: 'right',
                             fontWeight: 800,
-                            padding: '0.2rem 0.4rem',
-                            fontSize: '0.86rem',
+                            padding: '0.15rem 0.35rem',
+                            fontSize: '0.84rem',
                             display: 'inline-block',
                             borderColor: row.cashAmount ? '#10b981' : undefined,
                           }}
@@ -3775,7 +3811,7 @@ export const CreateOrderPage: React.FC = () => {
                       </td>
 
                       {/* GPay Input */}
-                      <td style={{ textAlign: 'right', padding: '0.25rem 0.45rem', minWidth: '88px' }}>
+                      <td style={{ textAlign: 'right', padding: '0.12rem 0.35rem', minWidth: '80px' }}>
                         <input
                           ref={(el) => {
                             inputRefs.current[`${index}_gpay`] = el;
@@ -3792,12 +3828,12 @@ export const CreateOrderPage: React.FC = () => {
                           onChange={(e) => handleCellChange(row.rowId, 'gpayAmount', e.target.value)}
                           onKeyDown={(e) => handleKeyDown(e, index, 'gpay')}
                           style={{
-                            width: '78px',
-                            height: '32px',
+                            width: '72px',
+                            height: '28px',
                             textAlign: 'right',
                             fontWeight: 800,
-                            padding: '0.2rem 0.4rem',
-                            fontSize: '0.86rem',
+                            padding: '0.15rem 0.35rem',
+                            fontSize: '0.84rem',
                             display: 'inline-block',
                             borderColor: row.gpayAmount ? '#dc2626' : undefined,
                           }}
@@ -3806,7 +3842,7 @@ export const CreateOrderPage: React.FC = () => {
 
                       {/* Bill Total */}
                       <td
-                        style={{ textAlign: 'right', fontWeight: 800, color: '#dc2626', fontSize: '0.92rem', padding: '0.4rem 0.65rem', minWidth: '90px', whiteSpace: 'nowrap' }}
+                        style={{ textAlign: 'right', fontWeight: 800, color: '#dc2626', fontSize: '0.88rem', padding: '0.18rem 0.45rem', minWidth: '80px', whiteSpace: 'nowrap' }}
                         title={`Bill: ${formatCurrency(fin.rowTotal)}`}
                       >
                         <div>{formatCurrency(fin.rowTotal)}</div>
@@ -3817,9 +3853,9 @@ export const CreateOrderPage: React.FC = () => {
                         style={{
                           textAlign: 'right',
                           fontWeight: 800,
-                          fontSize: '0.86rem',
-                          padding: '0.4rem 0.65rem',
-                          minWidth: '95px',
+                          fontSize: '0.84rem',
+                          padding: '0.18rem 0.45rem',
+                          minWidth: '85px',
                           whiteSpace: 'nowrap',
                         }}
                         title={`Prev Due: ${formatCurrency(fin.prevDue)} + Bill: ${formatCurrency(fin.rowTotal)} - Paid: ${formatCurrency(fin.rowPaid)} = ${formatCurrency(fin.rowBalance)}`}
@@ -3842,7 +3878,7 @@ export const CreateOrderPage: React.FC = () => {
                       </td>
 
                       {/* Status */}
-                      <td style={{ textAlign: 'center', padding: '0.35rem 0.35rem' }}>
+                      <td style={{ textAlign: 'center', padding: '0.12rem 0.25rem' }}>
                         {row.orderSource === 'CUSTOMER_LINK' ? (
                           unlockedSelfOrderIds.has(row.rowId) ? (
                             <span
@@ -3963,36 +3999,38 @@ export const CreateOrderPage: React.FC = () => {
                             </button>
                           )}
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveRow(row.rowId);
-                            }}
-                            title={`Remove ${row.customerName || 'row'} from list`}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '4px',
-                              borderRadius: '4px',
-                              color: 'var(--text-muted)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.color = '#dc2626';
-                              e.currentTarget.style.backgroundColor = 'var(--danger-bg)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.color = 'var(--text-muted)';
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          {(orderSort !== 'CUSTOM' || isCustomEditing || row.isCustomRow) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveRow(row.rowId);
+                              }}
+                              title={`Remove ${row.customerName || 'row'} from list`}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                borderRadius: '4px',
+                                color: 'var(--text-muted)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = '#dc2626';
+                                e.currentTarget.style.backgroundColor = 'var(--danger-bg)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = 'var(--text-muted)';
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -20,6 +20,7 @@ import {
   HandCoins,
   Store,
   ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 
 const SKIP_REASONS = [
@@ -59,6 +60,7 @@ export const DriverDashboard: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'DELIVERED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedFinancialIds, setExpandedFinancialIds] = useState<Set<string>>(new Set());
 
   // 1. Payment Modal State
   const [paymentDelivery, setPaymentDelivery] = useState<Delivery | null>(null);
@@ -665,41 +667,84 @@ export const DriverDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* ── CRITICAL FINANCIAL DATA: Clear POS Ledger Breakdown ── */}
-              <div
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '4px',
-                  padding: '0.45rem 0.75rem',
-                  marginBottom: '0.65rem',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#475569', fontWeight: 600 }}>Previous Due</span>
-                  <span style={{ fontWeight: 700, color: fin.previousOutstanding > 0 ? '#b91c1c' : '#334155' }}>
-                    {formatCompactINR(fin.previousOutstanding)}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#475569', fontWeight: 600 }}>Current Bill</span>
-                  <span style={{ fontWeight: 700, color: '#0f172a' }}>
-                    {formatCompactINR(fin.todayAmount)}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#475569', fontWeight: 600 }}>Collected</span>
-                  <span style={{ fontWeight: 700, color: fin.collectedAmount > 0 ? '#15803d' : '#64748b' }}>
-                    {formatCompactINR(fin.collectedAmount)}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.22rem 0 0.05rem', fontSize: '0.86rem' }}>
-                  <span style={{ color: '#0f172a', fontWeight: 700 }}>Remaining</span>
-                  <span style={{ fontWeight: 800, color: fin.remainingAmount > 0 ? '#b91c1c' : '#15803d', fontSize: '0.94rem' }}>
-                    {formatCompactINR(fin.remainingAmount)}
-                  </span>
-                </div>
-              </div>
+              {/* ── FINANCIAL DATA: Previous Due only by default; click to toggle full POS Ledger Breakdown ── */}
+              {(() => {
+                const isExpanded = expandedFinancialIds.has(delivery.id);
+                return (
+                  <div
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '4px',
+                      padding: '0.35rem 0.65rem',
+                      marginBottom: '0.65rem',
+                    }}
+                  >
+                    <div
+                      onClick={() => {
+                        setExpandedFinancialIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(delivery.id)) {
+                            next.delete(delivery.id);
+                          } else {
+                            next.add(delivery.id);
+                          }
+                          return next;
+                        });
+                      }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        fontSize: '0.82rem',
+                        padding: isExpanded ? '0.12rem 0 0.25rem' : '0.1rem 0',
+                        borderBottom: isExpanded ? '1px dashed #e2e8f0' : 'none',
+                      }}
+                      title="Click to show/hide bill breakdown"
+                    >
+                      <span style={{ color: '#475569', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span>Previous Due</span>
+                        <ChevronDown
+                          size={12}
+                          style={{
+                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.15s ease',
+                            color: '#64748b',
+                          }}
+                        />
+                      </span>
+                      <span style={{ fontWeight: 700, color: fin.previousOutstanding > 0 ? '#b91c1c' : '#334155' }}>
+                        {formatCompactINR(fin.previousOutstanding)}
+                      </span>
+                    </div>
+
+                    {isExpanded && (
+                      <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
+                          <span style={{ color: '#475569', fontWeight: 600 }}>Current Bill</span>
+                          <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                            {formatCompactINR(fin.todayAmount)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.18rem 0', borderBottom: '1px dashed #e2e8f0', fontSize: '0.82rem' }}>
+                          <span style={{ color: '#475569', fontWeight: 600 }}>Collected</span>
+                          <span style={{ fontWeight: 700, color: fin.collectedAmount > 0 ? '#15803d' : '#64748b' }}>
+                            {formatCompactINR(fin.collectedAmount)}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.22rem 0 0.05rem', fontSize: '0.86rem' }}>
+                          <span style={{ color: '#0f172a', fontWeight: 700 }}>Remaining</span>
+                          <span style={{ fontWeight: 800, color: fin.remainingAmount > 0 ? '#b91c1c' : '#15803d', fontSize: '0.94rem' }}>
+                            {formatCompactINR(fin.remainingAmount)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* ── DRIVER ACTION BUTTONS (Optimized for 1-Handed Mobile Touch) ── */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
