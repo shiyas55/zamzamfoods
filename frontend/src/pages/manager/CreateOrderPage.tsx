@@ -6,6 +6,7 @@ import { orderService } from '../../services/orderService';
 import { routeService } from '../../services/routeService';
 import { paymentService } from '../../services/paymentService';
 import { reportService } from '../../services/reportService';
+import { creditService } from '../../services/creditService';
 import { Customer, Product, Route, Driver, Order } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import {
@@ -41,6 +42,10 @@ import {
   Phone,
   MapPin,
   Printer,
+  CreditCard,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
 } from 'lucide-react';
 import { RealWhatsAppWebView } from '../../components/RealWhatsAppWebView';
 import { InvoiceModal } from '../../components/InvoiceModal';
@@ -77,6 +82,7 @@ export interface OrderRow {
   listOrder?: number;
   errorMessage?: string;
   isCustomRow?: boolean;
+  isChangingCustomer?: boolean;
   orderSource?: string;
   enteredByName?: string;
   enteredByRole?: string;
@@ -186,8 +192,28 @@ export const CreateOrderPage: React.FC = () => {
   }, [showOrdersOnly]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
+  const [searchSelectedIndex, setSearchSelectedIndex] = useState<number>(0);
   const [whatsAppNavToken, setWhatsAppNavToken] = useState<number>(0);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Global Keyboard Shortcuts (F2 or Ctrl+K / Cmd+K to instantly focus Customer Search)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === 'F2' ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')
+      ) {
+        e.preventDefault();
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          searchInputRef.current.select();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
   const [invoiceModalOrder, setInvoiceModalOrder] = useState<{ order: Order; customer?: Customer | null } | null>(null);
 
   // Customer Details Edit Modal State
@@ -205,6 +231,7 @@ export const CreateOrderPage: React.FC = () => {
   const [editCustNotes, setEditCustNotes] = useState('');
   const [editCustError, setEditCustError] = useState<string | null>(null);
   const [editCustSubmitting, setEditCustSubmitting] = useState(false);
+  const [editCustProductPrices, setEditCustProductPrices] = useState<Record<string, string>>({});
 
   // Time format helper functions
   const formatOrderTime = (isoString?: string): string => {
@@ -247,6 +274,20 @@ export const CreateOrderPage: React.FC = () => {
     setEditCustIsActive(cust.is_active ?? true);
     setEditCustNotes(cust.notes || '');
     setEditCustError(null);
+
+    // Initialize custom wholesale product prices
+    const initPrices: Record<string, string> = {};
+    products.forEach((p) => {
+      if (pricingCache[customerId]?.[p.id] !== undefined) {
+        initPrices[p.id] = String(pricingCache[customerId][p.id]);
+      } else if (cust.custom_prices?.[p.id] !== undefined) {
+        initPrices[p.id] = cust.custom_prices[p.id];
+      } else {
+        initPrices[p.id] = p.unit_price;
+      }
+    });
+    setEditCustProductPrices(initPrices);
+
     setIsEditCustomerModalOpen(true);
   };
 
@@ -266,6 +307,36 @@ export const CreateOrderPage: React.FC = () => {
       setEditCustSubmitting(true);
       setEditCustError(null);
 
+      // Collect product prices to persist to backend
+      const product_prices: Array<{ product_id: string; price: string }> = [];
+      const updatedCacheEntry: Record<string, number> & { kubbusPrice?: number; romaliPrice?: number } = {
+        ...(pricingCache[editingCustomer.id] || {}),
+      };
+      const updatedCustomPricesDict: Record<string, string> = {
+        ...(editingCustomer.custom_prices || {}),
+      };
+
+      products.forEach((prod) => {
+        const val = editCustProductPrices[prod.id];
+        if (val !== undefined && String(val).trim() !== '') {
+          const numVal = parseFloat(val.trim());
+          if (!isNaN(numVal) && numVal > 0) {
+            product_prices.push({ product_id: prod.id, price: numVal.toFixed(2) });
+            updatedCacheEntry[prod.id] = numVal;
+            updatedCustomPricesDict[prod.id] = numVal.toFixed(2);
+            if (kubbusProduct && prod.id === kubbusProduct.id) updatedCacheEntry.kubbusPrice = numVal;
+            if (romaliProduct && prod.id === romaliProduct.id) updatedCacheEntry.romaliPrice = numVal;
+          } else if (!isNaN(numVal) && numVal === 0) {
+            // Price set to 0 -> deactivate custom price
+            product_prices.push({ product_id: prod.id, price: '0.00' });
+            delete updatedCacheEntry[prod.id];
+            delete updatedCustomPricesDict[prod.id];
+            if (kubbusProduct && prod.id === kubbusProduct.id) delete updatedCacheEntry.kubbusPrice;
+            if (romaliProduct && prod.id === romaliProduct.id) delete updatedCacheEntry.romaliPrice;
+          }
+        }
+      });
+
       const updated = await customerService.updateCustomer(editingCustomer.id, {
         name: editCustName.trim(),
         owner_name: editCustOwner.trim(),
@@ -277,9 +348,13 @@ export const CreateOrderPage: React.FC = () => {
         credit_limit: editCustCreditLimit,
         is_active: editCustIsActive,
         notes: editCustNotes.trim(),
+        product_prices: product_prices.length > 0 ? product_prices : undefined,
       });
 
-      // Update customers master list
+      updated.custom_prices = updatedCustomPricesDict;
+
+      // Update in-memory pricing cache and customers list
+      setPricingCache((prev) => ({ ...prev, [editingCustomer.id]: updatedCacheEntry }));
       setCustomers((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
 
       // Update in-memory order rows
@@ -306,6 +381,75 @@ export const CreateOrderPage: React.FC = () => {
       setEditCustError(msg);
     } finally {
       setEditCustSubmitting(false);
+    }
+  };
+
+  // Edit Previous Due Modal State & Handlers
+  const [isPrevDueModalOpen, setIsPrevDueModalOpen] = useState(false);
+  const [prevDueRow, setPrevDueRow] = useState<OrderRow | null>(null);
+  const [prevDueAmount, setPrevDueAmount] = useState('');
+  const [prevDueError, setPrevDueError] = useState<string | null>(null);
+
+  const handleOpenPrevDueModal = (row: OrderRow) => {
+    setPrevDueRow(row);
+    setPrevDueAmount(row.customerBalance || '0.00');
+    setPrevDueError(null);
+    setIsPrevDueModalOpen(true);
+  };
+
+  const handleSavePrevDue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prevDueRow) return;
+
+    const val = parseFloat(prevDueAmount.trim() || '0');
+    if (isNaN(val) || val < 0) {
+      setPrevDueError('Please enter a valid positive amount.');
+      return;
+    }
+
+    const formattedAmount = val.toFixed(2);
+    const targetRow = prevDueRow;
+
+    // 1. Update in rows state immediately so today's sheet, previous due, and balance due update dynamically live
+    setRows((prev) =>
+      prev.map((r) =>
+        r.rowId === targetRow.rowId || (targetRow.customerId && r.customerId === targetRow.customerId)
+          ? { ...r, customerBalance: formattedAmount }
+          : r
+      )
+    );
+
+    // 2. Also update in customers state for software display
+    if (targetRow.customerId) {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === targetRow.customerId ? { ...c, current_balance: formattedAmount } : c))
+      );
+    }
+
+    setSuccessBanner(`Previous Due for "${targetRow.customerName || 'shop'}" updated to ${formatCurrency(formattedAmount)}!`);
+    setTimeout(() => setSuccessBanner(null), 3000);
+    setIsPrevDueModalOpen(false);
+
+    // 3. Persist automatically & dynamically to backend database!
+    if (targetRow.customerId) {
+      try {
+        await customerService.setBalance(targetRow.customerId, formattedAmount);
+      } catch (err) {
+        console.warn('Direct setBalance failed, trying credit adjustment fallback:', err);
+        try {
+          const oldBal = parseFloat(targetRow.customerBalance || '0');
+          const delta = (val - oldBal).toFixed(2);
+          if (parseFloat(delta) !== 0) {
+            await creditService.recordAdjustment({
+              customer_id: targetRow.customerId,
+              amount: delta,
+              notes: `Previous due set to ₹${formattedAmount} from Fast Wholesale Entry`,
+            });
+          }
+        } catch (fallbackErr) {
+          console.error('Failed to persist previous due to database:', fallbackErr);
+        }
+      }
     }
   };
 
@@ -358,7 +502,25 @@ export const CreateOrderPage: React.FC = () => {
   const [autoConfirmDriver, setAutoConfirmDriver] = useState<boolean>(true);
 
   // Customer-Specific Pricing Cache: customerId -> { [productId]: price, kubbusPrice?: number, romaliPrice?: number }
-  const [pricingCache, setPricingCache] = useState<Record<string, Record<string, number> & { kubbusPrice?: number; romaliPrice?: number }>>({});
+  const [pricingCache, setPricingCache] = useState<Record<string, Record<string, number> & { kubbusPrice?: number; romaliPrice?: number }>>(() => {
+    try {
+      const saved = localStorage.getItem('zamzam_pricing_cache');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Persist pricingCache to localStorage for instantaneous rehydration on page reload/navigation
+  useEffect(() => {
+    if (Object.keys(pricingCache).length > 0) {
+      try {
+        localStorage.setItem('zamzam_pricing_cache', JSON.stringify(pricingCache));
+      } catch {
+        // ignore
+      }
+    }
+  }, [pricingCache]);
 
   // Rows State (All shops pre-populated)
   const [rows, setRows] = useState<OrderRow[]>([]);
@@ -389,37 +551,50 @@ export const CreateOrderPage: React.FC = () => {
   const [newCustRoute, setNewCustRoute] = useState('');
   const [newCustListOrder, setNewCustListOrder] = useState('');
   const [newCustOrderNumber, setNewCustOrderNumber] = useState('');
+  const [newCustOpeningBalance, setNewCustOpeningBalance] = useState('');
   const [newCustProductPrices, setNewCustProductPrices] = useState<Record<string, string>>({});
   const [newCustProductQuantities, setNewCustProductQuantities] = useState<Record<string, string>>({});
   const [quickRouteName, setQuickRouteName] = useState('');
   const [isCreatingRoute, setIsCreatingRoute] = useState(false);
-  const [newCustKubbusPrice, setNewCustKubbusPrice] = useState('35.00');
-  const [newCustRomaliPrice, setNewCustRomaliPrice] = useState('45.00');
+  const [newCustKubbusPrice, setNewCustKubbusPrice] = useState('');
+  const [newCustRomaliPrice, setNewCustRomaliPrice] = useState('');
   const [newCustSubmitting, setNewCustSubmitting] = useState(false);
   const [newCustError, setNewCustError] = useState<string | null>(null);
 
   // Input references for keyboard navigation
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  // Products Identification
-  const kubbusProduct = products.find((p) => p.code === 'KUB' || p.name.toLowerCase().includes('kubbus'));
-  const romaliProduct = products.find((p) => p.code === 'ROM' || p.name.toLowerCase().includes('romali'));
+  // Products Identification (supports SKU codes KBS/KUB and PRI/ROM or name match)
+  const kubbusProduct = products.find((p) => p.code === 'KBS' || p.code === 'KUB' || p.name.toLowerCase().includes('kubbus'));
+  const romaliProduct = products.find((p) => p.code === 'PRI' || p.code === 'ROM' || p.name.toLowerCase().includes('romali'));
 
-  const defaultKubbusPrice = parseFloat(kubbusProduct?.unit_price || '35.00');
-  const defaultRomaliPrice = parseFloat(romaliProduct?.unit_price || '45.00');
+  const defaultKubbusPrice = parseFloat(kubbusProduct?.unit_price || '0');
+  const defaultRomaliPrice = parseFloat(romaliProduct?.unit_price || '0');
 
-  // Dynamic Product Pricing Helper
+  // Dynamic Product Pricing Helper (Strict Fallback: Valid Custom Rate > Customer Custom Prices Dict > Product Default Rate > 0)
   const getProductPriceForCustomer = useCallback((customerId: string, product: Product): number => {
+    // 1. Check pricingCache for specific product ID (must be > 0 to be valid custom rate)
     const cached = pricingCache[customerId]?.[product.id];
-    if (cached !== undefined) return cached;
-    if (kubbusProduct && product.id === kubbusProduct.id && pricingCache[customerId]?.kubbusPrice !== undefined) {
+    if (cached !== undefined && !isNaN(cached) && cached > 0) return cached;
+
+    // 2. Check kubbus / romali aliases in pricingCache
+    if (kubbusProduct && product.id === kubbusProduct.id && pricingCache[customerId]?.kubbusPrice !== undefined && pricingCache[customerId]?.kubbusPrice! > 0) {
       return pricingCache[customerId].kubbusPrice!;
     }
-    if (romaliProduct && product.id === romaliProduct.id && pricingCache[customerId]?.romaliPrice !== undefined) {
+    if (romaliProduct && product.id === romaliProduct.id && pricingCache[customerId]?.romaliPrice !== undefined && pricingCache[customerId]?.romaliPrice! > 0) {
       return pricingCache[customerId].romaliPrice!;
     }
+
+    // 3. Fallback directly to customer object's custom_prices if returned from API
+    const cust = customers.find((c) => c.id === customerId);
+    if (cust?.custom_prices && cust.custom_prices[product.id] !== undefined) {
+      const pVal = parseFloat(cust.custom_prices[product.id]);
+      if (!isNaN(pVal) && pVal > 0) return pVal;
+    }
+
+    // 4. Fallback to product standard unit_price from database
     return parseFloat(product.unit_price || '0');
-  }, [pricingCache, kubbusProduct, romaliProduct]);
+  }, [pricingCache, kubbusProduct, romaliProduct, customers]);
 
   // Open New Customer Modal Initializer
   const handleOpenNewCustomerModal = () => {
@@ -660,10 +835,30 @@ export const CreateOrderPage: React.FC = () => {
           setNewCustRoute(routeList[0].id);
         }
 
-        const kProd = prodList.find((p) => p.code === 'KUB' || p.name.toLowerCase().includes('kubbus'));
-        const rProd = prodList.find((p) => p.code === 'ROM' || p.name.toLowerCase().includes('romali'));
+        const kProd = prodList.find((p) => p.code === 'KBS' || p.code === 'KUB' || p.name.toLowerCase().includes('kubbus'));
+        const rProd = prodList.find((p) => p.code === 'PRI' || p.code === 'ROM' || p.name.toLowerCase().includes('romali'));
         if (kProd) setNewCustKubbusPrice(kProd.unit_price);
         if (rProd) setNewCustRomaliPrice(rProd.unit_price);
+
+        // Pre-populate pricingCache for all customers immediately from database custom_prices
+        const initialPricing: Record<string, Record<string, number> & { kubbusPrice?: number; romaliPrice?: number }> = {};
+        custList.forEach((c) => {
+          const entry: Record<string, number> & { kubbusPrice?: number; romaliPrice?: number } = {};
+          if (c.custom_prices) {
+            Object.entries(c.custom_prices).forEach(([prodId, priceStr]) => {
+              const cpNum = parseFloat(priceStr);
+              if (!isNaN(cpNum) && cpNum > 0) {
+                entry[prodId] = cpNum;
+                if (kProd && prodId === kProd.id) entry.kubbusPrice = cpNum;
+                if (rProd && prodId === rProd.id) entry.romaliPrice = cpNum;
+              }
+            });
+          }
+          if (Object.keys(entry).length > 0) {
+            initialPricing[c.id] = entry;
+          }
+        });
+        setPricingCache((prev) => ({ ...prev, ...initialPricing }));
 
         const initialAutoQtys: Record<string, string> = {};
         prodList.forEach((p, idx) => {
@@ -741,27 +936,32 @@ export const CreateOrderPage: React.FC = () => {
     }
   };
 
-  // Fetch and cache custom pricing for customer
   // Fetch and cache custom pricing for customer dynamically for all products
-  const fetchCustomerPricing = async (custId: string) => {
-    if (pricingCache[custId]) return pricingCache[custId];
+  const fetchCustomerPricing = useCallback(async (custId: string, forceRefresh = false) => {
+    if (!custId) return;
+    if (!forceRefresh && pricingCache[custId] && Object.keys(pricingCache[custId]).length > 2) {
+      return pricingCache[custId];
+    }
 
     try {
       const pricingList = await customerService.getCustomerPricing(custId);
       const entry: Record<string, number> & { kubbusPrice?: number; romaliPrice?: number } = {};
 
-      products.forEach((p) => {
+      const currentCatalog = products.length > 0 ? products : [];
+      currentCatalog.forEach((p) => {
         entry[p.id] = parseFloat(p.unit_price || '0');
       });
 
       pricingList.forEach((item) => {
         const effPrice = parseFloat(item.effective_price);
-        entry[item.product_id] = effPrice;
-        if (kubbusProduct && item.product_id === kubbusProduct.id) {
-          entry.kubbusPrice = effPrice;
-        }
-        if (romaliProduct && item.product_id === romaliProduct.id) {
-          entry.romaliPrice = effPrice;
+        if (!isNaN(effPrice)) {
+          entry[item.product_id] = effPrice;
+          if (kubbusProduct && item.product_id === kubbusProduct.id) {
+            entry.kubbusPrice = effPrice;
+          }
+          if (romaliProduct && item.product_id === romaliProduct.id) {
+            entry.romaliPrice = effPrice;
+          }
         }
       });
 
@@ -771,28 +971,157 @@ export const CreateOrderPage: React.FC = () => {
       setPricingCache((prev) => ({ ...prev, [custId]: entry }));
       return entry;
     } catch {
+      const cust = customers.find((c) => c.id === custId);
       const fallback: Record<string, number> & { kubbusPrice: number; romaliPrice: number } = {
         kubbusPrice: defaultKubbusPrice,
         romaliPrice: defaultRomaliPrice,
       };
       products.forEach((p) => {
-        fallback[p.id] = parseFloat(p.unit_price || '0');
+        if (cust?.custom_prices && cust.custom_prices[p.id] !== undefined) {
+          fallback[p.id] = parseFloat(cust.custom_prices[p.id]);
+        } else {
+          fallback[p.id] = parseFloat(p.unit_price || '0');
+        }
       });
+      if (kubbusProduct && fallback[kubbusProduct.id] !== undefined) {
+        fallback.kubbusPrice = fallback[kubbusProduct.id];
+      }
+      if (romaliProduct && fallback[romaliProduct.id] !== undefined) {
+        fallback.romaliPrice = fallback[romaliProduct.id];
+      }
       setPricingCache((prev) => ({ ...prev, [custId]: fallback }));
       return fallback;
     }
-  };
+  }, [products, kubbusProduct, romaliProduct, defaultKubbusPrice, defaultRomaliPrice, pricingCache, customers]);
 
   // Keyboard navigation helper
   const focusCell = (visibleIndex: number, col: string) => {
     setTimeout(() => {
-      const el = inputRefs.current[`${visibleIndex}_${col}`];
+      let el = inputRefs.current[`${visibleIndex}_${col}`];
+      if (!el && visibleRows[visibleIndex]?.customerId) {
+        el = inputRefs.current[`cust_${visibleRows[visibleIndex].customerId}_${col}`];
+      }
+      if (!el && visibleRows[visibleIndex]) {
+        const rowId = visibleRows[visibleIndex].customerId || visibleRows[visibleIndex].rowId;
+        const rowEl = document.getElementById(`order-row-${rowId}`);
+        if (rowEl) {
+          el =
+            rowEl.querySelector<HTMLInputElement>(`input[data-col="${col}"]`) ||
+            rowEl.querySelector<HTMLInputElement>('input[type="number"]:not([readonly])');
+        }
+      }
       if (el) {
         el.focus();
         el.select();
         el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       }
     }, 25);
+  };
+
+  // Smart Search Relevance Scoring: Exact match > StartsWith > Word-Starts > Contains > Phone/Route
+  const getCustomerSearchScore = useCallback(
+    (
+      name: string,
+      owner?: string,
+      route?: string,
+      phone?: string,
+      query: string = '',
+      digitsQuery: string = ''
+    ): number => {
+      const q = query.toLowerCase().trim();
+      if (!q) return 0;
+
+      const n = (name || '').toLowerCase().trim();
+      const o = (owner || '').toLowerCase().trim();
+      const r = (route || '').toLowerCase().trim();
+      const p = (phone || '').replace(/[^0-9]/g, '');
+
+      let score = 0;
+
+      // 1. Exact shop name match
+      if (n === q) return 10000;
+
+      // 2. Shop name starts with search query (e.g. "s" -> "Sha", "Star", "Super")
+      if (n.startsWith(q)) {
+        score += 5000 + (100 - Math.min(n.length, 100));
+      }
+      // 3. Any word in the shop name starts with search query (e.g. "Royal Star" -> "st")
+      else if (new RegExp(`(^|\\s)${q}`, 'i').test(n)) {
+        score += 3500;
+      }
+      // 4. Shop name contains search query
+      else if (n.includes(q)) {
+        score += 1800;
+      }
+
+      // 5. Owner name matches
+      if (o === q) {
+        score += 1500;
+      } else if (o.startsWith(q)) {
+        score += 1000;
+      } else if (o.includes(q)) {
+        score += 400;
+      }
+
+      // 6. Phone number matches (last digits or prefix)
+      if (digitsQuery.length >= 2 && p) {
+        if (p.endsWith(digitsQuery)) {
+          score += 1200;
+        } else if (p.startsWith(digitsQuery)) {
+          score += 900;
+        } else if (p.includes(digitsQuery)) {
+          score += 600;
+        }
+      }
+
+      // 7. Route name matches
+      if (r.startsWith(q)) {
+        score += 300;
+      } else if (r.includes(q)) {
+        score += 100;
+      }
+
+      return score;
+    },
+    []
+  );
+
+  // Bulletproof direct customer row & cell focus
+  const focusCustomerCell = (customerId: string, col?: string) => {
+    const doFocus = () => {
+      const pCols = products.length > 0 ? products.map((p) => `prod_${p.id}`) : ['kubbus', 'romali'];
+      const targetCol = col || pCols[0] || 'kubbus';
+      let el = inputRefs.current[`cust_${customerId}_${targetCol}`];
+      const rowEl =
+        document.getElementById(`order-row-${customerId}`) ||
+        document.querySelector(`tr[data-customer-id="${customerId}"]`);
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (!el) {
+          el =
+            (targetCol ? rowEl.querySelector<HTMLInputElement>(`input[data-col="${targetCol}"]:not([readonly])`) : null) ||
+            rowEl.querySelector<HTMLInputElement>('input[type="number"]:not([readonly])');
+        }
+      }
+      if (!el) {
+        const vIdx = visibleRows.findIndex((r) => r.customerId === customerId);
+        if (vIdx !== -1) {
+          el = inputRefs.current[`${vIdx}_${targetCol}`];
+        }
+      }
+      if (el) {
+        el.focus();
+        el.select();
+        return true;
+      }
+      return false;
+    };
+
+    if (!doFocus()) {
+      setTimeout(doFocus, 35);
+      setTimeout(doFocus, 90);
+      setTimeout(doFocus, 220);
+    }
   };
 
   // Visible rows filtered by Route & Search Query
@@ -832,6 +1161,20 @@ export const CreateOrderPage: React.FC = () => {
       ? filtered.filter((r) => Boolean(r.orderId || r.submittedAt || r.createdAt || r.kubbusQty !== '0' || r.romaliQty !== '0'))
       : filtered;
 
+    // When searching, sort strictly by best match relevance so best candidate is always row 0
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const digitsQ = q.replace(/[^0-9]/g, '');
+      return [...afterOrderFilter].sort((a, b) => {
+        const custA = customers.find((c) => c.id === a.customerId);
+        const custB = customers.find((c) => c.id === b.customerId);
+        const scoreA = getCustomerSearchScore(a.customerName, a.customerOwner, a.customerRoute, custA?.phone, q, digitsQ);
+        const scoreB = getCustomerSearchScore(b.customerName, b.customerOwner, b.customerRoute, custB?.phone, q, digitsQ);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return a.customerName.localeCompare(b.customerName);
+      });
+    }
+
     // Helper function for shop registered oldest first (Shop Registered: Oldest)
     const sortByShopRegisteredOldest = (a: OrderRow, b: OrderRow) => {
       const tA = new Date(a.customerCreatedAt || 0).getTime();
@@ -856,7 +1199,7 @@ export const CreateOrderPage: React.FC = () => {
 
     // Default & SHOP_CREATE_ASC: sort by Shop Registered (Oldest)
     return [...afterOrderFilter].sort(sortByShopRegisteredOldest);
-  }, [rows, routeFilter, sourceFilter, searchQuery, orderSort, routes, customers, customSortOrder, showOrdersOnly]);
+  }, [rows, routeFilter, sourceFilter, searchQuery, orderSort, routes, customers, customSortOrder, showOrdersOnly, getCustomerSearchScore]);
 
   // Synchronize single shared search state: auto-highlight matching customer across billing and WhatsApp
   useEffect(() => {
@@ -1337,28 +1680,123 @@ export const CreateOrderPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter matching customers for instant search dropdown (by shop name, owner, and phone)
+  // Filter and Rank matching customers for instant search dropdown (Best Result First)
   const matchingSearchCustomers = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase().trim();
     const digitsQ = q.replace(/[^0-9]/g, '');
 
-    return customers.filter((c) => {
-      const matchName = c.name.toLowerCase().includes(q);
-      const matchOwner = (c.owner_name || '').toLowerCase().includes(q);
-      const matchRoute = (c.route_details?.name || '').toLowerCase().includes(q);
-      const matchPhone = digitsQ.length >= 2 && c.phone && c.phone.replace(/[^0-9]/g, '').includes(digitsQ);
-      const matchRawPhone = Boolean(c.phone && c.phone.toLowerCase().includes(q));
-      return matchName || matchOwner || matchRoute || matchPhone || matchRawPhone;
-    }).slice(0, 10);
-  }, [searchQuery, customers]);
+    const scored = customers
+      .map((c) => ({
+        customer: c,
+        score: getCustomerSearchScore(
+          c.name,
+          c.owner_name,
+          c.route_details?.name,
+          c.phone,
+          q,
+          digitsQ
+        ),
+      }))
+      .filter((item) => item.score > 0);
+
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.customer.name.localeCompare(b.customer.name);
+    });
+
+    return scored.slice(0, 10).map((item) => item.customer);
+  }, [searchQuery, customers, getCustomerSearchScore]);
 
   // Click Customer/Shop from Search Result -> Immediately Open WhatsApp Chat
   const handleSelectCustomerForWhatsApp = (customerId: string) => {
     setSelectedCustomerId(customerId);
     setWhatsAppNavToken(Date.now());
+    fetchCustomerPricing(customerId);
     setShowSearchDropdown(false);
     // Note: searchQuery is intentionally preserved so search state is never lost!
+  };
+
+  // Auto-Select or Pick Customer from Search Dropdown
+  const handleSelectCustomerFromSearch = (cust: { id: string; name?: string }) => {
+    const custId = cust.id;
+    const custName = cust.name || customers.find((c) => c.id === custId)?.name || '';
+
+    // If customer is not currently in rows, ensure they are added to rows
+    const exists = rows.some((r) => r.customerId === custId);
+    if (!exists) {
+      const fullCust = customers.find((c) => c.id === custId);
+      const newRow: OrderRow = {
+        rowId: `row_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        customerId: custId,
+        customerName: custName,
+        customerOwner: fullCust?.owner_name || '',
+        customerPhone: fullCust?.phone || '',
+        customerRoute: fullCust?.route_details?.name || '',
+        customerRouteId: fullCust?.route_details?.id || fullCust?.route,
+        customerBalance: fullCust?.current_balance || '0.00',
+        kubbusQty: '',
+        romaliQty: '',
+        productQuantities: {},
+        cashAmount: '',
+        gpayAmount: '',
+        status: 'IDLE',
+        isCustomRow: true,
+      };
+      setRows((prev) => [newRow, ...prev]);
+    }
+
+    // If route filter would hide this customer, reset routeFilter to 'ALL'
+    if (routeFilter !== 'ALL') {
+      const fullCust = customers.find((c) => c.id === custId);
+      const custRouteId = fullCust?.route_details?.id || fullCust?.route;
+      if (custRouteId && custRouteId !== routeFilter) {
+        setRouteFilter('ALL');
+      }
+    }
+
+    setShowSearchDropdown(false);
+    setSelectedCustomerId(custId);
+    setSearchQuery(custName);
+
+    // Fetch and ensure customer rates are loaded
+    fetchCustomerPricing(custId);
+
+    if (isWhatsAppEnabled) {
+      handleSelectCustomerForWhatsApp(custId);
+    }
+
+    // Direct scroll & focus on the customer's first product quantity cell
+    const targetCol = products.length > 0 ? `prod_${products[0].id}` : 'kubbus';
+    focusCustomerCell(custId, targetCol);
+  };
+
+  // Change Customer via Arrow Buttons (Previous / Next Customer in sheet)
+  const handleNavigateCustomer = (direction: 'PREV' | 'NEXT') => {
+    if (visibleRows.length === 0) return;
+
+    let currentIndex = visibleRows.findIndex((r) => r.customerId === selectedCustomerId);
+    if (currentIndex === -1) currentIndex = 0;
+
+    let targetIndex = direction === 'NEXT' ? currentIndex + 1 : currentIndex - 1;
+    if (targetIndex >= visibleRows.length) targetIndex = 0;
+    if (targetIndex < 0) targetIndex = visibleRows.length - 1;
+
+    const targetRow = visibleRows[targetIndex];
+    if (!targetRow) return;
+
+    if (targetRow.customerId) {
+      setSelectedCustomerId(targetRow.customerId);
+      fetchCustomerPricing(targetRow.customerId);
+      if (isWhatsAppEnabled) {
+        handleSelectCustomerForWhatsApp(targetRow.customerId);
+      }
+      const targetCol = products.length > 0 ? `prod_${products[0].id}` : 'kubbus';
+      focusCustomerCell(targetRow.customerId, targetCol);
+    } else {
+      const targetCol = products.length > 0 ? `prod_${products[0].id}` : 'kubbus';
+      focusCell(targetIndex, targetCol);
+    }
   };
 
   // Remove a specific row
@@ -1472,15 +1910,21 @@ export const CreateOrderPage: React.FC = () => {
   }, [getProductCols]);
 
   /**
-   * Ultra-Fast Product Keyboard Entry:
+   * Full Keyboard Order Entry Navigation:
    * Enter / Tab on products:
-   *   - Kubbus -> Romali Roti -> Next Shop's Kubbus! (Skips Cash & GPay)
+   *   - Kubbus -> Romali Roti -> Next Product -> Next Shop's Kubbus!
+   *   - At the bottom of the list or filtered view: jumps to Search Bar for next customer
    * Enter / Tab on Cash:
-   *   - Cash -> GPay -> Next Shop's Cash
+   *   - Cash -> GPay -> Next Shop's Cash / First Product
    * Shift + Tab:
    *   - Moves backwards between products / shops
    * Arrow Up / Down:
    *   - Jumps vertically between shops on the same column
+   *   - ArrowUp at row 0 jumps directly to Customer Search Bar
+   * Arrow Left / Right:
+   *   - Jumps horizontally between columns (Kubbus <-> Romali <-> Cash <-> GPay)
+   * Escape / F2:
+   *   - Immediately returns focus to Customer Search Bar
    */
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -1489,62 +1933,60 @@ export const CreateOrderPage: React.FC = () => {
   ) => {
     const prodCols = getProductCols();
     const isProdCol = prodCols.includes(col);
+    const colSeq = getColSequence();
+    const colIdx = colSeq.indexOf(col);
+
+    // Escape or F2: Return focus directly to the Customer Search bar with text selected
+    if (e.key === 'Escape' || e.key === 'F2') {
+      e.preventDefault();
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+        searchInputRef.current.select();
+      }
+      return;
+    }
 
     if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
       e.preventDefault();
-      if (isProdCol) {
-        const pIdx = prodCols.indexOf(col);
-        if (pIdx >= 0 && pIdx < prodCols.length - 1) {
-          // Go to next product of the SAME shop (e.g. Kubbus -> Romali Roti)
-          focusCell(visibleIndex, prodCols[pIdx + 1]);
-        } else if (pIdx === prodCols.length - 1) {
-          // LAST product of this shop -> jump straight to NEXT SHOP's first product (e.g. Romali -> Next Shop's Kubbus)!
-          if (visibleIndex < visibleRows.length - 1) {
-            focusCell(visibleIndex + 1, prodCols[0]);
+      if (colIdx >= 0 && colIdx < colSeq.length - 1) {
+        // Move to next column of the same shop: Kubbus -> Romali -> Cash -> GPay!
+        focusCell(visibleIndex, colSeq[colIdx + 1]);
+      } else if (colIdx === colSeq.length - 1) {
+        // From GPay (end of current shop) -> jump to NEXT SHOP's first product (Kubbus)!
+        if (visibleIndex < visibleRows.length - 1) {
+          focusCell(visibleIndex + 1, colSeq[0]);
+        } else {
+          // Reached bottom of list or single filtered shop -> jump back to Search bar for next customer
+          if (searchInputRef.current) {
+            searchInputRef.current.focus();
+            searchInputRef.current.select();
           }
         }
-        return;
-      }
-
-      // If user is manually focused on Cash or GPay:
-      if (col === 'cash') {
-        focusCell(visibleIndex, 'gpay');
-        return;
-      }
-      if (col === 'gpay') {
-        if (visibleIndex < visibleRows.length - 1) {
-          focusCell(visibleIndex + 1, 'cash');
-        }
-        return;
       }
       return;
     }
 
     if (e.key === 'Tab' && e.shiftKey) {
-      if (isProdCol) {
-        e.preventDefault();
-        const pIdx = prodCols.indexOf(col);
-        if (pIdx > 0) {
-          // Previous product of same shop
-          focusCell(visibleIndex, prodCols[pIdx - 1]);
-        } else if (pIdx === 0 && visibleIndex > 0) {
-          // Previous shop's last product
-          focusCell(visibleIndex - 1, prodCols[prodCols.length - 1]);
+      e.preventDefault();
+      if (colIdx > 0) {
+        // Move to previous column of the same shop: GPay -> Cash -> Romali -> Kubbus!
+        focusCell(visibleIndex, colSeq[colIdx - 1]);
+      } else if (colIdx === 0) {
+        if (visibleIndex > 0) {
+          // Previous shop's last column (GPay)
+          focusCell(visibleIndex - 1, colSeq[colSeq.length - 1]);
+        } else {
+          // First cell of first row -> focus search bar
+          if (searchInputRef.current) {
+            searchInputRef.current.focus();
+            searchInputRef.current.select();
+          }
         }
-        return;
       }
-      if (col === 'gpay') {
-        e.preventDefault();
-        focusCell(visibleIndex, 'cash');
-        return;
-      }
-      if (col === 'cash') {
-        e.preventDefault();
-        focusCell(visibleIndex, prodCols[prodCols.length - 1]);
-        return;
-      }
+      return;
     }
 
+    // ArrowDown: Move down to same column in row below
     if (e.key === 'ArrowDown') {
       if (visibleIndex < visibleRows.length - 1) {
         e.preventDefault();
@@ -1553,10 +1995,40 @@ export const CreateOrderPage: React.FC = () => {
       return;
     }
 
+    // ArrowUp: Move up to same column in row above; if at row 0, jump to Search Bar
     if (e.key === 'ArrowUp') {
+      e.preventDefault();
       if (visibleIndex > 0) {
-        e.preventDefault();
         focusCell(visibleIndex - 1, col);
+      } else {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+          searchInputRef.current.select();
+        }
+      }
+      return;
+    }
+
+    // ArrowRight: Move to next column horizontally
+    if (e.key === 'ArrowRight') {
+      if (colIdx >= 0 && colIdx < colSeq.length - 1) {
+        e.preventDefault();
+        focusCell(visibleIndex, colSeq[colIdx + 1]);
+      } else if (colIdx === colSeq.length - 1 && visibleIndex < visibleRows.length - 1) {
+        e.preventDefault();
+        focusCell(visibleIndex + 1, colSeq[0]);
+      }
+      return;
+    }
+
+    // ArrowLeft: Move to previous column horizontally
+    if (e.key === 'ArrowLeft') {
+      if (colIdx > 0) {
+        e.preventDefault();
+        focusCell(visibleIndex, colSeq[colIdx - 1]);
+      } else if (colIdx === 0 && visibleIndex > 0) {
+        e.preventDefault();
+        focusCell(visibleIndex - 1, colSeq[colSeq.length - 1]);
       }
       return;
     }
@@ -2030,16 +2502,26 @@ export const CreateOrderPage: React.FC = () => {
         product_prices: product_prices.length > 0 ? product_prices : undefined,
       });
 
+      let initialBalance = created.current_balance || '0.00';
+      const parsedOpeningDue = parseFloat(newCustOpeningBalance.trim() || '0');
+      if (!isNaN(parsedOpeningDue) && parsedOpeningDue > 0) {
+        initialBalance = parsedOpeningDue.toFixed(2);
+        created.current_balance = initialBalance;
+      }
+
       setCustomers((prev) => [created, ...prev]);
 
       // Cache custom wholesale prices for all products
       const priceMap: Record<string, number> & { kubbusPrice?: number; romaliPrice?: number } = {};
+      const customPricesDict: Record<string, string> = {};
       products.forEach((prod) => {
         const pr = parseFloat(newCustProductPrices[prod.id] || prod.unit_price || '0');
         priceMap[prod.id] = pr;
+        customPricesDict[prod.id] = pr.toFixed(2);
         if (kubbusProduct && prod.id === kubbusProduct.id) priceMap.kubbusPrice = pr;
         if (romaliProduct && prod.id === romaliProduct.id) priceMap.romaliPrice = pr;
       });
+      created.custom_prices = customPricesDict;
       setPricingCache((prev) => ({ ...prev, [created.id]: priceMap }));
 
       const createdRouteId = created.route || created.route_details?.id || '';
@@ -2068,7 +2550,7 @@ export const CreateOrderPage: React.FC = () => {
         customerOwner: created.owner_name || '',
         customerRouteId: createdRouteId,
         customerRoute: createdRouteName,
-        customerBalance: created.current_balance,
+        customerBalance: initialBalance,
         driverId: routeDriver?.id,
         driverName: driverDisplay,
         kubbusQty: kQty,
@@ -2111,8 +2593,10 @@ export const CreateOrderPage: React.FC = () => {
       setNewCustOwner('');
       setNewCustPhone('');
       setNewCustAddress('');
+      setNewCustRoute('');
       setNewCustListOrder('');
       setNewCustOrderNumber('');
+      setNewCustOpeningBalance('');
       setNewCustProductPrices({});
       setNewCustProductQuantities({});
 
@@ -2382,11 +2866,15 @@ export const CreateOrderPage: React.FC = () => {
             Collections &amp; Balance
           </span>
           <div style={{ fontSize: '0.7rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column', gap: '0.05rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Collected:</span>
               <strong style={{ color: '#10b981' }}>{formatCurrency(sheetStats.totalCash + sheetStats.totalGPay)}</strong>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'var(--text-muted)', paddingLeft: '0.15rem' }}>
+              <span>Cash: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(sheetStats.totalCash)}</strong></span>
+              <span>GPay: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(sheetStats.totalGPay)}</strong></span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Balance Due:</span>
               <strong style={{ color: '#dc2626' }}>{formatCurrency(sheetStats.totalDue)}</strong>
             </div>
@@ -2687,7 +3175,7 @@ export const CreateOrderPage: React.FC = () => {
           </button>
         )}
 
-        {/* Customer/Shop Search Input with Connected WhatsApp Dropdown List */}
+        {/* Customer/Shop Search Input with Connected WhatsApp Dropdown List & Auto-Selection */}
         <div ref={searchContainerRef} style={{ position: 'relative', flex: '1 1 180px', minWidth: '160px' }}>
           <Search
             size={13}
@@ -2702,17 +3190,66 @@ export const CreateOrderPage: React.FC = () => {
             }}
           />
           <input
+            ref={searchInputRef}
             type="text"
             className="form-input"
             style={{ paddingLeft: '26px', height: '28px', paddingRight: '24px', fontSize: '0.78rem', width: '100%' }}
-            placeholder="Search by shop name, customer, or phone..."
+            placeholder="Search customer (Enter to select, ↑/↓ to navigate)..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setShowSearchDropdown(true);
+              setSearchSelectedIndex(0);
             }}
             onFocus={() => {
-              if (searchQuery.trim()) setShowSearchDropdown(true);
+              if (searchQuery.trim()) {
+                setShowSearchDropdown(true);
+                setSearchSelectedIndex(0);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (showSearchDropdown && matchingSearchCustomers.length > 0) {
+                  setSearchSelectedIndex((prev) => (prev + 1) % matchingSearchCustomers.length);
+                } else if (visibleRows.length > 0) {
+                  const targetCol = getProductCols()[0] || 'kubbus';
+                  focusCell(0, targetCol);
+                } else {
+                  handleNavigateCustomer('NEXT');
+                }
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (showSearchDropdown && matchingSearchCustomers.length > 0) {
+                  setSearchSelectedIndex((prev) => (prev - 1 + matchingSearchCustomers.length) % matchingSearchCustomers.length);
+                } else {
+                  handleNavigateCustomer('PREV');
+                }
+              } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (matchingSearchCustomers.length > 0) {
+                  const sel = matchingSearchCustomers[searchSelectedIndex] || matchingSearchCustomers[0];
+                  handleSelectCustomerFromSearch(sel);
+                } else if (visibleRows.length > 0) {
+                  const first = visibleRows[0];
+                  if (first.customerId) {
+                    handleSelectCustomerFromSearch({ id: first.customerId, name: first.customerName });
+                  }
+                }
+              } else if (e.key === 'Tab' && !e.shiftKey) {
+                if (matchingSearchCustomers.length > 0) {
+                  e.preventDefault();
+                  const sel = matchingSearchCustomers[searchSelectedIndex] || matchingSearchCustomers[0];
+                  handleSelectCustomerFromSearch(sel);
+                } else if (visibleRows.length > 0) {
+                  e.preventDefault();
+                  const targetCol = getProductCols()[0] || 'kubbus';
+                  focusCell(0, targetCol);
+                }
+              } else if (e.key === 'Escape') {
+                setShowSearchDropdown(false);
+                setSearchQuery('');
+              }
             }}
           />
           {searchQuery && (
@@ -2742,7 +3279,7 @@ export const CreateOrderPage: React.FC = () => {
             </button>
           )}
 
-          {/* Search Result Dropdown List */}
+          {/* Search Result Dropdown List with Keyboard Navigation & Auto-Selection */}
           {showSearchDropdown && searchQuery.trim() && (
             <div
               className="card"
@@ -2776,11 +3313,9 @@ export const CreateOrderPage: React.FC = () => {
                 }}
               >
                 <span>Matching Shops ({matchingSearchCustomers.length})</span>
-                {isWhatsAppEnabled && (
-                  <span style={{ fontSize: '0.68rem', color: '#059669', textTransform: 'none', fontWeight: 600 }}>
-                    Click to open WhatsApp
-                  </span>
-                )}
+                <span style={{ fontSize: '0.67rem', color: '#6366f1', textTransform: 'none', fontWeight: 600 }}>
+                  [↑/↓] Navigate • [Enter] Select
+                </span>
               </div>
 
               {matchingSearchCustomers.length === 0 ? (
@@ -2788,75 +3323,150 @@ export const CreateOrderPage: React.FC = () => {
                   No customer or shop matches "{searchQuery}"
                 </div>
               ) : (
-                matchingSearchCustomers.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => {
-                      if (isWhatsAppEnabled) {
-                        handleSelectCustomerForWhatsApp(c.id);
-                      } else {
-                        setSearchQuery(c.name);
-                        setShowSearchDropdown(false);
-                      }
-                    }}
-                    style={{
-                      padding: '0.5rem 0.75rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      cursor: 'pointer',
-                      borderBottom: '1px solid var(--border-light, #f1f5f9)',
-                      gap: '0.5rem',
-                      transition: 'background 0.12s ease',
-                      background: (isWhatsAppEnabled && selectedCustomerId === c.id) ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = (isWhatsAppEnabled && selectedCustomerId === c.id) ? 'rgba(16, 185, 129, 0.1)' : 'transparent')}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {c.name}
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        {c.owner_name && <span>{c.owner_name}</span>}
-                        {c.phone && (
-                          <span style={{ color: '#059669', fontWeight: 600 }}>
-                            📞 {c.phone}
+                matchingSearchCustomers.map((c, idx) => {
+                  const isSelectedCandidate = idx === searchSelectedIndex;
+                  return (
+                    <div
+                      key={c.id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSelectCustomerFromSearch(c);
+                      }}
+                      onClick={() => handleSelectCustomerFromSearch(c)}
+                      style={{
+                        padding: '0.45rem 0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid var(--border-light, #f1f5f9)',
+                        gap: '0.5rem',
+                        transition: 'background 0.1s ease',
+                        background: isSelectedCandidate
+                          ? '#eef2ff'
+                          : (isWhatsAppEnabled && selectedCustomerId === c.id)
+                          ? 'rgba(16, 185, 129, 0.1)'
+                          : 'transparent',
+                        borderLeft: isSelectedCandidate ? '3.5px solid #4f46e5' : '3.5px solid transparent',
+                      }}
+                      onMouseEnter={() => setSearchSelectedIndex(idx)}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: isSelectedCandidate ? '#3730a3' : 'var(--text-primary)' }}>
+                            {c.name}
                           </span>
-                        )}
-                        {c.route_details?.name && (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                            ({c.route_details.name})
-                          </span>
-                        )}
+                          {idx === 0 && (
+                            <span style={{ fontSize: '0.62rem', background: '#4338ca', color: '#fff', padding: '0.06rem 0.35rem', borderRadius: '4px', fontWeight: 800, letterSpacing: '0.02em', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                              ★ Best Match
+                            </span>
+                          )}
+                          {isSelectedCandidate && (
+                            <span style={{ fontSize: '0.6rem', background: idx === 0 ? '#4f46e5' : '#6366f1', color: '#fff', padding: '0.05rem 0.28rem', borderRadius: '3px', fontWeight: 700 }}>
+                              ↵ Enter / Click
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.73rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', marginTop: '1px' }}>
+                          {c.owner_name && <span>{c.owner_name}</span>}
+                          {c.phone && (
+                            <span style={{ color: '#059669', fontWeight: 600 }}>
+                              📞 {c.phone}
+                            </span>
+                          )}
+                          {c.route_details?.name && (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                              ({c.route_details.name})
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    {isWhatsAppEnabled && (
-                      <div
-                        style={{
-                          background: '#ecfdf5',
-                          color: '#047857',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '6px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                          flexShrink: 0,
-                          border: '1px solid #a7f3d0',
-                        }}
-                      >
-                        <MessageCircle size={12} />
-                        <span>Open Chat</span>
-                      </div>
-                    )}
-                  </div>
-                ))
+                      {isWhatsAppEnabled && (
+                        <div
+                          style={{
+                            background: '#ecfdf5',
+                            color: '#047857',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.45rem',
+                            borderRadius: '5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.2rem',
+                            flexShrink: 0,
+                            border: '1px solid #a7f3d0',
+                          }}
+                        >
+                          <MessageCircle size={11} />
+                          <span>WhatsApp</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           )}
+        </div>
+
+        {/* Change Customer Arrow Buttons: Previous & Next Customer */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '1px',
+            flexShrink: 0,
+            background: 'var(--bg-card, #fff)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-sm, 4px)',
+            padding: '1px',
+          }}
+          title="Change Customer (Prev / Next)"
+        >
+          <button
+            type="button"
+            onClick={() => handleNavigateCustomer('PREV')}
+            disabled={visibleRows.length === 0}
+            style={{
+              height: '24px',
+              width: '24px',
+              padding: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              borderRadius: '3px',
+              cursor: visibleRows.length === 0 ? 'not-allowed' : 'pointer',
+              color: visibleRows.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
+            }}
+            title="Previous Customer (↑ / Alt+Up)"
+          >
+            <ChevronUp size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleNavigateCustomer('NEXT')}
+            disabled={visibleRows.length === 0}
+            style={{
+              height: '24px',
+              width: '24px',
+              padding: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              borderRadius: '3px',
+              cursor: visibleRows.length === 0 ? 'not-allowed' : 'pointer',
+              color: visibleRows.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
+            }}
+            title="Next Customer (↓ / Alt+Down)"
+          >
+            <ChevronDown size={14} />
+          </button>
         </div>
 
         {/* Clear Filters */}
@@ -3291,6 +3901,7 @@ export const CreateOrderPage: React.FC = () => {
 
                   return (
                     <tr
+                      id={`order-row-${row.customerId || row.rowId}`}
                       key={row.rowId}
                       draggable={orderSort === 'CUSTOM' && isCustomEditing}
                       onDragStart={orderSort === 'CUSTOM' && isCustomEditing ? (e) => {
@@ -3480,20 +4091,27 @@ export const CreateOrderPage: React.FC = () => {
 
                       {/* Shop Name - Compact single-row layout */}
                       <td style={{ padding: '0.18rem 0.4rem', minWidth: '170px', maxWidth: '250px' }}>
-                        {row.isCustomRow && !row.customerId ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        {row.isChangingCustomer || (row.isCustomRow && !row.customerId) ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                             <select
                               className="form-input"
                               value={row.customerId}
-                              onChange={(e) => handleSelectCustomerForRow(row.rowId, e.target.value)}
+                              onChange={(e) => {
+                                handleSelectCustomerForRow(row.rowId, e.target.value);
+                                setRows((prev) =>
+                                  prev.map((r) => (r.rowId === row.rowId ? { ...r, isChangingCustomer: false } : r))
+                                );
+                              }}
                               style={{
-                                fontSize: '0.82rem',
-                                padding: '0.2rem 0.4rem',
-                                height: '30px',
+                                fontSize: '0.8rem',
+                                padding: '0.15rem 0.35rem',
+                                height: '28px',
                                 fontWeight: 700,
                                 borderColor: '#f59e0b',
                                 backgroundColor: '#fffbeb',
+                                flex: 1,
                               }}
+                              autoFocus
                             >
                               <option value="">-- Select Customer Shop --</option>
                               {customers.map((c) => (
@@ -3502,7 +4120,28 @@ export const CreateOrderPage: React.FC = () => {
                                 </option>
                               ))}
                             </select>
-                            <span style={{ fontSize: '0.68rem', color: '#b45309' }}>Select a shop for this custom row</span>
+                            {row.customerId && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRows((prev) =>
+                                    prev.map((r) => (r.rowId === row.rowId ? { ...r, isChangingCustomer: false } : r))
+                                  )
+                                }
+                                style={{
+                                  fontSize: '0.62rem',
+                                  padding: '0.15rem 0.35rem',
+                                  background: '#f1f5f9',
+                                  border: '1px solid #cbd5e1',
+                                  borderRadius: '3px',
+                                  cursor: 'pointer',
+                                  height: '28px',
+                                }}
+                                title="Cancel change"
+                              >
+                                <X size={12} />
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <>
@@ -3521,6 +4160,36 @@ export const CreateOrderPage: React.FC = () => {
                                   <Edit2 size={9} /><span>Edit</span>
                                 </button>
                               )}
+                              {/* Change Customer Arrow Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRows((prev) =>
+                                    prev.map((r) =>
+                                      r.rowId === row.rowId ? { ...r, isChangingCustomer: true } : r
+                                    )
+                                  );
+                                }}
+                                style={{
+                                  fontSize: '0.58rem',
+                                  padding: '0.03rem 0.22rem',
+                                  background: '#fef3c7',
+                                  color: '#b45309',
+                                  border: '1px solid #fde68a',
+                                  borderRadius: '3px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '1px',
+                                  fontWeight: 600,
+                                  flexShrink: 0,
+                                }}
+                                title="Change / Switch customer for this row"
+                              >
+                                <ArrowUpDown size={8} />
+                                <span>Change</span>
+                              </button>
                               {row.orderNumber ? (
                                 <span title={`Order #${row.orderNumber}`} style={{ fontSize: '0.6rem', fontWeight: 800, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '3px', padding: '0.03rem 0.25rem', whiteSpace: 'nowrap', flexShrink: 0 }}>#{row.orderNumber}</span>
                               ) : (
@@ -3545,9 +4214,6 @@ export const CreateOrderPage: React.FC = () => {
                                   )}
                                   {unlockedSelfOrderIds.has(row.rowId) && <span style={{ fontSize: '0.57rem', color: '#b45309', fontWeight: 700 }}>Unlocked</span>}
                                 </span>
-                              )}
-                              {row.isCustomRow && (
-                                <button type="button" onClick={() => setRows((prev) => prev.map((r) => r.rowId === row.rowId ? { ...r, customerId: '', customerName: '', customerOwner: '', customerRoute: 'Walk-in / Custom', customerBalance: '0' } : r))} style={{ fontSize: '0.58rem', padding: '0.03rem 0.22rem', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '3px', cursor: 'pointer', flexShrink: 0 }} title="Change shop">Change</button>
                               )}
                               {isWhatsAppEnabled && activeCustomer?.id === row.customerId && (
                                 <span style={{ fontSize: '0.59rem', background: '#dcfce7', color: '#15803d', padding: '0.03rem 0.25rem', borderRadius: '3px', fontWeight: 800, flexShrink: 0, border: '1px solid #86efac', whiteSpace: 'nowrap' }}>💬 WA</span>
@@ -3581,12 +4247,52 @@ export const CreateOrderPage: React.FC = () => {
                           fontWeight: 700,
                           fontSize: '0.82rem',
                           padding: '0.18rem 0.45rem',
-                          minWidth: '80px',
+                          minWidth: '95px',
                           whiteSpace: 'nowrap',
                           color: parseFloat(row.customerBalance || '0') > 0 ? '#dc2626' : 'var(--text-secondary)',
                         }}
                       >
-                        {formatCurrency(row.customerBalance || '0')}
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
+                          <span
+                            onClick={() => {
+                              if (row.customerId) handleOpenPrevDueModal(row);
+                            }}
+                            style={{
+                              cursor: row.customerId ? 'pointer' : 'default',
+                              borderBottom: row.customerId ? '1px dashed rgba(0,0,0,0.2)' : 'none',
+                            }}
+                            title={row.customerId ? `Click to edit Previous Due for ${row.customerName}` : undefined}
+                          >
+                            {formatCurrency(row.customerBalance || '0')}
+                          </span>
+                          {row.customerId && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPrevDueModal(row);
+                              }}
+                              title={`Edit Previous Due for ${row.customerName}`}
+                              style={{
+                                fontSize: '0.58rem',
+                                padding: '0.04rem 0.22rem',
+                                background: '#f0f9ff',
+                                color: '#0284c7',
+                                border: '1px solid #bae6fd',
+                                borderRadius: '3px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                fontWeight: 600,
+                                flexShrink: 0,
+                                lineHeight: 1.1,
+                              }}
+                            >
+                              <Edit2 size={8} />
+                            </button>
+                          )}
+                        </div>
                       </td>
 
                       {/* Dynamic Product Columns */}
@@ -3603,13 +4309,21 @@ export const CreateOrderPage: React.FC = () => {
                           const isLocked =
                             (row.status === 'LOCKED' && !unlockedSelfOrderIds.has(row.rowId)) ||
                             (row.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(row.rowId));
+                          const effRate = getProductPriceForCustomer(row.customerId, prod);
+                          const stdRate = parseFloat(prod.unit_price || '0');
+                          const isCustomRate = Boolean(row.customerId) && Math.abs(effRate - stdRate) > 0.001;
 
                           return (
                             <td key={prod.id} style={{ textAlign: 'right', padding: '0.12rem 0.35rem', minWidth: '80px' }}>
                               <input
                                 ref={(el) => {
                                   inputRefs.current[`${index}_prod_${prod.id}`] = el;
+                                  if (row.customerId) {
+                                    inputRefs.current[`cust_${row.customerId}_prod_${prod.id}`] = el;
+                                  }
                                 }}
+                                data-col={`prod_${prod.id}`}
+                                data-customer-id={row.customerId}
                                 type="number"
                                 min="0"
                                 step="1"
@@ -3623,7 +4337,8 @@ export const CreateOrderPage: React.FC = () => {
                                     setSelfOrderPendingField(`prod_${prod.id}`);
                                   }
                                 }}
-                                onFocus={() => {
+                                onFocus={(e) => {
+                                  e.target.select();
                                   if (row.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(row.rowId)) {
                                     setSelfOrderModalRow(row);
                                     setSelfOrderPendingField(`prod_${prod.id}`);
@@ -3650,7 +4365,7 @@ export const CreateOrderPage: React.FC = () => {
                                     ? 'Customer Self-Order. Click to unlock and edit.'
                                     : row.status === 'LOCKED'
                                     ? 'Order is locked and cannot be edited. Use Reopen to modify.'
-                                    : `${prod.name}`
+                                    : `${prod.name} • Rate: ₹${effRate.toFixed(2)}${isCustomRate ? ' (Customer Custom)' : ' (Standard)'}`
                                 }
                               />
                             </td>
@@ -3663,7 +4378,12 @@ export const CreateOrderPage: React.FC = () => {
                             <input
                               ref={(el) => {
                                 inputRefs.current[`${index}_kubbus`] = el;
+                                if (row.customerId) {
+                                  inputRefs.current[`cust_${row.customerId}_kubbus`] = el;
+                                }
                               }}
+                              data-col="kubbus"
+                              data-customer-id={row.customerId}
                               type="number"
                               min="0"
                               step="1"
@@ -3680,7 +4400,8 @@ export const CreateOrderPage: React.FC = () => {
                                   setSelfOrderPendingField('kubbus');
                                 }
                               }}
-                              onFocus={() => {
+                              onFocus={(e) => {
+                                e.target.select();
                                 if (row.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(row.rowId)) {
                                   setSelfOrderModalRow(row);
                                   setSelfOrderPendingField('kubbus');
@@ -3713,7 +4434,9 @@ export const CreateOrderPage: React.FC = () => {
                                   ? 'Customer Self-Order. Click to unlock and edit.'
                                   : row.status === 'LOCKED'
                                   ? 'Order is locked and cannot be edited. Use Reopen to modify.'
-                                  : undefined
+                                  : kubbusProduct
+                                  ? `Kubbus • Rate: ₹${getProductPriceForCustomer(row.customerId, kubbusProduct).toFixed(2)}`
+                                  : 'Kubbus'
                               }
                             />
                           </td>
@@ -3723,7 +4446,12 @@ export const CreateOrderPage: React.FC = () => {
                             <input
                               ref={(el) => {
                                 inputRefs.current[`${index}_romali`] = el;
+                                if (row.customerId) {
+                                  inputRefs.current[`cust_${row.customerId}_romali`] = el;
+                                }
                               }}
+                              data-col="romali"
+                              data-customer-id={row.customerId}
                               type="number"
                               min="0"
                               step="1"
@@ -3740,7 +4468,8 @@ export const CreateOrderPage: React.FC = () => {
                                   setSelfOrderPendingField('romali');
                                 }
                               }}
-                              onFocus={() => {
+                              onFocus={(e) => {
+                                e.target.select();
                                 if (row.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(row.rowId)) {
                                   setSelfOrderModalRow(row);
                                   setSelfOrderPendingField('romali');
@@ -3762,18 +4491,20 @@ export const CreateOrderPage: React.FC = () => {
                                   (row.status === 'LOCKED' && !unlockedSelfOrderIds.has(row.rowId)) ||
                                   (row.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(row.rowId))
                                 ) ? 'pointer' : 'text',
-                                borderColor: row.romaliQty ? '#f97316' : undefined,
+                                borderColor: row.romaliQty ? '#dc2626' : undefined,
                                 backgroundColor: (
                                   (row.status === 'LOCKED' && !unlockedSelfOrderIds.has(row.rowId)) ||
                                   (row.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(row.rowId))
-                                ) ? '#f9fafb' : row.romaliQty ? '#fff7ed' : undefined,
+                                ) ? '#f9fafb' : row.romaliQty ? '#fef2f2' : undefined,
                               }}
                               title={
                                 (row.orderSource === 'CUSTOMER_LINK' && !unlockedSelfOrderIds.has(row.rowId))
                                   ? 'Customer Self-Order. Click to unlock and edit.'
                                   : row.status === 'LOCKED'
                                   ? 'Order is locked and cannot be edited. Use Reopen to modify.'
-                                  : undefined
+                                  : romaliProduct
+                                  ? `Romali • Rate: ₹${getProductPriceForCustomer(row.customerId, romaliProduct).toFixed(2)}`
+                                  : 'Romali'
                               }
                             />
                           </td>
@@ -3785,14 +4516,20 @@ export const CreateOrderPage: React.FC = () => {
                         <input
                           ref={(el) => {
                             inputRefs.current[`${index}_cash`] = el;
+                            if (row.customerId) {
+                              inputRefs.current[`cust_${row.customerId}_cash`] = el;
+                            }
                           }}
+                          data-col="cash"
+                          data-customer-id={row.customerId}
                           type="number"
                           min="0"
                           step="any"
                           placeholder="0.00"
                           className="form-input"
                           value={row.cashAmount}
-                          onFocus={() => {
+                          onFocus={(e) => {
+                            e.target.select();
                             if (row.customerId) fetchCustomerPricing(row.customerId);
                           }}
                           onChange={(e) => handleCellChange(row.rowId, 'cashAmount', e.target.value)}
@@ -3815,14 +4552,20 @@ export const CreateOrderPage: React.FC = () => {
                         <input
                           ref={(el) => {
                             inputRefs.current[`${index}_gpay`] = el;
+                            if (row.customerId) {
+                              inputRefs.current[`cust_${row.customerId}_gpay`] = el;
+                            }
                           }}
+                          data-col="gpay"
+                          data-customer-id={row.customerId}
                           type="number"
                           min="0"
                           step="any"
                           placeholder="0.00"
                           className="form-input"
                           value={row.gpayAmount}
-                          onFocus={() => {
+                          onFocus={(e) => {
+                            e.target.select();
                             if (row.customerId) fetchCustomerPricing(row.customerId);
                           }}
                           onChange={(e) => handleCellChange(row.rowId, 'gpayAmount', e.target.value)}
@@ -4546,8 +5289,8 @@ export const CreateOrderPage: React.FC = () => {
                 />
               </div>
 
-              {/* Stop Sequence & Custom Order Number Options */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '0.75rem' }}>
+              {/* Stop Sequence, Custom Order Number & Opening Prev. Due */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.65rem', marginBottom: '0.75rem' }}>
                 <div>
                   <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.2rem' }}>
                     Route Stop / List Order
@@ -4570,11 +5313,27 @@ export const CreateOrderPage: React.FC = () => {
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. ORD-1001 or Slip #"
+                    placeholder="e.g. ORD-1001"
                     value={newCustOrderNumber}
                     onChange={(e) => setNewCustOrderNumber(e.target.value)}
                     style={{ height: '34px', padding: '0.25rem 0.5rem' }}
                     title="Specify a custom order number for today, or leave blank to auto-generate"
+                  />
+                </div>
+                <div>
+                  <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.2rem' }}>
+                    Prev. Due / Opening (₹)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-input"
+                    placeholder="0.00"
+                    value={newCustOpeningBalance}
+                    onChange={(e) => setNewCustOpeningBalance(e.target.value)}
+                    style={{ height: '34px', padding: '0.25rem 0.5rem', fontWeight: 600 }}
+                    title="Initial previous due / opening balance for this customer"
                   />
                 </div>
               </div>
@@ -5125,6 +5884,66 @@ export const CreateOrderPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Customer-Specific Wholesale Rates (₹) */}
+              <div style={{ marginBottom: '0.85rem', padding: '0.65rem 0.75rem', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    Customer-Specific Wholesale Rates
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+                    Custom rate for this shop (overrides default product price)
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: products.length > 2 ? 'repeat(auto-fit, minmax(130px, 1fr))' : '1fr 1fr', gap: '0.65rem' }}>
+                  {products.map((p) => {
+                    const stdPrice = parseFloat(p.unit_price || '0').toFixed(2);
+                    const currVal = editCustProductPrices[p.id] ?? stdPrice;
+                    const isCustomRate = currVal !== '' && parseFloat(currVal) !== parseFloat(stdPrice);
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          background: '#ffffff',
+                          padding: '0.4rem 0.6rem',
+                          borderRadius: '5px',
+                          border: isCustomRate ? '1.5px solid #6366f1' : '1px solid #cbd5e1',
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                          {p.name}
+                        </div>
+                        <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                          Standard: ₹{stdPrice}
+                        </div>
+                        <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.1rem' }}>
+                          Rate (₹/ps)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-input"
+                          value={currVal}
+                          onChange={(e) =>
+                            setEditCustProductPrices((prev) => ({ ...prev, [p.id]: e.target.value }))
+                          }
+                          style={{
+                            height: '28px',
+                            padding: '0.15rem 0.35rem',
+                            fontSize: '0.82rem',
+                            textAlign: 'right',
+                            fontWeight: 700,
+                            borderColor: isCustomRate ? '#6366f1' : undefined,
+                            backgroundColor: isCustomRate ? '#eef2ff' : undefined,
+                          }}
+                          placeholder={stdPrice}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div style={{ marginBottom: '1rem' }}>
                 <label className="form-label" style={{ fontSize: '0.8rem', marginBottom: '0.2rem' }}>Notes</label>
                 <textarea
@@ -5152,6 +5971,160 @@ export const CreateOrderPage: React.FC = () => {
                 >
                   {editCustSubmitting ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                   <span>{editCustSubmitting ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Previous Due Popup Modal */}
+      {isPrevDueModalOpen && prevDueRow && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '1rem',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsPrevDueModalOpen(false);
+            }
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              padding: '1.4rem',
+              width: '100%',
+              maxWidth: '460px',
+              boxShadow: 'var(--shadow-lg)',
+              borderRadius: 'var(--radius-lg, 10px)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <CreditCard size={20} color="var(--primary)" />
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                    Edit Previous Due
+                  </h3>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    {prevDueRow.customerName} {prevDueRow.customerRoute ? `• ${prevDueRow.customerRoute}` : ''}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPrevDueModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.2rem' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {prevDueError && (
+              <div className="alert alert-error" style={{ marginBottom: '0.8rem', fontSize: '0.8rem', padding: '0.4rem 0.65rem' }}>
+                {prevDueError}
+              </div>
+            )}
+
+            <form onSubmit={handleSavePrevDue}>
+              {/* Current Previous Due info box */}
+              <div
+                style={{
+                  background: 'var(--bg-main, #f8fafc)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md, 6px)',
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Current Outstanding Due:
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.95rem',
+                    fontWeight: 800,
+                    color: parseFloat(prevDueRow.customerBalance || '0') > 0 ? '#dc2626' : 'var(--text-primary)',
+                  }}
+                >
+                  {formatCurrency(prevDueRow.customerBalance || '0')}
+                </span>
+              </div>
+
+              {/* New Amount input */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label" style={{ fontSize: '0.82rem', marginBottom: '0.35rem', fontWeight: 700 }}>
+                  Today's Previous Due Amount (₹) *
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '1rem',
+                      fontWeight: 800,
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    autoFocus
+                    className="form-input"
+                    placeholder="0.00"
+                    value={prevDueAmount}
+                    onChange={(e) => setPrevDueAmount(e.target.value)}
+                    style={{
+                      height: '38px',
+                      fontSize: '1.1rem',
+                      fontWeight: 800,
+                      paddingLeft: '26px',
+                      color: parseFloat(prevDueAmount || '0') > 0 ? '#dc2626' : 'var(--text-primary)',
+                    }}
+                  />
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.35rem', display: 'block' }}>
+                  Quickly set or override today's previous due for this shop on the sheet.
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsPrevDueModalOpen(false)}
+                  style={{ height: '34px', fontSize: '0.82rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', height: '34px', fontSize: '0.82rem', fontWeight: 700 }}
+                >
+                  <Save size={14} />
+                  <span>Save Amount</span>
                 </button>
               </div>
             </form>

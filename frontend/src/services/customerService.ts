@@ -61,6 +61,10 @@ export const customerService = {
     return apiClient.delete<void>(`/customers/${id}/`);
   },
 
+  async setBalance(id: string, balance: string, notes?: string): Promise<{ id: string; name: string; current_balance: string }> {
+    return apiClient.post<{ id: string; name: string; current_balance: string }>(`/customers/${id}/set-balance/`, { balance, notes });
+  },
+
   async getCustomerPricing(id: string): Promise<import('../types').CustomerPricingOverviewItem[]> {
     return apiClient.get<import('../types').CustomerPricingOverviewItem[]>(`/customers/${id}/pricing/`);
   },

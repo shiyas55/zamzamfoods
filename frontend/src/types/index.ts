@@ -66,6 +66,7 @@ export interface Customer {
   is_active: boolean;
   notes?: string;
   product_prices?: Array<{ product_id: string; price: string }>;
+  custom_prices?: Record<string, string>;
   created_at?: string;
   updated_at?: string;
 }
