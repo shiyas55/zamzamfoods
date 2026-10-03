@@ -50,51 +50,62 @@ class ApiClient {
     }
 
     this.refreshPromise = (async (): Promise<RefreshResult> => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: refreshToken ? JSON.stringify({ refresh: refreshToken }) : undefined,
-        });
+      // Try refresh with 1 retry for cold-start / waking server
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: refreshToken ? JSON.stringify({ refresh: refreshToken }) : undefined,
+          });
 
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          const errDetail = typeof data?.detail === 'string' ? data.detail.toLowerCase() : '';
-          const isDefinitiveAuthFailure =
-            response.status === 401 ||
-            (response.status === 400 &&
-              (errDetail.includes('token') ||
-                errDetail.includes('invalid') ||
-                errDetail.includes('expired') ||
-                errDetail.includes('blacklisted')));
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            const errDetail = typeof data?.detail === 'string' ? data.detail.toLowerCase() : '';
+            const isDefinitiveAuthFailure =
+              response.status === 401 ||
+              (response.status === 400 &&
+                (errDetail.includes('token') ||
+                  errDetail.includes('invalid') ||
+                  errDetail.includes('expired') ||
+                  errDetail.includes('blacklisted')));
 
-          if (isDefinitiveAuthFailure) {
-            const currentRt = localStorage.getItem('zamzam_refresh_token');
-            if (currentRt === refreshToken) {
-              this.clearTokens();
-              this.dispatchLogout();
+            if (isDefinitiveAuthFailure) {
+              const currentRt = localStorage.getItem('zamzam_refresh_token');
+              if (currentRt === refreshToken) {
+                this.clearTokens();
+                this.dispatchLogout();
+              }
+              return { success: false, isAuthFailure: true };
             }
-            return { success: false, isAuthFailure: true };
+
+            // 500, 502, 503, 504 server cold-start issues: retry if first attempt
+            if (attempt < 2) {
+              await new Promise((res) => setTimeout(res, 500));
+              continue;
+            }
+            return { success: false, isAuthFailure: false };
           }
 
-          // 500, 502, 503, 504 or other server issues are NOT auth rejections
+          const data = await response.json().catch(() => ({}));
+          if (data.access) {
+            this.setTokens(data.access, data.refresh || refreshToken || '');
+            return { success: true, isAuthFailure: false };
+          }
+          return { success: false, isAuthFailure: false };
+        } catch {
+          if (attempt < 2) {
+            await new Promise((res) => setTimeout(res, 500));
+            continue;
+          }
           return { success: false, isAuthFailure: false };
         }
-
-        const data = await response.json().catch(() => ({}));
-        if (data.access) {
-          this.setTokens(data.access, data.refresh || refreshToken || '');
-          return { success: true, isAuthFailure: false };
-        }
-        return { success: false, isAuthFailure: false };
-      } catch {
-        // Network error during refresh: do not force logout, preserve session
-        return { success: false, isAuthFailure: false };
-      } finally {
-        this.refreshPromise = null;
       }
-    })();
+      return { success: false, isAuthFailure: false };
+    })().finally(() => {
+      this.refreshPromise = null;
+    });
 
     return this.refreshPromise;
   }
@@ -133,19 +144,39 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        ...fetchOptions,
-        headers,
-        credentials: 'include',
-      });
-    } catch {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        throw new Error(
-          'You are currently offline. Live operations require a connection to the Zamzam server.'
-        );
+    let response: Response | null = null;
+    const maxNetworkAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxNetworkAttempts; attempt++) {
+      try {
+        response = await fetch(url, {
+          ...fetchOptions,
+          headers,
+          credentials: 'include',
+        });
+
+        // If server is cold-starting (502/503/504), retry with small backoff
+        if (response.status >= 502 && response.status <= 504 && attempt < maxNetworkAttempts) {
+          await new Promise((res) => setTimeout(res, attempt * 400));
+          continue;
+        }
+
+        break;
+      } catch {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          throw new Error(
+            'You are currently offline. Live operations require a connection to the Zamzam server.'
+          );
+        }
+        if (attempt < maxNetworkAttempts) {
+          await new Promise((res) => setTimeout(res, attempt * 400));
+          continue;
+        }
+        throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
       }
+    }
+
+    if (!response) {
       throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
     }
 
@@ -165,11 +196,15 @@ class ApiClient {
           headers['Authorization'] = `Bearer ${freshToken}`;
         }
         // Retry fetch ONCE with fresh token and credentials
-        response = await fetch(url, {
-          ...fetchOptions,
-          headers,
-          credentials: 'include',
-        });
+        try {
+          response = await fetch(url, {
+            ...fetchOptions,
+            headers,
+            credentials: 'include',
+          });
+        } catch {
+          throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
+        }
       } else if (refreshResult.isAuthFailure) {
         throw new Error('Session expired. Please log in again.');
       } else {
