@@ -66,6 +66,7 @@ export interface OrderRow {
   customerId: string;
   customerName: string;
   customerOwner?: string;
+  customerPhone?: string;
   customerRouteId?: string;
   customerRoute?: string;
   customerBalance?: string;
