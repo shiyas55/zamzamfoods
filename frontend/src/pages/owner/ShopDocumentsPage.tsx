@@ -936,35 +936,6 @@ export const ShopDocumentsPage: React.FC = () => {
                 />
               </div>
 
-              {/* Number & Authority */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Document / License #
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: '100%', height: '38px', fontSize: '0.88rem' }}
-                    placeholder="e.g. 13325999000000"
-                    value={upDocNumber}
-                    onChange={(e) => setUpDocNumber(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Issuing Authority
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: '100%', height: '38px', fontSize: '0.88rem' }}
-                    placeholder="e.g. FSSAI, Kerala Food Safety"
-                    value={upAuthority}
-                    onChange={(e) => setUpAuthority(e.target.value)}
-                  />
-                </div>
-              </div>
 
               {/* Issue & Expiry Dates */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -1331,32 +1302,6 @@ export const ShopDocumentsPage: React.FC = () => {
                 </select>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Document / License #
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: '100%', height: '38px', fontSize: '0.88rem' }}
-                    value={editDocNum}
-                    onChange={(e) => setEditDocNum(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Issuing Authority
-                  </label>
-                  <input
-                    type="text"
-                    className="input"
-                    style={{ width: '100%', height: '38px', fontSize: '0.88rem' }}
-                    value={editAuthority}
-                    onChange={(e) => setEditAuthority(e.target.value)}
-                  />
-                </div>
-              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div>

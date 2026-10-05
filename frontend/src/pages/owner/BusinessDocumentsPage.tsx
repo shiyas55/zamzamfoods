@@ -726,23 +726,6 @@ export const BusinessDocumentsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* License number + authority */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    License / Registration #
-                  </label>
-                  <input type="text" className="input" value={upDocNumber} onChange={e => setUpDocNumber(e.target.value)}
-                    placeholder="e.g. 13325999000000" />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.83rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Issuing Authority
-                  </label>
-                  <input type="text" className="input" value={upAuthority} onChange={e => setUpAuthority(e.target.value)}
-                    placeholder="e.g. FSSAI, GST Dept, Municipality" />
-                </div>
-              </div>
 
               {/* Issue date + expiry */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -991,22 +974,11 @@ export const BusinessDocumentsPage: React.FC = () => {
                 <input type="text" className="input" value={editTitle} onChange={e => setEditTitle(e.target.value)} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Document Type</label>
-                  <select className="input" value={editDocType} onChange={e => setEditDocType(e.target.value as BusinessDocumentType)}>
-                    {Object.entries(DOC_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>License / Doc #</label>
-                  <input type="text" className="input" value={editDocNum} onChange={e => setEditDocNum(e.target.value)} />
-                </div>
-              </div>
-
               <div style={{ marginBottom: '0.85rem' }}>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Issuing Authority</label>
-                <input type="text" className="input" value={editAuthority} onChange={e => setEditAuthority(e.target.value)} placeholder="e.g. FSSAI, GST Department" />
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, marginBottom: '0.3rem' }}>Document Type</label>
+                <select className="input" value={editDocType} onChange={e => setEditDocType(e.target.value as BusinessDocumentType)}>
+                  {Object.entries(DOC_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.85rem' }}>
