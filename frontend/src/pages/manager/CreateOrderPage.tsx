@@ -1505,13 +1505,15 @@ export const CreateOrderPage: React.FC = () => {
       totalPieces = kQty + rQty;
     }
 
-    const cash = parseFloat(row.cashAmount) || 0;
-    const gpay = parseFloat(row.gpayAmount) || 0;
-    const discount = parseFloat(row.discountAmount) || 0;
-    const rowPaid = cash + gpay;
-    const prevDue = parseFloat(row.customerBalance || '0') || 0;
-    const netBill = Math.max(0, rowTotal - discount);
-    const rowBalance = prevDue + netBill - rowPaid;
+    const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+    const cash = round2(parseFloat(row.cashAmount) || 0);
+    const gpay = round2(parseFloat(row.gpayAmount) || 0);
+    const discount = round2(parseFloat(row.discountAmount) || 0);
+    const rowPaid = round2(cash + gpay);
+    const prevDue = round2(parseFloat(row.customerBalance || '0') || 0);
+    const netBill = round2(Math.max(0, rowTotal - discount));
+    const rowBalance = round2(prevDue + netBill - rowPaid);
+    rowTotal = round2(rowTotal);
 
     return {
       kQty,
