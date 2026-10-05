@@ -48,8 +48,13 @@ import {
   ArrowUpDown,
   BarChart2,
 } from 'lucide-react';
-import { RealWhatsAppWebView } from '../../components/RealWhatsAppWebView';
-import { InvoiceModal } from '../../components/InvoiceModal';
+
+const RealWhatsAppWebView = React.lazy(() =>
+  import('../../components/RealWhatsAppWebView').then((m) => ({ default: m.RealWhatsAppWebView }))
+);
+const InvoiceModal = React.lazy(() =>
+  import('../../components/InvoiceModal').then((m) => ({ default: m.InvoiceModal }))
+);
 import { UniversalDatePicker } from '../../components/UniversalDatePicker';
 import { useSettings } from '../../context/SettingsContext';
 import { draftOrderStorage } from '../../utils/draftOrderStorage';

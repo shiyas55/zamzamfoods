@@ -37,7 +37,10 @@ import {
 } from 'lucide-react';
 import { settingsService } from '../../services/settingsService';
 import { ZentrixSettingsSection, ZENTRIX_SUPPORT_CONFIG } from '../../components/ZentrixHelpDesk';
-import { DatabaseStorageBackupSection } from '../../components/DatabaseStorageBackupSection';
+
+const DatabaseStorageBackupSection = React.lazy(() =>
+  import('../../components/DatabaseStorageBackupSection').then((m) => ({ default: m.DatabaseStorageBackupSection }))
+);
 
 export const SettingsPage: React.FC = () => {
   const { settings, loading, updateSettings, refreshSettings } = useSettings();
@@ -1722,7 +1725,9 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             {/* SECTION: DATABASE STORAGE LEVEL & BACKUP DISASTER RECOVERY */}
-            <DatabaseStorageBackupSection />
+            <React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}><div className="spinner" /></div>}>
+              <DatabaseStorageBackupSection />
+            </React.Suspense>
 
 
             {/* SECTION 3: ZENTRIX 24x7 HELP DESK & SOFTWARE SUPPORT */}
