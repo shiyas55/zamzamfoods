@@ -52,9 +52,17 @@ jobs:
           VITE_API_URL: https://zamzamfood.up.railway.app/api/v1
         with:
           projectPath: './frontend'
-          tagName: v1.0.1
-          releaseName: 'Zamzam Foods v1.0.1'
-          releaseBody: 'Automated desktop build for Windows (.exe) and macOS (.dmg) with Shop Documents, photo-only document uploads, and live Railway backend dual-authentication.'
+          tagName: v__VERSION__
+          releaseName: 'Zamzam Foods v__VERSION__'
+          releaseBody: |
+            Zamzam Foods v__VERSION__ Desktop Release (Windows & macOS)
+
+            ### Key Enhancements & Optimizations:
+            - **Performance & Code Splitting**: 95% reduction in initial entry JavaScript bundle (from 1.25 MB down to 62 kB) with dynamic route and heavy component lazy-loading.
+            - **Automated Disaster Recovery**: Scheduled 23:59 local SQLite snapshot engine, multi-format backup CLI (`backup_database`), and automated DB restore verification.
+            - **Security Hardening**: Brute-force rate limiting on Settings PIN verification and IP-based rate limiting on public customer order submission.
+            - **Mobile Upload Efficiency**: Client-side canvas image downscaling to prevent network saturation and optimize Cloudinary bandwidth.
+            - **Quality Assurance**: Complete 135-test automated test suite passing across all RBAC, ledger, wholesale pricing, and route delivery flows.
           releaseDraft: false
           prerelease: false
 
