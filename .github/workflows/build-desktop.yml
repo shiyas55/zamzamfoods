@@ -52,9 +52,9 @@ jobs:
           VITE_API_URL: https://zamzamfood.up.railway.app/api/v1
         with:
           projectPath: './frontend'
-          tagName: v1.0.0
-          releaseName: 'Zamzam Foods v1.0.0'
-          releaseBody: 'Automated desktop build for Windows (.exe) and macOS (.dmg)'
+          tagName: v1.0.1
+          releaseName: 'Zamzam Foods v1.0.1'
+          releaseBody: 'Automated desktop build for Windows (.exe) and macOS (.dmg) with Shop Documents, photo-only document uploads, and live Railway backend dual-authentication.'
           releaseDraft: false
           prerelease: false
 
