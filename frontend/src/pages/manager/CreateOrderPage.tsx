@@ -1161,6 +1161,13 @@ export const CreateOrderPage: React.FC = () => {
     }
   };
 
+  const handleClearAllFilters = () => {
+    setRouteFilter('ALL');
+    setSearchQuery('');
+    setShowOrdersOnly(false);
+    setSourceFilter('ALL');
+  };
+
   // Visible rows filtered by Route & Search Query
   const visibleRows = useMemo(() => {
     const filtered = rows.filter((row) => {
@@ -3792,14 +3799,11 @@ export const CreateOrderPage: React.FC = () => {
         </div>
 
         {/* Clear Filters */}
-        {(routeFilter !== 'ALL' || searchQuery) && (
+        {(routeFilter !== 'ALL' || searchQuery || showOrdersOnly || sourceFilter !== 'ALL') && (
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setRouteFilter('ALL');
-              setSearchQuery('');
-            }}
+            onClick={handleClearAllFilters}
             style={{ height: '28px', padding: '0 0.55rem', fontSize: '0.76rem' }}
           >
             Clear Filters
@@ -4204,8 +4208,30 @@ export const CreateOrderPage: React.FC = () => {
                       <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
                         {customers.length === 0
                           ? 'All sample data has been removed. Register your first shop to start entering real daily wholesale orders.'
+                          : showOrdersOnly
+                          ? `${customers.length} shops exist in your database, but none have orders placed on ${orderDate}. Click below to show all shops and enter orders.`
                           : 'No shops match your current search query or route filter.'}
                       </p>
+                      {customers.length > 0 && showOrdersOnly && (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => setShowOrdersOnly(false)}
+                          style={{ marginTop: '0.4rem', padding: '0.45rem 1.25rem', fontWeight: 700 }}
+                        >
+                          <span>Show All {customers.length} Shops</span>
+                        </button>
+                      )}
+                      {customers.length > 0 && !showOrdersOnly && isFilterActive && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={handleClearAllFilters}
+                          style={{ marginTop: '0.4rem', padding: '0.45rem 1.25rem', fontWeight: 700 }}
+                        >
+                          <span>Clear All Filters</span>
+                        </button>
+                      )}
                       {customers.length === 0 && (
                         <button
                           type="button"
