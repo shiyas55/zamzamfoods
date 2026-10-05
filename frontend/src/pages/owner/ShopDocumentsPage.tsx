@@ -6,6 +6,7 @@ import {
   BusinessDocumentType,
 } from '../../services/businessDocumentService';
 import { formatDate } from '../../utils/formatters';
+import { compressImages } from '../../utils/imageCompression';
 import {
   ShieldCheck,
   UploadCloud,
@@ -237,6 +238,7 @@ export const ShopDocumentsPage: React.FC = () => {
     try {
       setUploading(true);
       setUploadError(null);
+      const filesToUpload = await compressImages(selectedFiles);
       const created = await businessDocumentService.batchUpload({
         document_type: upDocType,
         title: upTitle.trim() || undefined,
@@ -245,7 +247,7 @@ export const ShopDocumentsPage: React.FC = () => {
         issue_date: upIssueDate || undefined,
         expiry_date: upExpiry || undefined,
         notes: upNotes.trim() || undefined,
-        files: selectedFiles,
+        files: filesToUpload,
       });
       setDocuments((prev) => [...created, ...prev]);
       showToast(`Uploaded ${created.length} shop document(s) successfully!`);
