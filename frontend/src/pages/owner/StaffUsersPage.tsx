@@ -107,7 +107,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
 
   // Attendance State
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0]);
-  const [attendanceFilterRole, setAttendanceFilterRole] = useState<'ALL' | 'MEMBERS' | 'DRIVERS' | 'STAFF'>('ALL');
+  const [attendanceFilterRole, setAttendanceFilterRole] = useState<'ALL' | 'MEMBERS' | 'DRIVERS'>('ALL');
   const [attendanceSearch, setAttendanceSearch] = useState('');
   const [dailySheet, setDailySheet] = useState<DailySheetItem[]>([]);
   const [attendanceLoading, setAttendanceLoading] = useState(false);
@@ -420,7 +420,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
     );
   };
 
-  const handleOpenCreateForSection = (type: 'MEMBER' | 'DRIVER' | 'STAFF') => {
+  const handleOpenCreateForSection = (type: 'MEMBER' | 'DRIVER') => {
     setEditingStaff(null);
     setStaffFullName('');
     setStaffPhone('');
@@ -436,14 +436,9 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
       setStaffDesignation('Share Member');
       setStaffWageType('CUSTOM');
       setStaffCustomWage('');
-    } else if (type === 'DRIVER') {
-      setStaffRoleType('STAFF');
-      setStaffDesignation('Staff Driver');
-      setStaffWageType('DEFAULT_SLAB');
-      setStaffCustomWage('');
     } else {
       setStaffRoleType('STAFF');
-      setStaffDesignation('Production Staff');
+      setStaffDesignation('Staff Driver');
       setStaffWageType('DEFAULT_SLAB');
       setStaffCustomWage('');
     }
@@ -667,13 +662,8 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
     let driverPresent = 0;
     let driverEarned = 0;
 
-    let staffTotal = 0;
-    let staffPresent = 0;
-    let staffEarned = 0;
-
     dailySheet.forEach((item) => {
-      const isDriver = item.role_type === 'STAFF' && (item.designation?.toLowerCase().includes('driver') || false);
-      const isMember = item.role_type === 'MEMBER' || (!isDriver && item.role_type !== 'STAFF');
+      const isMember = item.role_type === 'MEMBER';
 
       const wage = parseFloat(item.calculated_wage) || 0;
       const cash = parseFloat(item.cash_paid || '0') || 0;
@@ -695,14 +685,10 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
         memberTotal++;
         if (item.status === 'FULL' || item.status === 'HALF') memberPresent++;
         memberEarned += wage;
-      } else if (isDriver) {
+      } else {
         driverTotal++;
         if (item.status === 'FULL') driverPresent++;
         driverEarned += wage;
-      } else {
-        staffTotal++;
-        if (item.status === 'FULL') staffPresent++;
-        staffEarned += wage;
       }
     });
 
@@ -728,10 +714,6 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
       driverTotal,
       driverPresent,
       driverEarned,
-
-      staffTotal,
-      staffPresent,
-      staffEarned,
     };
   }, [dailySheet]);
 
@@ -1306,26 +1288,6 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
 
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => handleOpenCreateForSection('STAFF')}
-                style={{
-                  height: 28,
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  color: '#334155',
-                  borderColor: '#cbd5e1',
-                  background: '#f8fafc',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                }}
-              >
-                <UserPlus size={13} />
-                <span>Add Staff</span>
-              </button>
-
-              <button
-                type="button"
                 className="btn btn-primary btn-sm"
                 onClick={handleSaveAttendance}
                 disabled={attendanceSaving}
@@ -1383,18 +1345,17 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
               </div>
             </div>
 
-            {/* Card 3: Staff & Drivers */}
+            {/* Card 3: Staff Drivers */}
             <div className="card" style={{ padding: '0.3rem 0.7rem', borderLeft: '3.5px solid #4f46e5' }}>
               <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-                🚚 Staff Drivers &amp; Ops
+                🚚 Staff Drivers
               </span>
               <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#4f46e5', marginTop: '0.05rem', lineHeight: 1.15 }}>
-                {attendanceStats.driverPresent + attendanceStats.staffPresent} /{' '}
-                {attendanceStats.driverTotal + attendanceStats.staffTotal}{' '}
+                {attendanceStats.driverPresent} / {attendanceStats.driverTotal}{' '}
                 <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>Active</span>
               </div>
               <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.05rem' }}>
-                Earned: <strong style={{ color: '#059669' }}>{formatCurrency(attendanceStats.driverEarned + attendanceStats.staffEarned)}</strong>
+                Earned: <strong style={{ color: '#059669' }}>{formatCurrency(attendanceStats.driverEarned)}</strong>
               </div>
             </div>
 
@@ -1491,14 +1452,6 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
               >
                 🚚 Staff Drivers ({attendanceStats.driverTotal})
               </button>
-              <button
-                type="button"
-                className={`btn btn-sm ${attendanceFilterRole === 'STAFF' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setAttendanceFilterRole('STAFF')}
-                style={{ height: 26, fontSize: '0.73rem', padding: '0 0.55rem', fontWeight: 700 }}
-              >
-                🏭 Operations Staff ({attendanceStats.staffTotal})
-              </button>
             </div>
 
             {/* Bulk Actions */}
@@ -1553,20 +1506,18 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               {/* SECTION RENDERER HELPER */}
-              {(['MEMBERS', 'DRIVERS', 'STAFF'] as const).map((secKey) => {
+              {(['MEMBERS', 'DRIVERS'] as const).map((secKey) => {
                 if (attendanceFilterRole !== 'ALL' && attendanceFilterRole !== secKey) {
                   return null;
                 }
 
                 // Filter items for this section
                 const sectionItems = dailySheet.filter((item) => {
-                  const isDriver = item.role_type === 'STAFF' && (item.designation?.toLowerCase().includes('driver') || false);
-                  const isMember = item.role_type === 'MEMBER' || (!isDriver && item.role_type !== 'STAFF');
-                  const isStaff = item.role_type === 'STAFF' && !isDriver;
+                  const isMember = item.role_type === 'MEMBER';
+                  const isDriverOrStaff = item.role_type === 'STAFF';
 
                   if (secKey === 'MEMBERS' && !isMember) return false;
-                  if (secKey === 'DRIVERS' && !isDriver) return false;
-                  if (secKey === 'STAFF' && !isStaff) return false;
+                  if (secKey === 'DRIVERS' && !isDriverOrStaff) return false;
 
                   if (attendanceSearch.trim()) {
                     const q = attendanceSearch.toLowerCase().trim();
@@ -1582,18 +1533,16 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 const secTitle =
                   secKey === 'MEMBERS'
                     ? 'SECTION 1: 👔 SHARE MEMBERS (BUSINESS OWNERS / PARTNERS)'
-                    : secKey === 'DRIVERS'
-                    ? 'SECTION 2: 🚚 STAFF DRIVERS (ROUTE DELIVERIES & FLEET)'
-                    : 'SECTION 3: 🏭 OPERATIONS & COUNTER STAFF (MANAGEMENT, SALES, BAKERY)';
+                    : 'SECTION 2: 🚚 STAFF DRIVERS';
 
                 const secSubtitle =
                   secKey === 'MEMBERS'
                     ? 'Eligible for Full Day (100%), Half Day (50%), or Leave (₹0)'
                     : 'Eligible for Present (100% daily wage) or Leave (₹0)';
 
-                const secBadgeBg = secKey === 'MEMBERS' ? '#fef3c7' : secKey === 'DRIVERS' ? '#eff6ff' : '#f8fafc';
-                const secBadgeText = secKey === 'MEMBERS' ? '#92400e' : secKey === 'DRIVERS' ? '#1e40af' : '#334155';
-                const secBadgeBorder = secKey === 'MEMBERS' ? '#fde68a' : secKey === 'DRIVERS' ? '#bfdbfe' : '#cbd5e1';
+                const secBadgeBg = secKey === 'MEMBERS' ? '#fef3c7' : '#eff6ff';
+                const secBadgeText = secKey === 'MEMBERS' ? '#92400e' : '#1e40af';
+                const secBadgeBorder = secKey === 'MEMBERS' ? '#fde68a' : '#bfdbfe';
 
                 const secPresent = sectionItems.filter((i) => i.status === 'FULL' || i.status === 'HALF').length;
                 const secEarned = sectionItems.reduce((acc, i) => acc + (parseFloat(i.calculated_wage) || 0), 0);
@@ -1651,7 +1600,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                         <button
                           type="button"
                           className="btn btn-secondary btn-sm"
-                          onClick={() => handleOpenCreateForSection(secKey === 'MEMBERS' ? 'MEMBER' : secKey === 'DRIVERS' ? 'DRIVER' : 'STAFF')}
+                          onClick={() => handleOpenCreateForSection(secKey === 'MEMBERS' ? 'MEMBER' : 'DRIVER')}
                           style={{
                             height: 24,
                             fontSize: '0.7rem',
@@ -1666,7 +1615,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                           }}
                         >
                           <Plus size={12} />
-                          {secKey === 'MEMBERS' ? 'Add Member' : secKey === 'DRIVERS' ? 'Add Driver' : 'Add Staff'}
+                          {secKey === 'MEMBERS' ? 'Add Member' : 'Add Driver'}
                         </button>
                       </div>
                     </div>
@@ -2049,7 +1998,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                 No active members found in this section.{' '}
                                 <button
                                   type="button"
-                                  onClick={() => handleOpenCreateForSection(secKey === 'MEMBERS' ? 'MEMBER' : secKey === 'DRIVERS' ? 'DRIVER' : 'STAFF')}
+                                  onClick={() => handleOpenCreateForSection(secKey === 'MEMBERS' ? 'MEMBER' : 'DRIVER')}
                                   style={{
                                     border: 'none',
                                     background: 'transparent',
