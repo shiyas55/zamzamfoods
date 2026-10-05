@@ -1953,19 +1953,19 @@ export const CreateOrderPage: React.FC = () => {
         const fin = getRowFinancials(row);
         if (fin.hasOrder || fin.cash > 0 || fin.gpay > 0 || fin.discount > 0) {
           acc.validShopsCount += 1;
-          acc.totalKubbus += fin.kQty;
-          acc.totalRomali += fin.rQty;
-          acc.totalPieces += fin.totalPieces;
-          products.forEach((p) => {
-            acc.productTotals[p.id] = (acc.productTotals[p.id] || 0) + (fin.itemQuantities[p.id] || 0);
-          });
-          acc.totalBill += fin.rowTotal;
-          acc.totalCash += fin.cash;
-          acc.totalGPay += fin.gpay;
-          acc.totalDiscount += fin.discount;
-          acc.totalDue += fin.rowBalance;
-          acc.totalPrevDue += fin.prevDue;
         }
+        acc.totalKubbus += fin.kQty;
+        acc.totalRomali += fin.rQty;
+        acc.totalPieces += fin.totalPieces;
+        products.forEach((p) => {
+          acc.productTotals[p.id] = (acc.productTotals[p.id] || 0) + (fin.itemQuantities[p.id] || 0);
+        });
+        acc.totalBill += fin.rowTotal;
+        acc.totalCash += fin.cash;
+        acc.totalGPay += fin.gpay;
+        acc.totalDiscount += fin.discount;
+        acc.totalDue += fin.rowBalance;
+        acc.totalPrevDue += fin.prevDue;
         return acc;
       },
       {
@@ -2034,6 +2034,7 @@ export const CreateOrderPage: React.FC = () => {
 
   const isFilterActive = routeFilter !== 'ALL' || Boolean(searchQuery.trim()) || sourceFilter !== 'ALL' || showOrdersOnly;
   const shouldShowDownside = routeFilter !== 'ALL' || isFilterActive || showDownsideSummary;
+  const activeStats = isFilterActive ? filteredStats : sheetStats;
 
   // Count unsubmitted / modified orders ready to submit
   const pendingOrdersCount = useMemo(() => {
@@ -3064,13 +3065,13 @@ export const CreateOrderPage: React.FC = () => {
         {/* Card 1: Orders summary */}
         <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #dc2626' }}>
           <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-            Dispatch Orders ({orderDate})
+            Dispatch Orders ({isFilterActive ? 'Filtered' : orderDate})
           </span>
           <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#dc2626', marginTop: '0.02rem', lineHeight: 1.15 }}>
-            {sheetStats.validShopsCount} Shops
+            {activeStats.validShopsCount} Shops
           </div>
           <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>
-            {formatCurrency(sheetStats.totalBill)} total bill
+            {formatCurrency(activeStats.totalBill)} total bill
           </div>
         </div>
 
@@ -3080,11 +3081,11 @@ export const CreateOrderPage: React.FC = () => {
             const colors = ['#f59e0b', '#0284c7', '#7c3aed', '#059669', '#ea580c', '#e11d48'];
             const cardColor = colors[idx % colors.length];
             const qty =
-              sheetStats.productTotals[p.id] ||
+              activeStats.productTotals[p.id] ||
               (kubbusProduct && p.id === kubbusProduct.id
-                ? sheetStats.totalKubbus
+                ? activeStats.totalKubbus
                 : romaliProduct && p.id === romaliProduct.id
-                ? sheetStats.totalRomali
+                ? activeStats.totalRomali
                 : 0);
 
             return (
@@ -3108,7 +3109,7 @@ export const CreateOrderPage: React.FC = () => {
                 Total Kubbus
               </span>
               <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#b45309', marginTop: '0.02rem', lineHeight: 1.15 }}>
-                {sheetStats.totalKubbus} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
+                {activeStats.totalKubbus} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
               </div>
               <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>Single pieces (ps)</div>
             </div>
@@ -3117,7 +3118,7 @@ export const CreateOrderPage: React.FC = () => {
                 Total Romali
               </span>
               <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#dc2626', marginTop: '0.02rem', lineHeight: 1.15 }}>
-                {sheetStats.totalRomali} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
+                {activeStats.totalRomali} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
               </div>
               <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>Wholesale pieces</div>
             </div>
@@ -3131,7 +3132,7 @@ export const CreateOrderPage: React.FC = () => {
               Total All Pieces
             </span>
             <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#4f46e5', marginTop: '0.02rem', lineHeight: 1.15 }}>
-              {sheetStats.totalPieces} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
+              {activeStats.totalPieces} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
             </div>
             <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>
               Across {products.length} products
@@ -3147,18 +3148,18 @@ export const CreateOrderPage: React.FC = () => {
           <div style={{ fontSize: '0.7rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column', gap: '0.05rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Collected:</span>
-              <strong style={{ color: '#10b981' }}>{formatCurrency(sheetStats.totalCash + sheetStats.totalGPay)}</strong>
+              <strong style={{ color: '#10b981' }}>{formatCurrency(activeStats.totalCash + activeStats.totalGPay)}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'var(--text-muted)', paddingLeft: '0.15rem' }}>
-              <span>Cash: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(sheetStats.totalCash)}</strong></span>
-              <span>GPay: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(sheetStats.totalGPay)}</strong></span>
-              {isOrderDiscountEnabled && sheetStats.totalDiscount > 0 && (
-                <span>Disc: <strong style={{ color: '#b45309', fontWeight: 600 }}>{formatCurrency(sheetStats.totalDiscount)}</strong></span>
+              <span>Cash: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(activeStats.totalCash)}</strong></span>
+              <span>GPay: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(activeStats.totalGPay)}</strong></span>
+              {isOrderDiscountEnabled && activeStats.totalDiscount > 0 && (
+                <span>Disc: <strong style={{ color: '#b45309', fontWeight: 600 }}>{formatCurrency(activeStats.totalDiscount)}</strong></span>
               )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Balance Due:</span>
-              <strong style={{ color: '#dc2626' }}>{formatCurrency(sheetStats.totalDue)}</strong>
+              <strong style={{ color: '#dc2626' }}>{formatCurrency(activeStats.totalDue)}</strong>
             </div>
           </div>
         </div>
