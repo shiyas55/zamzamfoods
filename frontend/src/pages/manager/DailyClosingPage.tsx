@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { reportService, DailyClosingResponse } from '../../services/reportService';
 import { formatCurrency, formatDateTime, formatDate, getLocalDateString } from '../../utils/formatters';
+import { UniversalDatePicker } from '../../components/UniversalDatePicker';
 import {
   Calendar,
   CheckCircle2,
@@ -156,15 +157,12 @@ export const DailyClosingPage: React.FC = () => {
 
         {/* Date Selector & Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'var(--bg-card)', padding: '0.35rem 0.75rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-            <Calendar size={16} color="var(--primary)" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              style={{ border: 'none', background: 'transparent', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.88rem', outline: 'none' }}
-            />
-          </div>
+          <UniversalDatePicker
+            value={selectedDate}
+            onChange={(d) => setSelectedDate(d)}
+            style={{ width: '135px', height: '34px' }}
+            title="Business Day Date (DD/MM/YYYY)"
+          />
 
           {!isClosed && !closingData?.is_opened ? (
             <button

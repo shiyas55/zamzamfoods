@@ -19,6 +19,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { InvoiceModal } from '../../components/InvoiceModal';
+import { UniversalDatePicker } from '../../components/UniversalDatePicker';
 import { EditOrderModal } from '../../components/EditOrderModal';
 import { openWhatsApp, generateInvoiceMessage } from '../../utils/whatsappUtils';
 import { useSettings } from '../../context/SettingsContext';
@@ -258,17 +259,12 @@ export const OrdersPage: React.FC = () => {
       >
         {/* Date Selector */}
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <Calendar size={14} style={{ position: 'absolute', left: '8px', color: '#64748b', pointerEvents: 'none' }} />
-            <input
-              type="date"
-              className="form-input"
-              style={{ width: '145px', height: '34px', paddingLeft: '1.75rem', fontSize: '0.82rem' }}
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              title="Select specific order date to filter"
-            />
-          </div>
+          <UniversalDatePicker
+            value={selectedDate}
+            onChange={(d) => setSelectedDate(d)}
+            style={{ width: '135px', height: '34px' }}
+            title="Select specific order date (DD/MM/YYYY) to filter"
+          />
           <div style={{ display: 'inline-flex', gap: '0.2rem' }}>
             <button
               type="button"

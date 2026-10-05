@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { RealWhatsAppWebView } from '../../components/RealWhatsAppWebView';
 import { InvoiceModal } from '../../components/InvoiceModal';
+import { UniversalDatePicker } from '../../components/UniversalDatePicker';
 import { useSettings } from '../../context/SettingsContext';
 import { draftOrderStorage } from '../../utils/draftOrderStorage';
 
@@ -3221,14 +3222,12 @@ export const CreateOrderPage: React.FC = () => {
           })}
         </select>
 
-        {/* Date Selector (Changing this re-queries the database for that date!) */}
-        <input
-          type="date"
-          className="form-input"
-          style={{ width: '112px', flex: '0 0 auto', height: '28px', padding: '0 0.35rem', fontSize: '0.74rem' }}
+        {/* Date Selector - Guaranteed DD/MM/YYYY on all devices and locales */}
+        <UniversalDatePicker
           value={orderDate}
-          onChange={(e) => handleDateChange(e.target.value)}
-          title="Select dispatch date to load or enter orders"
+          onChange={(newDate) => handleDateChange(newDate)}
+          style={{ width: '118px', height: '28px' }}
+          title="Dispatch Date (DD/MM/YYYY) — Changing this re-queries the database for that date"
         />
 
         {/* Order Sorting Dropdown - Small, side-by-side with Route and Date */}
