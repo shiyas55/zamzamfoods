@@ -23,6 +23,7 @@ import {
 import { formatCurrency } from '../../utils/formatters';
 import { useSettings } from '../../context/SettingsContext';
 import { MaintenanceScreen } from '../../components/MaintenanceScreen';
+import { API_BASE_URL } from '../../services/apiClient';
 
 interface ProductInfo {
   id: string;
@@ -61,11 +62,7 @@ export const CustomerOrderPage: React.FC = () => {
     const fetchLinkData = async () => {
       try {
         setLoading(true);
-        const apiBase =
-          import.meta.env.VITE_API_URL ||
-          (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-            ? '/api/v1'
-            : 'https://zamzamfood.up.railway.app/api/v1');
+        const apiBase = API_BASE_URL;
         let res = await fetch(`${apiBase}/public/customer-order/${customerId}/`);
         if (!res.ok && res.status === 404) {
           res = await fetch(`${apiBase}/orders/public/customer-order/${customerId}/`);
@@ -150,11 +147,7 @@ export const CustomerOrderPage: React.FC = () => {
         quantity: quantities[p.id],
       }));
 
-      const apiBase =
-        import.meta.env.VITE_API_URL ||
-        (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-          ? '/api/v1'
-          : 'https://zamzamfood.up.railway.app/api/v1');
+      const apiBase = API_BASE_URL;
       let res = await fetch(`${apiBase}/public/customer-order/${customerId}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -23,6 +23,8 @@ jobs:
             name: 'macos-dmg'
 
     runs-on: ${{ matrix.platform }}
+    env:
+      VITE_API_URL: https://zamzamfood.up.railway.app/api/v1
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,6 +49,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_API_URL: https://zamzamfood.up.railway.app/api/v1
         with:
           projectPath: './frontend'
           tagName: v1.0.0

@@ -13,9 +13,21 @@
  *   5. If refresh fails with 401 → dispatch auth:logout → frontend redirects to /login
  */
 
+const isTauriApp = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return Boolean(
+    (window as any).__TAURI_INTERNALS__ ||
+    (window as any).__TAURI__ ||
+    window.location.protocol === 'tauri:' ||
+    window.location.hostname === 'tauri.localhost'
+  );
+};
+
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
-  (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  (typeof window !== 'undefined' &&
+   !isTauriApp() &&
+   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? '/api/v1'
     : 'https://zamzamfood.up.railway.app/api/v1');
 
