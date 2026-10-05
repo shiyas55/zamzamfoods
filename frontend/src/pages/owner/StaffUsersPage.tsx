@@ -58,6 +58,18 @@ interface StaffUsersPageProps {
   defaultTab?: 'staff' | 'attendance' | 'payouts' | 'accounts';
 }
 
+const isDriverPersonnel = (item: { role_type?: string; designation?: string }): boolean => {
+  const des = (item.designation || '').toLowerCase();
+  const role = (item.role_type || '').toUpperCase();
+  if (des.includes('driver')) return true;
+  if (role === 'STAFF') return true;
+  return false;
+};
+
+const isMemberPersonnel = (item: { role_type?: string; designation?: string }): boolean => {
+  return !isDriverPersonnel(item);
+};
+
 export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) => {
   const { user: currentUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -663,7 +675,8 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
     let driverEarned = 0;
 
     dailySheet.forEach((item) => {
-      const isMember = item.role_type === 'MEMBER';
+      const isDriver = isDriverPersonnel(item);
+      const isMember = !isDriver;
 
       const wage = parseFloat(item.calculated_wage) || 0;
       const cash = parseFloat(item.cash_paid || '0') || 0;
@@ -1461,11 +1474,11 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
 
                 // Filter items for this section
                 const sectionItems = dailySheet.filter((item) => {
-                  const isMember = item.role_type === 'MEMBER';
-                  const isDriverOrStaff = item.role_type === 'STAFF';
+                  const isDriver = isDriverPersonnel(item);
+                  const isMember = !isDriver;
 
                   if (secKey === 'MEMBERS' && !isMember) return false;
-                  if (secKey === 'DRIVERS' && !isDriverOrStaff) return false;
+                  if (secKey === 'DRIVERS' && !isDriver) return false;
 
                   if (attendanceSearch.trim()) {
                     const q = attendanceSearch.toLowerCase().trim();
@@ -1646,7 +1659,9 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                     </div>
                                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '1px', display: 'flex', gap: '0.4rem' }}>
                                       {item.phone_number && <span>📞 {item.phone_number}</span>}
-                                      <span style={{ opacity: 0.85 }}>• {item.tenure_slab_label}</span>
+                                      <span style={{ opacity: 0.85 }}>
+                                        • {isDriverPersonnel(item) && item.tenure_slab_label?.includes('Member') ? 'Tenure Slab Rate' : item.tenure_slab_label}
+                                      </span>
                                     </div>
                                   </td>
 
