@@ -9,7 +9,7 @@ import {
   CreditCard, BookOpen, BarChart3, Users, LogOut, Receipt, Sun, Moon,
   History, Activity, Lock, ChevronLeft, ChevronRight,
   PanelLeftClose, PanelLeftOpen, Menu, X, PlusCircle, MessageCircle, Settings,
-  Wrench, AlertTriangle, Headphones, FolderArchive,
+  Wrench, AlertTriangle, Headphones, FolderArchive, UserCheck,
 } from 'lucide-react';
 import { ZentrixSidebarCard, ZentrixHelpDeskWidget } from '../components/ZentrixHelpDesk';
 
@@ -74,6 +74,7 @@ export const OwnerLayout: React.FC = () => {
     { to: '/owner/reports',            label: 'Financial Reports',  icon: BarChart3       },
     { to: '/owner/activity-history',   label: 'Activity History',   icon: History         },
     { to: '/owner/users',              label: 'Staff & Roles',      icon: Users           },
+    { to: '/owner/attendance',         label: 'Attendance & Wages', icon: UserCheck       },
     { to: '/owner/settings',           label: 'Settings',           icon: Settings        },
   ];
 

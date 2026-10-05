@@ -109,6 +109,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="reports" element={<ReportsPage />} />
           <Route path="daily-closing" element={<DailyClosingPage />} />
           <Route path="activity-history" element={<ActivityHistoryPage />} />
+          <Route path="attendance" element={<StaffUsersPage defaultTab="attendance" />} />
           <Route path="users" element={<StaffUsersPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
@@ -135,6 +136,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="credit" element={<CreditLedgerPage />} />
           <Route path="drivers" element={<DriversPage />} />
           <Route path="daily-closing" element={<DailyClosingPage />} />
+          <Route path="attendance" element={<StaffUsersPage defaultTab="attendance" />} />
           <Route path="users" element={<StaffUsersPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

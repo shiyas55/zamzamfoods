@@ -8,7 +8,7 @@ import {
   LayoutDashboard, PlusCircle, ShoppingCart, Store, Send, CreditCard,
   BookOpen, LogOut, Receipt, Sun, Moon, Activity, History, Truck, Lock,
   BarChart3, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Menu, X, MessageCircle, Settings, Users,
-  FolderArchive,
+  FolderArchive, UserCheck,
 } from 'lucide-react';
 import { ZentrixSidebarCard, ZentrixHelpDeskWidget } from '../components/ZentrixHelpDesk';
 
@@ -69,6 +69,7 @@ export const ManagerLayout: React.FC = () => {
     { to: '/manager/daily-closing',      label: 'Daily Closing',          icon: Lock            },
     { to: '/manager/credit',             label: 'Credit Ledger',          icon: BookOpen        },
     { to: '/manager/users',              label: 'Staff & Roles',          icon: Users           },
+    { to: '/manager/attendance',         label: 'Attendance & Wages',     icon: UserCheck       },
     { to: '/manager/settings',           label: 'Settings & Cache',       icon: Settings        },
   ];
 

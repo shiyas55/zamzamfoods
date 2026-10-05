@@ -654,6 +654,8 @@ export interface DailySheetItem {
   status: AttendanceStatus;
   is_marked: boolean;
   calculated_wage: string;
+  cash_paid?: string;
+  gpay_paid?: string;
   notes: string;
 }
 

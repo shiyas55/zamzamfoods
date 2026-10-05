@@ -111,7 +111,13 @@ export const staffService = {
 
   async bulkSaveAttendance(payload: {
     date: string;
-    attendances: { staff_id: string; status: AttendanceStatus; notes?: string }[];
+    attendances: {
+      staff_id: string;
+      status: AttendanceStatus;
+      notes?: string;
+      cash_paid?: string;
+      gpay_paid?: string;
+    }[];
   }): Promise<{ message: string; count: number }> {
     return apiClient.post('/staff-attendance/bulk-save/', payload);
   },
