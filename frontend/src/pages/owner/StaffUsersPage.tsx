@@ -794,58 +794,6 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div className="card" style={{ padding: '1.15rem', borderLeft: '4px solid #b91c1c' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Total Staff Members
-          </span>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.2rem' }}>
-            {staffSummary?.total_staff ?? staffList.length}
-          </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            {staffSummary?.worker_staff ?? 0} Direct Profiles • {staffSummary?.login_staff ?? 0} Login Accounts
-          </span>
-        </div>
-
-        <div className="card" style={{ padding: '1.15rem', borderLeft: '4px solid #059669' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Working Today
-          </span>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginTop: '0.2rem' }}>
-            {staffSummary?.today_present ?? sheetPresentCount}
-          </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Staff marked present today</span>
-        </div>
-
-        <div className="card" style={{ padding: '1.15rem', borderLeft: '4px solid #b45309' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Wages Earned (Month)
-          </span>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#b45309', marginTop: '0.2rem' }}>
-            {formatCurrency(staffSummary?.month_wages_earned || '0.00')}
-          </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>From daily attendance calculations</span>
-        </div>
-
-        <div className="card" style={{ padding: '1.15rem', borderLeft: '4px solid #2563eb' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Payouts Given (Month)
-          </span>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#2563eb', marginTop: '0.2rem' }}>
-            {formatCurrency(staffSummary?.month_payouts_given || '0.00')}
-          </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Cash advances & salaries paid</span>
-        </div>
-      </div>
-
       {/* Tabs Navigation */}
       <div
         style={{
