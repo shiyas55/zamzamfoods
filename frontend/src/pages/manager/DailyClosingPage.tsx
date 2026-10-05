@@ -21,6 +21,7 @@ import {
   ShieldAlert,
   Sun,
   Sunrise,
+  Edit2,
 } from 'lucide-react';
 
 export const DailyClosingPage: React.FC = () => {
@@ -174,13 +175,29 @@ export const DailyClosingPage: React.FC = () => {
               <span>Open Business Day</span>
             </button>
           ) : closingData?.is_opened && !isClosed ? (
-            <span
-              className="badge badge-success"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '0.4rem 0.7rem', fontSize: '0.8rem' }}
-            >
-              <Sun size={14} />
-              <span>Day Open (Float: {formatCurrency(closingData.opening_record?.opening_cash || '0')})</span>
-            </span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <span
+                className="badge badge-success"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '0.4rem 0.7rem', fontSize: '0.8rem' }}
+              >
+                <Sun size={14} />
+                <span>Day Open (Float: {formatCurrency(closingData.opening_record?.opening_cash || '0')})</span>
+              </span>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setOpeningCashInput(closingData.opening_record?.opening_cash ? String(closingData.opening_record.opening_cash) : '');
+                  setOpeningNotesInput(closingData.opening_record?.opening_notes || '');
+                  setIsOpenDayModalOpen(true);
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', fontWeight: 700 }}
+                title="Edit opening float amount"
+              >
+                <Edit2 size={13} />
+                <span>Edit Float</span>
+              </button>
+            </div>
           ) : null}
 
           <button className="btn btn-secondary btn-sm" onClick={() => fetchClosingSummary()} disabled={loading}>
@@ -312,6 +329,33 @@ export const DailyClosingPage: React.FC = () => {
               )}
             </div>
           </div>
+          {!isClosed && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                setOpeningCashInput(closingData.opening_record?.opening_cash ? String(closingData.opening_record.opening_cash) : '');
+                setOpeningNotesInput(closingData.opening_record?.opening_notes || '');
+                setIsOpenDayModalOpen(true);
+              }}
+              style={{
+                marginLeft: 'auto',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                border: '1px solid #ef4444',
+                color: '#b91c1c',
+                background: 'white',
+                cursor: 'pointer',
+                padding: '0.4rem 0.85rem',
+              }}
+              title="Click to edit opening cash float amount"
+            >
+              <Edit2 size={15} />
+              <span>Edit Float Amount</span>
+            </button>
+          )}
         </div>
       ) : (
         <div
@@ -663,11 +707,13 @@ export const DailyClosingPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#dc2626', marginBottom: '0.5rem' }}>
               <Sunrise size={24} />
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
-                Open Business Day ({selectedDate})
+                {closingData?.is_opened ? 'Edit Opening Cash Float' : 'Open Business Day'} ({selectedDate})
               </h3>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Record the opening cash float in the cash drawer and start today's trading session.
+              {closingData?.is_opened
+                ? 'Update the morning cash float amount in the cash drawer for this business day.'
+                : "Record the opening cash float in the cash drawer and start today's trading session."}
             </p>
 
             <form onSubmit={handleOpenDay}>
@@ -721,7 +767,7 @@ export const DailyClosingPage: React.FC = () => {
                   style={{ background: '#dc2626', borderColor: '#dc2626' }}
                 >
                   <Sun size={16} />
-                  <span>{submittingDayOpen ? 'Opening Day...' : 'Confirm & Open Day'}</span>
+                  <span>{submittingDayOpen ? 'Saving...' : closingData?.is_opened ? 'Save Float Amount' : 'Confirm & Open Day'}</span>
                 </button>
               </div>
             </form>

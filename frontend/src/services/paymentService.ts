@@ -58,6 +58,24 @@ export const paymentService = {
     return apiClient.post<Payment>(`/payments/${paymentId}/reverse/`, { reason });
   },
 
+  async syncDailyPayment(payload: {
+    customer_id: string;
+    date: string;
+    cash_amount: string;
+    gpay_amount: string;
+    order_id?: string | null;
+  }): Promise<{
+    status: string;
+    customer_id: string;
+    customer_name: string;
+    current_balance: string;
+    date: string;
+    cash_amount: string;
+    gpay_amount: string;
+  }> {
+    return apiClient.post('/payments/sync-daily-payment/', payload);
+  },
+
   async getDailySummary(date?: string): Promise<{
     date: string;
     total_collected: string;

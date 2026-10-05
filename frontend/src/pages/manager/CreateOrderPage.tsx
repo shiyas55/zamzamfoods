@@ -119,10 +119,15 @@ export const CreateOrderPage: React.FC = () => {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   });
 
-  // Date Option (Defaults to today YYYY-MM-DD or saved date)
+  // Date Option (Defaults to today YYYY-MM-DD or URL ?date= param — no stale Chrome storage persistence)
   const [orderDate, setOrderDate] = useState<string>(() => {
-    const saved = localStorage.getItem('zamzam_selected_order_date');
-    if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) return saved;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlDate = params.get('date');
+      if (urlDate && /^\d{4}-\d{2}-\d{2}$/.test(urlDate)) return urlDate;
+    } catch {
+      // ignore
+    }
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -458,26 +463,8 @@ export const CreateOrderPage: React.FC = () => {
   // Option: Auto-Confirm & Dispatch to Route Driver on Submit
   const [autoConfirmDriver, setAutoConfirmDriver] = useState<boolean>(true);
 
-  // Customer-Specific Pricing Cache: customerId -> { [productId]: price, kubbusPrice?: number, romaliPrice?: number }
-  const [pricingCache, setPricingCache] = useState<Record<string, Record<string, number> & { kubbusPrice?: number; romaliPrice?: number }>>(() => {
-    try {
-      const saved = localStorage.getItem('zamzam_pricing_cache');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  // Persist pricingCache to localStorage for instantaneous rehydration on page reload/navigation
-  useEffect(() => {
-    if (Object.keys(pricingCache).length > 0) {
-      try {
-        localStorage.setItem('zamzam_pricing_cache', JSON.stringify(pricingCache));
-      } catch {
-        // ignore
-      }
-    }
-  }, [pricingCache]);
+  // Customer-Specific Pricing Cache: customerId -> { [productId]: price, kubbusPrice?: number, romaliPrice?: number } (in-memory)
+  const [pricingCache, setPricingCache] = useState<Record<string, Record<string, number> & { kubbusPrice?: number; romaliPrice?: number }>>({});
 
   // Rows State (All shops pre-populated)
   const [rows, setRows] = useState<OrderRow[]>([]);
@@ -625,9 +612,6 @@ export const CreateOrderPage: React.FC = () => {
           }
         });
 
-        // Load any in-progress local drafts for this target date
-        const drafts = draftOrderStorage.getAllDraftsForDate(targetDate);
-
         // Map customerId -> Cash and GPay totals
         const cashMap = new Map<string, number>();
         const gpayMap = new Map<string, number>();
@@ -670,24 +654,6 @@ export const CreateOrderPage: React.FC = () => {
           let cAmt = cashMap.get(cust.id);
           let gAmt = gpayMap.get(cust.id);
           let dAmt = existingOrder?.shop_expense ? parseFloat(existingOrder.shop_expense) : undefined;
-
-          // Restore unsubmitted draft if no database order exists yet OR draft has more recent modifications
-          const draft = drafts[cust.id];
-          if (draft) {
-            const hasExistingItems = existingOrder && existingOrder.items && existingOrder.items.length > 0;
-            const dbUpdatedTime = existingOrder ? new Date(existingOrder.updated_at || existingOrder.created_at || 0).getTime() : 0;
-            const isDraftNewer = !hasExistingItems || (draft.updatedAt && draft.updatedAt > dbUpdatedTime);
-            if (isDraftNewer || !existingOrder) {
-              if (draft.productQuantities) {
-                Object.assign(productQuantities, draft.productQuantities);
-              }
-              if (draft.kubbusQty !== undefined && draft.kubbusQty !== '') kQty = draft.kubbusQty;
-              if (draft.romaliQty !== undefined && draft.romaliQty !== '') rQty = draft.romaliQty;
-              if (cAmt === undefined && draft.cashAmount) cAmt = parseFloat(draft.cashAmount) || undefined;
-              if (gAmt === undefined && draft.gpayAmount) gAmt = parseFloat(draft.gpayAmount) || undefined;
-              if (dAmt === undefined && draft.discountAmount) dAmt = parseFloat(draft.discountAmount) || undefined;
-            }
-          }
 
           // Check if customer notes contain a stop number, e.g. [Stop #3]
           let parsedStopNumber: number | undefined;
@@ -879,6 +845,9 @@ export const CreateOrderPage: React.FC = () => {
         });
         setAutoProductQtys(initialAutoQtys);
 
+        // Purge any stale Chrome localStorage order drafts, cached dates, or pricing caches
+        draftOrderStorage.clearAllChromeStorage();
+
         // Load existing orders from database for today's date
         await loadOrdersForDate(orderDate, custList, driverList);
       } catch (err: unknown) {
@@ -895,7 +864,6 @@ export const CreateOrderPage: React.FC = () => {
   // When orderDate changes, automatically re-query database for that date!
   const handleDateChange = async (newDate: string) => {
     setOrderDate(newDate);
-    localStorage.setItem('zamzam_selected_order_date', newDate);
     setSuccessBanner(null);
     setUnlockedSelfOrderIds(new Set());
     try {
@@ -1671,7 +1639,9 @@ export const CreateOrderPage: React.FC = () => {
           d.is_active
       );
 
-      const assignedDriverId = row.driverId || routeDriver?.id || null;
+      const assignedDriverId =
+        (row.driverId && row.driverId.trim().length === 36 ? row.driverId.trim() : null) ||
+        (routeDriver?.id && routeDriver.id.trim().length === 36 ? routeDriver.id.trim() : null);
 
       const items: Array<{ product_id: string; quantity: number; unit_price: string }> = [];
       const activeProducts = products.length > 0 ? products : [
@@ -1722,25 +1692,15 @@ export const CreateOrderPage: React.FC = () => {
         }
       }
 
-      if (fin.cash > 0) {
-        await paymentService.recordPayment({
+      // Synchronize Cash and GPay collections seamlessly (handles new payments, edits like 8000->1000, and clears to 0!)
+      let paymentRes: any;
+      if (row.customerId) {
+        paymentRes = await paymentService.syncDailyPayment({
           customer_id: row.customerId,
-          amount: fin.cash.toFixed(2),
-          payment_method: 'CASH',
+          date: orderDate,
+          cash_amount: fin.cash > 0 ? fin.cash.toFixed(2) : '0.00',
+          gpay_amount: fin.gpay > 0 ? fin.gpay.toFixed(2) : '0.00',
           order_id: order?.id || row.orderId,
-          received_at: `${orderDate}T12:00:00Z`,
-          notes: order ? `Cash collection for Order #${order.order_number}` : 'Wholesale counter cash payment',
-        });
-      }
-
-      if (fin.gpay > 0) {
-        await paymentService.recordPayment({
-          customer_id: row.customerId,
-          amount: fin.gpay.toFixed(2),
-          payment_method: 'GPAY_UPI',
-          order_id: order?.id || row.orderId,
-          received_at: `${orderDate}T12:00:00Z`,
-          notes: order ? `GPay collection for Order #${order.order_number}` : 'Wholesale counter GPay payment',
         });
       }
 
@@ -1750,6 +1710,7 @@ export const CreateOrderPage: React.FC = () => {
             ? {
                 ...r,
                 status: 'SAVED',
+                customerBalance: paymentRes?.current_balance !== undefined ? paymentRes.current_balance : r.customerBalance,
                 orderId: order?.id || r.orderId,
                 orderNumber: order?.order_number || r.orderNumber,
                 driverId: order?.driver || assignedDriverId || r.driverId || undefined,
@@ -2003,6 +1964,7 @@ export const CreateOrderPage: React.FC = () => {
           acc.totalGPay += fin.gpay;
           acc.totalDiscount += fin.discount;
           acc.totalDue += fin.rowBalance;
+          acc.totalPrevDue += fin.prevDue;
         }
         return acc;
       },
@@ -2017,6 +1979,7 @@ export const CreateOrderPage: React.FC = () => {
         totalGPay: 0,
         totalDiscount: 0,
         totalDue: 0,
+        totalPrevDue: 0,
       }
     );
   }, [rows, products, pricingCache, defaultKubbusPrice, defaultRomaliPrice, getProductPriceForCustomer]);
@@ -2617,7 +2580,10 @@ export const CreateOrderPage: React.FC = () => {
             d.is_active
         );
 
-        const assignedDriverId = autoConfirmDriver ? (row.driverId || routeDriver?.id || null) : null;
+        const assignedDriverId = autoConfirmDriver
+          ? (row.driverId && row.driverId.trim().length === 36 ? row.driverId.trim() : null) ||
+            (routeDriver?.id && routeDriver.id.trim().length === 36 ? routeDriver.id.trim() : null)
+          : null;
 
         const items: Array<{ product_id: string; quantity: number; unit_price: string }> = [];
         const activeProducts = products.length > 0 ? products : [
@@ -2669,27 +2635,15 @@ export const CreateOrderPage: React.FC = () => {
           }
         }
 
-        // Record Cash Payment if entered
-        if (fin.cash > 0) {
-          await paymentService.recordPayment({
+        // Synchronize Cash and GPay collections seamlessly (handles new payments, edits like 8000->1000, and clears to 0!)
+        let paymentRes: any;
+        if (row.customerId) {
+          paymentRes = await paymentService.syncDailyPayment({
             customer_id: row.customerId,
-            amount: fin.cash.toFixed(2),
-            payment_method: 'CASH',
+            date: orderDate,
+            cash_amount: fin.cash > 0 ? fin.cash.toFixed(2) : '0.00',
+            gpay_amount: fin.gpay > 0 ? fin.gpay.toFixed(2) : '0.00',
             order_id: order?.id || row.orderId,
-            received_at: `${orderDate}T12:00:00Z`,
-            notes: order ? `Cash collection for Order #${order.order_number}` : 'Wholesale counter cash payment',
-          });
-        }
-
-        // Record GPay Payment if entered
-        if (fin.gpay > 0) {
-          await paymentService.recordPayment({
-            customer_id: row.customerId,
-            amount: fin.gpay.toFixed(2),
-            payment_method: 'GPAY_UPI',
-            order_id: order?.id || row.orderId,
-            received_at: `${orderDate}T12:00:00Z`,
-            notes: order ? `GPay collection for Order #${order.order_number}` : 'Wholesale counter GPay payment',
           });
         }
 
@@ -2699,6 +2653,7 @@ export const CreateOrderPage: React.FC = () => {
               ? {
                   ...r,
                   status: 'SAVED',
+                  customerBalance: paymentRes?.current_balance !== undefined ? paymentRes.current_balance : r.customerBalance,
                   orderId: order?.id || r.orderId,
                   orderNumber: order?.order_number || r.orderNumber,
                   driverId: order?.driver || assignedDriverId || r.driverId || undefined,
@@ -5357,8 +5312,17 @@ export const CreateOrderPage: React.FC = () => {
                   <td style={{ padding: '0.45rem 0.55rem', color: 'var(--text-muted)', fontSize: '0.73rem', fontWeight: 600 }}>
                     {filteredStats.validShopsCount} / {visibleRows.length} shops
                   </td>
-                  <td style={{ textAlign: 'right', padding: '0.45rem 0.55rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    —
+                  <td
+                    style={{
+                      textAlign: 'right',
+                      padding: '0.45rem 0.55rem',
+                      fontWeight: 800,
+                      color: filteredStats.totalPrevDue > 0 ? '#dc2626' : 'var(--text-primary)',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title="Total Previous Due across visible shops"
+                  >
+                    {formatCurrency(filteredStats.totalPrevDue)}
                   </td>
                   {products.length > 0 ? (
                     products.map((p, idx) => {
@@ -5622,6 +5586,28 @@ export const CreateOrderPage: React.FC = () => {
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em', marginRight: '0.25rem' }}>
                   Collections:
                 </span>
+
+                {/* Prev. Due */}
+                {filteredStats.totalPrevDue > 0 && (
+                  <span
+                    style={{
+                      background: '#fff1f2',
+                      color: '#dc2626',
+                      border: '1px solid #fecdd3',
+                      borderRadius: '5px',
+                      padding: '0.2rem 0.5rem',
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
+                    }}
+                    title="Total Opening / Previous Due across visible shops"
+                  >
+                    <span>📋 Prev. Due:</span>
+                    <strong style={{ fontSize: '0.82rem' }}>{formatCurrency(filteredStats.totalPrevDue)}</strong>
+                  </span>
+                )}
 
                 {/* Cash */}
                 <span

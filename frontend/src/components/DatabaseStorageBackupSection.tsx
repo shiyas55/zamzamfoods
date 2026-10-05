@@ -44,6 +44,7 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { draftOrderStorage } from '../utils/draftOrderStorage';
 import { databaseService, DatabaseStats, DatabaseModuleStat, ClearAllResult } from '../services/databaseService';
 import { tauriBackupService, TauriBackupConfig, TauriBackupFileInfo, isTauriEnvironment } from '../services/tauriBackupService';
 
@@ -131,6 +132,7 @@ export const DatabaseStorageBackupSection: React.FC = () => {
       setIsClearing(true);
       setClearError(null);
       const res = await databaseService.clearAllData(clearPin.trim(), clearConfirmation.trim().toUpperCase());
+      draftOrderStorage.clearAllChromeStorage();
       setClearSuccess(res);
       setClearPin('');
       setClearConfirmation('');

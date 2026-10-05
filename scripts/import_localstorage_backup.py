@@ -106,6 +106,10 @@ def run_import(json_path):
             print(f"  • Existing order found: #{existing_order.order_number} for {customer.name} on {date_str}")
         elif items_data:
             try:
+                # Sequential order number for that specific date
+                daily_seq = Order.objects.filter(order_date=order_date).count() + 1
+                ord_num = f"ORD-{order_date.strftime('%Y%m%d')}-{daily_seq:04d}"
+
                 order = create_order_service(
                     customer_id=customer.id,
                     items_data=items_data,
@@ -115,8 +119,13 @@ def run_import(json_path):
                     source="MANAGER",
                     entered_by_role="MANAGER",
                     entered_by_name=admin_user.get_full_name() or admin_user.username,
+                    order_number=ord_num,
                 )
                 created_orders += 1
+
+                # Backdate the corresponding CreditTransaction to order_date
+                from apps.credits.models import CreditTransaction
+                CreditTransaction.objects.filter(reference_order=order).update(created_at=payment_time)
 
                 for item in items_data:
                     p = products_by_id.get(item["product_id"])
@@ -150,7 +159,7 @@ def run_import(json_path):
             ).first()
             if not existing_pay:
                 try:
-                    record_payment_service(
+                    pay = record_payment_service(
                         customer_id=customer.id,
                         amount=cash_amt,
                         payment_method=Payment.Method.CASH,
@@ -159,6 +168,7 @@ def run_import(json_path):
                         notes=f"Wholesale counter cash collection ({date_str}) [LocalStorage Recovery]",
                         received_at=payment_time,
                     )
+                    CreditTransaction.objects.filter(reference_payment=pay).update(created_at=payment_time)
                     recorded_cash_payments += 1
                     total_cash_amount += cash_amt
                     print(f"    ↳ Recorded Cash: ₹{cash_amt} for {customer.name}")
@@ -175,7 +185,7 @@ def run_import(json_path):
             ).first()
             if not existing_gpay:
                 try:
-                    record_payment_service(
+                    pay = record_payment_service(
                         customer_id=customer.id,
                         amount=gpay_amt,
                         payment_method=Payment.Method.GPAY_UPI,
@@ -184,6 +194,7 @@ def run_import(json_path):
                         notes=f"Wholesale counter GPay collection ({date_str}) [LocalStorage Recovery]",
                         received_at=payment_time,
                     )
+                    CreditTransaction.objects.filter(reference_payment=pay).update(created_at=payment_time)
                     recorded_gpay_payments += 1
                     total_gpay_amount += gpay_amt
                     print(f"    ↳ Recorded GPay: ₹{gpay_amt} for {customer.name}")
