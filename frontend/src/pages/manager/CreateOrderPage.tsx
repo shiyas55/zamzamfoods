@@ -2072,9 +2072,25 @@ export const CreateOrderPage: React.FC = () => {
     return customers.filter((c) => !existingIds.has(c.id)).length;
   }, [rows, customers]);
 
-  // Dynamic Product Column Sequence for Fast Order Entry (Kubbus -> Romali -> Next Shop)
+  // Dynamic Product Column Sequence for Fast Order Entry
   const getProductCols = useCallback((): string[] => {
     return products.length > 0 ? products.map((p) => `prod_${p.id}`) : ['kubbus', 'romali'];
+  }, [products]);
+
+  // Dynamic Entry Product Columns (skips products marked skip_in_entry, e.g. Bun)
+  const getEntryProductCols = useCallback((): string[] => {
+    if (products.length > 0) {
+      const activeEntryProds = products.filter((p) => {
+        if (p.skip_in_entry !== undefined) return !p.skip_in_entry;
+        const nameLower = (p.name || '').toLowerCase();
+        const codeLower = (p.code || '').toLowerCase();
+        return !nameLower.includes('bun') && !codeLower.includes('bun');
+      });
+      return activeEntryProds.length > 0
+        ? activeEntryProds.map((p) => `prod_${p.id}`)
+        : products.map((p) => `prod_${p.id}`);
+    }
+    return ['kubbus', 'romali'];
   }, [products]);
 
   // Dynamic Column Sequence for Keyboard Navigation
@@ -2087,18 +2103,16 @@ export const CreateOrderPage: React.FC = () => {
 
   /**
    * Full Keyboard Order Entry Navigation:
-   * Enter / Tab on products:
-   *   - Kubbus -> Romali Roti -> Next Product -> Next Shop's Kubbus!
+   * Enter key flow:
+   *   - Kubbus -> Romali Roti -> (skips Bun/other skipped products) -> Cash -> GPay -> Next Shop's Kubbus!
    *   - At the bottom of the list or filtered view: jumps to Search Bar for next customer
-   * Enter / Tab on Cash:
-   *   - Cash -> GPay -> Next Shop's Cash / First Product
+   * Tab key:
+   *   - Full sequential traversal through all columns (including Bun)
    * Shift + Tab:
-   *   - Moves backwards between products / shops
+   *   - Moves backwards between columns / shops
    * Arrow Up / Down:
    *   - Jumps vertically between shops on the same column
    *   - ArrowUp at row 0 jumps directly to Customer Search Bar
-   * Arrow Left / Right:
-   *   - Jumps horizontally between columns (Kubbus <-> Romali <-> Cash <-> GPay)
    * Escape / F2:
    *   - Immediately returns focus to Customer Search Bar
    */
@@ -2124,46 +2138,45 @@ export const CreateOrderPage: React.FC = () => {
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      // If user is on a product column:
+      const entryProds = getEntryProductCols();
+      const firstEntryCol = entryProds.length > 0 ? entryProds[0] : (prodCols[0] || 'kubbus');
+
+      // 1. If user is on a product column:
       if (isProdCol) {
-        const prodIdx = prodCols.indexOf(col);
-        if (prodIdx >= 0 && prodIdx < prodCols.length - 1) {
-          // Move to next product within the same shop: Product 1 -> Product 2 -> Product 3
-          focusCell(visibleIndex, prodCols[prodIdx + 1]);
+        const entryIdx = entryProds.indexOf(col);
+        if (entryIdx >= 0 && entryIdx < entryProds.length - 1) {
+          // Move to next entry product within the same shop: Kubbus -> Romali
+          focusCell(visibleIndex, entryProds[entryIdx + 1]);
         } else {
-          // On last product (e.g. 3rd product): SKIP cash, gpay, discount and jump straight to NEXT SHOP!
-          if (visibleIndex < visibleRows.length - 1) {
-            focusCell(visibleIndex + 1, prodCols[0]);
-          } else {
-            // Reached bottom of list or single filtered shop -> jump back to Search bar for next customer
-            if (searchInputRef.current) {
-              searchInputRef.current.focus();
-              searchInputRef.current.select();
-            }
-          }
+          // On last active product (or skipped product like Bun): Jump directly to Cash!
+          focusCell(visibleIndex, 'cash');
         }
         return;
       }
 
-      // If user is on cash, gpay, or discount:
+      // 2. If user is on cash: move to GPay
       if (col === 'cash') {
         focusCell(visibleIndex, 'gpay');
         return;
       }
+
+      // 3. If user is on gpay: move to discount (if enabled) OR jump to NEXT SHOP's first product!
       if (col === 'gpay') {
         if (isOrderDiscountEnabled) {
           focusCell(visibleIndex, 'discount');
         } else if (visibleIndex < visibleRows.length - 1) {
-          focusCell(visibleIndex + 1, prodCols[0]);
+          focusCell(visibleIndex + 1, firstEntryCol);
         } else if (searchInputRef.current) {
           searchInputRef.current.focus();
           searchInputRef.current.select();
         }
         return;
       }
+
+      // 4. If user is on discount: jump to NEXT SHOP's first product!
       if (col === 'discount') {
         if (visibleIndex < visibleRows.length - 1) {
-          focusCell(visibleIndex + 1, prodCols[0]);
+          focusCell(visibleIndex + 1, firstEntryCol);
         } else if (searchInputRef.current) {
           searchInputRef.current.focus();
           searchInputRef.current.select();
@@ -4139,15 +4152,18 @@ export const CreateOrderPage: React.FC = () => {
                 <th style={{ minWidth: '110px', padding: '0.35rem 0.55rem' }}>Route & Staff Driver</th>
                 <th style={{ minWidth: '80px', textAlign: 'right', padding: '0.35rem 0.55rem', whiteSpace: 'nowrap' }}>Prev. Due</th>
                 {products.length > 0 ? (
-                  products.map((p) => (
-                    <th
-                      key={p.id}
-                      style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.4rem', whiteSpace: 'nowrap' }}
-                      title={`${p.name} (Unit price: ₹${parseFloat(p.unit_price).toFixed(2)})`}
-                    >
-                      {p.name} ({p.packet_size ? p.packet_size : 'ps'})
-                    </th>
-                  ))
+                  products.map((p) => {
+                    const isSkipped = p.skip_in_entry || (p.skip_in_entry === undefined && (p.name.toLowerCase().includes('bun') || p.code.toLowerCase().includes('bun')));
+                    return (
+                      <th
+                        key={p.id}
+                        style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.4rem', whiteSpace: 'nowrap' }}
+                        title={`${p.name} (Unit price: ₹${parseFloat(p.unit_price).toFixed(2)})${isSkipped ? ' • Skipped on Enter' : ''}`}
+                      >
+                        {p.name} ({p.packet_size ? p.packet_size : 'ps'})
+                      </th>
+                    );
+                  })
                 ) : (
                   <>
                     <th style={{ minWidth: '82px', textAlign: 'right', padding: '0.35rem 0.4rem', whiteSpace: 'nowrap' }}>Kubbus (ps)</th>

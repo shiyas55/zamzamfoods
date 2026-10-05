@@ -193,6 +193,7 @@ export interface Product {
   unit_price: string;
   packet_size: string;
   order_number?: number;
+  skip_in_entry?: boolean;
   is_active: boolean;
   created_at?: string;
 }

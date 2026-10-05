@@ -18,6 +18,7 @@ export const productService = {
     unit_price: string;
     packet_size: string;
     order_number?: number;
+    skip_in_entry?: boolean;
     is_active: boolean;
   }>): Promise<Product> {
     return apiClient.patch<Product>(`/products/${id}/`, updates);
@@ -34,6 +35,7 @@ export const productService = {
     unit_price: string;
     packet_size: string;
     order_number?: number;
+    skip_in_entry?: boolean;
     is_active?: boolean;
   }): Promise<Product> {
     return apiClient.post<Product>('/products/', product);

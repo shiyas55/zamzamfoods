@@ -17,6 +17,7 @@ export const ProductsPage: React.FC = () => {
   const [unitPrice, setUnitPrice] = useState('');
   const [packetSize, setPacketSize] = useState('');
   const [orderNumber, setOrderNumber] = useState('1');
+  const [skipInEntry, setSkipInEntry] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +29,7 @@ export const ProductsPage: React.FC = () => {
   const [editUnitPrice, setEditUnitPrice] = useState('');
   const [editPacketSize, setEditPacketSize] = useState('');
   const [editOrderNumber, setEditOrderNumber] = useState('1');
+  const [editSkipInEntry, setEditSkipInEntry] = useState(false);
   const [editIsActive, setEditIsActive] = useState(true);
   const [isEditingSubmitting, setIsEditingSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export const ProductsPage: React.FC = () => {
     setEditUnitPrice(String(p.unit_price));
     setEditPacketSize(p.packet_size || '');
     setEditOrderNumber(String(p.order_number ?? 1));
+    setEditSkipInEntry(Boolean(p.skip_in_entry));
     setEditIsActive(p.is_active !== false);
     setEditError(null);
   };
@@ -85,6 +88,7 @@ export const ProductsPage: React.FC = () => {
         unit_price: unitPrice,
         packet_size: packetSize.trim(),
         order_number: parseInt(orderNumber, 10) || (products.length + 1),
+        skip_in_entry: skipInEntry,
       });
       setIsAddModalOpen(false);
       setName('');
@@ -93,6 +97,7 @@ export const ProductsPage: React.FC = () => {
       setUnitPrice('');
       setPacketSize('');
       setOrderNumber(String(products.length + 2));
+      setSkipInEntry(false);
       setFeedback({ type: 'success', message: `Product "${name}" created successfully.` });
       fetchProducts();
     } catch (err: unknown) {
@@ -121,6 +126,7 @@ export const ProductsPage: React.FC = () => {
         unit_price: editUnitPrice,
         packet_size: editPacketSize.trim(),
         order_number: parseInt(editOrderNumber, 10) || 1,
+        skip_in_entry: editSkipInEntry,
         is_active: editIsActive,
       });
       setEditingProduct(null);
@@ -261,11 +267,16 @@ export const ProductsPage: React.FC = () => {
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                     <span className="badge badge-info" style={{ fontWeight: 700 }}>{p.code}</span>
                     <span className="badge badge-secondary" style={{ fontWeight: 700, background: '#f1f5f9', color: '#475569' }}>
                       Order #{p.order_number ?? 1}
                     </span>
+                    {p.skip_in_entry && (
+                      <span className="badge" style={{ fontWeight: 700, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: '0.72rem' }}>
+                        Skip on Enter
+                      </span>
+                    )}
                   </div>
                   {p.is_active !== false ? (
                     <span className="badge badge-success">Active Product</span>
@@ -470,6 +481,22 @@ export const ProductsPage: React.FC = () => {
                 />
               </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.75rem 0 0.25rem 0' }}>
+                <input
+                  type="checkbox"
+                  id="productSkipInEntry"
+                  checked={skipInEntry}
+                  onChange={(e) => setSkipInEntry(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: '#dc2626' }}
+                />
+                <label htmlFor="productSkipInEntry" style={{ fontSize: '0.88rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+                  Skip in Enter key navigation (Fast Order Entry)
+                </label>
+              </div>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block', marginBottom: '1rem' }}>
+                When checked, pressing Enter during billing sheet entry will jump past this product column straight to cash/gpay or next shop.
+              </span>
+
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsAddModalOpen(false)}>
                   Cancel
@@ -575,7 +602,7 @@ export const ProductsPage: React.FC = () => {
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '1rem 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '1rem 0 0.25rem 0' }}>
                 <input
                   type="checkbox"
                   id="editProductActive"
@@ -587,6 +614,22 @@ export const ProductsPage: React.FC = () => {
                   Product Active for Wholesale Orders
                 </label>
               </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.75rem 0 0.25rem 0' }}>
+                <input
+                  type="checkbox"
+                  id="editProductSkipInEntry"
+                  checked={editSkipInEntry}
+                  onChange={(e) => setEditSkipInEntry(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: '#dc2626' }}
+                />
+                <label htmlFor="editProductSkipInEntry" style={{ fontSize: '0.88rem', fontWeight: 600, color: '#334155', cursor: 'pointer' }}>
+                  Skip in Enter key navigation (Fast Order Entry)
+                </label>
+              </div>
+              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'block', marginBottom: '1rem' }}>
+                When checked, pressing Enter during billing sheet entry will jump past this product column straight to cash/gpay or next shop.
+              </span>
 
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditingProduct(null)}>
