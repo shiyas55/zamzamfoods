@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { paymentService } from '../../services/paymentService';
-import { Payment } from '../../types';
+import { staffService } from '../../services/staffService';
+import { Payment, StaffMember } from '../../types';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
-import { CreditCard, DollarSign, MessageSquare, RotateCcw, AlertTriangle, X, CheckCircle } from 'lucide-react';
+import { CreditCard, DollarSign, MessageSquare, RotateCcw, AlertTriangle, X, CheckCircle, Plus } from 'lucide-react';
 import { openWhatsApp, generatePaymentReceiptMessage } from '../../utils/whatsappUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
+import { RecordShopPaymentModal } from '../../components/RecordShopPaymentModal';
 
 export const PaymentsPage: React.FC = () => {
   const { user } = useAuth();
@@ -14,8 +16,13 @@ export const PaymentsPage: React.FC = () => {
   const [method, setMethod] = useState('');
   const [paymentType, setPaymentType] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [collectorFilter, setCollectorFilter] = useState('');
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<{ total_collected: string; cash_total: string; upi_total: string } | null>(null);
+
+  // Record Payment Modal State
+  const [isRecordModalOpen, setIsRecordModalOpen] = useState(false);
 
   // Reversal Modal State
   const [reversalPayment, setReversalPayment] = useState<Payment | null>(null);
@@ -29,16 +36,19 @@ export const PaymentsPage: React.FC = () => {
   const fetchPayments = async () => {
     try {
       setLoading(true);
-      const [list, sum] = await Promise.all([
+      const [list, sum, stfList] = await Promise.all([
         paymentService.getPayments({
           method: method || undefined,
           payment_type: paymentType || undefined,
           status: statusFilter || undefined,
+          driver: collectorFilter || undefined,
         }),
         paymentService.getDailySummary(),
+        staffService.getStaff({ is_active: true }),
       ]);
       setPayments(list);
       setSummary(sum);
+      setStaffList(stfList);
     } catch (err: unknown) {
       console.error(err);
     } finally {
@@ -48,7 +58,7 @@ export const PaymentsPage: React.FC = () => {
 
   useEffect(() => {
     fetchPayments();
-  }, [method, paymentType, statusFilter]);
+  }, [method, paymentType, statusFilter, collectorFilter]);
 
   const handleOpenReverseModal = (payment: Payment) => {
     setReversalPayment(payment);
@@ -81,13 +91,35 @@ export const PaymentsPage: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: '1.75rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-          Payment Collections & Receipts
-        </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-          Audit trail of all Cash and UPI payments collected from customer shops with financial reversal safeguards.
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            Payment Collections & Receipts
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '4px 0 0 0' }}>
+            Audit trail of all Cash and UPI payments collected from customer shops with financial reversal safeguards.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => setIsRecordModalOpen(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            fontWeight: 700,
+            fontSize: '0.92rem',
+            padding: '0.55rem 1.25rem',
+            backgroundColor: '#059669',
+            borderColor: '#059669',
+            borderRadius: '8px',
+            boxShadow: '0 2px 4px rgba(5, 150, 105, 0.25)',
+          }}
+          title="Create customer shop payment collection"
+        >
+          <Plus size={18} /> Create Collection
+        </button>
       </div>
 
       {successMessage && (
@@ -148,6 +180,34 @@ export const PaymentsPage: React.FC = () => {
           <option value="">All Statuses</option>
           <option value="COMPLETED">Completed</option>
           <option value="REVERSED">Reversed</option>
+        </select>
+
+        {/* Collector / Driver Filter */}
+        <select
+          className="form-select"
+          style={{ minWidth: '220px' }}
+          value={collectorFilter}
+          onChange={(e) => setCollectorFilter(e.target.value)}
+        >
+          <option value="">All Drivers & Collectors</option>
+          <optgroup label="Staff Drivers">
+            {staffList
+              .filter((s) => s.role_type === 'STAFF')
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.full_name} (Driver)
+                </option>
+              ))}
+          </optgroup>
+          <optgroup label="Share Members (Owners)">
+            {staffList
+              .filter((s) => s.role_type === 'MEMBER')
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.full_name} (Share Member)
+                </option>
+              ))}
+          </optgroup>
         </select>
       </div>
 
@@ -216,7 +276,47 @@ export const PaymentsPage: React.FC = () => {
                         )}
                       </td>
                       <td style={{ fontSize: '0.85rem' }}>{p.reference_number || '—'}</td>
-                      <td>{p.collected_by_name || 'Staff'}</td>
+                      <td>
+                        {p.notes && p.notes.toLowerCase().includes('forgot') ? (
+                          <div>
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: '#fef3c7',
+                                color: '#92400e',
+                                fontWeight: 800,
+                                border: '1px solid #fde68a',
+                                display: 'inline-block',
+                              }}
+                            >
+                              Driver Forgot • Owner Collected
+                            </span>
+                            <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                              {p.staff_member_name ? `For Driver: ${p.staff_member_name}` : p.collected_by_name || 'Owner'}
+                            </div>
+                          </div>
+                        ) : p.staff_member_name ? (
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ fontWeight: 700 }}>{p.staff_member_name}</span>
+                            <span
+                              style={{
+                                fontSize: '0.66rem',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                backgroundColor: p.staff_member_role === 'MEMBER' ? '#fef3c7' : '#dbeafe',
+                                color: p.staff_member_role === 'MEMBER' ? '#92400e' : '#1d4ed8',
+                                fontWeight: 700,
+                              }}
+                            >
+                              {p.staff_member_role === 'MEMBER' ? 'Share Member' : 'Staff Driver'}
+                            </span>
+                          </div>
+                        ) : (
+                          p.collected_by_name || 'Staff'
+                        )}
+                      </td>
                       <td>{formatDateTime(p.received_at)}</td>
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
@@ -337,6 +437,16 @@ export const PaymentsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Record Shop Payment Modal */}
+      <RecordShopPaymentModal
+        isOpen={isRecordModalOpen}
+        onClose={() => setIsRecordModalOpen(false)}
+        onSuccess={(msg) => {
+          if (msg) setSuccessMessage(msg);
+          fetchPayments();
+        }}
+      />
     </div>
   );
 };

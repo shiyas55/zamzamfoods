@@ -16,6 +16,7 @@ export const ProductsPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
   const [packetSize, setPacketSize] = useState('');
+  const [orderNumber, setOrderNumber] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +27,7 @@ export const ProductsPage: React.FC = () => {
   const [editDescription, setEditDescription] = useState('');
   const [editUnitPrice, setEditUnitPrice] = useState('');
   const [editPacketSize, setEditPacketSize] = useState('');
+  const [editOrderNumber, setEditOrderNumber] = useState('1');
   const [editIsActive, setEditIsActive] = useState(true);
   const [isEditingSubmitting, setIsEditingSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -61,6 +63,7 @@ export const ProductsPage: React.FC = () => {
     setEditDescription(p.description || '');
     setEditUnitPrice(String(p.unit_price));
     setEditPacketSize(p.packet_size || '');
+    setEditOrderNumber(String(p.order_number ?? 1));
     setEditIsActive(p.is_active !== false);
     setEditError(null);
   };
@@ -81,6 +84,7 @@ export const ProductsPage: React.FC = () => {
         description: description.trim(),
         unit_price: unitPrice,
         packet_size: packetSize.trim(),
+        order_number: parseInt(orderNumber, 10) || (products.length + 1),
       });
       setIsAddModalOpen(false);
       setName('');
@@ -88,6 +92,7 @@ export const ProductsPage: React.FC = () => {
       setDescription('');
       setUnitPrice('');
       setPacketSize('');
+      setOrderNumber(String(products.length + 2));
       setFeedback({ type: 'success', message: `Product "${name}" created successfully.` });
       fetchProducts();
     } catch (err: unknown) {
@@ -115,6 +120,7 @@ export const ProductsPage: React.FC = () => {
         description: editDescription.trim(),
         unit_price: editUnitPrice,
         packet_size: editPacketSize.trim(),
+        order_number: parseInt(editOrderNumber, 10) || 1,
         is_active: editIsActive,
       });
       setEditingProduct(null);
@@ -255,7 +261,12 @@ export const ProductsPage: React.FC = () => {
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span className="badge badge-info" style={{ fontWeight: 700 }}>{p.code}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span className="badge badge-info" style={{ fontWeight: 700 }}>{p.code}</span>
+                    <span className="badge badge-secondary" style={{ fontWeight: 700, background: '#f1f5f9', color: '#475569' }}>
+                      Order #{p.order_number ?? 1}
+                    </span>
+                  </div>
                   {p.is_active !== false ? (
                     <span className="badge badge-success">Active Product</span>
                   ) : (
@@ -433,6 +444,22 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
+                <label className="form-label">Order Number (Display Sequence) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  placeholder="e.g. 1 for Kubbus, 2 for Bun, 3 for Romali"
+                  value={orderNumber}
+                  onChange={(e) => setOrderNumber(e.target.value)}
+                  required
+                />
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                  Controls which column position this product appears on the billing sheet (1 = 1st column, 2 = 2nd column, etc.)
+                </span>
+              </div>
+
+              <div className="form-group">
                 <label className="form-label">Description</label>
                 <textarea
                   className="form-textarea"
@@ -521,6 +548,21 @@ export const ProductsPage: React.FC = () => {
                   value={editPacketSize}
                   onChange={(e) => setEditPacketSize(e.target.value)}
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Order Number (Display Sequence) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  value={editOrderNumber}
+                  onChange={(e) => setEditOrderNumber(e.target.value)}
+                  required
+                />
+                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                  Controls which column position this product appears on the billing sheet (1 = 1st column, 2 = 2nd column, etc.)
+                </span>
               </div>
 
               <div className="form-group">

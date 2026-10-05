@@ -289,10 +289,10 @@ export const DriversPage: React.FC = () => {
       >
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            Driver Fleet Profiles
+            Staff Drivers Fleet
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-            Delivery personnel, vehicle registrations, assigned territories, and driver login credentials.
+            Staff drivers, delivery vehicles, assigned routes, and attendance-linked login accounts.
           </p>
         </div>
 
@@ -305,7 +305,7 @@ export const DriversPage: React.FC = () => {
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}
         >
           <UserPlus size={18} />
-          Add Driver Profile
+          Add Staff Driver
         </button>
       </div>
 
@@ -323,10 +323,10 @@ export const DriversPage: React.FC = () => {
             Total Fleet Size
           </span>
           <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#dc2626', marginTop: '0.25rem' }}>
-            {drivers.length} Drivers
+            {drivers.length} Staff Drivers
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            Registered delivery personnel
+            Registered delivery staff drivers
           </div>
         </div>
 
@@ -433,19 +433,19 @@ export const DriversPage: React.FC = () => {
         >
           <Truck size={40} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-            No Driver Profiles Found
+            No Staff Drivers Found
           </h3>
           <p style={{ fontSize: '0.88rem', marginBottom: '1.25rem' }}>
             {searchTerm || filterRoute
-              ? 'No driver matches the current search or route filter.'
-              : 'You have not added any drivers to the fleet yet.'}
+              ? 'No staff driver matches the current search or route filter.'
+              : 'You have not added any staff drivers to the fleet yet.'}
           </p>
           <button
             className="btn btn-primary"
             onClick={() => setIsAddModalOpen(true)}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <UserPlus size={16} /> Add First Driver Profile
+            <UserPlus size={16} /> Add First Staff Driver
           </button>
         </div>
       ) : (
@@ -513,7 +513,12 @@ export const DriversPage: React.FC = () => {
                             fontWeight: 800,
                             margin: 0,
                             color: 'var(--text-primary)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: '160px',
                           }}
+                          title={d.driver_name}
                         >
                           {d.driver_name}
                         </h3>
@@ -525,9 +530,9 @@ export const DriversPage: React.FC = () => {
 
                     <span
                       className={`badge ${d.is_active ? 'badge-success' : 'badge-neutral'}`}
-                      style={{ fontSize: '0.75rem' }}
+                      style={{ fontSize: '0.75rem', flexShrink: 0 }}
                     >
-                      {d.is_active ? 'Active Driver' : 'Inactive'}
+                      {d.is_active ? 'Active Staff Driver' : 'Inactive'}
                     </span>
                   </div>
 
@@ -544,23 +549,41 @@ export const DriversPage: React.FC = () => {
                       fontSize: '0.85rem',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', minWidth: 0 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', flexShrink: 0 }}>
                         <Navigation size={15} /> Assigned Route:
                       </span>
                       <span
                         className="badge badge-primary"
-                        style={{ fontWeight: 700 }}
+                        style={{
+                          fontWeight: 700,
+                          maxWidth: '170px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: 'inline-block',
+                        }}
+                        title={d.assigned_route_details?.name || 'Unassigned / Floating'}
                       >
                         {d.assigned_route_details?.name || 'Unassigned / Floating'}
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', minWidth: 0 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', flexShrink: 0 }}>
                         <Truck size={15} /> Vehicle / Plate:
                       </span>
-                      <strong style={{ color: 'var(--text-primary)' }}>
+                      <strong
+                        style={{
+                          color: 'var(--text-primary)',
+                          maxWidth: '170px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          textAlign: 'right',
+                        }}
+                        title={d.vehicle_number || 'Van (Unassigned)'}
+                      >
                         {d.vehicle_number || 'Van (Unassigned)'}
                       </strong>
                     </div>
@@ -684,7 +707,7 @@ export const DriversPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <UserPlus size={22} style={{ color: 'var(--primary, #dc2626)' }} />
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
-                  Add New Driver Profile
+                  Add New Staff Driver
                 </h3>
               </div>
               <button
@@ -855,7 +878,7 @@ export const DriversPage: React.FC = () => {
                   disabled={addingDriver}
                   style={{ fontWeight: 700 }}
                 >
-                  {addingDriver ? 'Creating...' : 'Create Driver Profile'}
+                  {addingDriver ? 'Creating...' : 'Create Staff Driver'}
                 </button>
               </div>
             </form>
@@ -895,7 +918,7 @@ export const DriversPage: React.FC = () => {
                 <Edit2 size={22} style={{ color: '#0284c7' }} />
                 <div>
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
-                    Edit Driver Profile
+                    Edit Staff Driver Profile
                   </h3>
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
                     @{editingDriver.user_details?.username || 'driver'}

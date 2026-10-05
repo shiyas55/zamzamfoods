@@ -3,27 +3,49 @@ import { expenseService } from '../../services/expenseService';
 import { routeService } from '../../services/routeService';
 import { DriverExpense, DriverExpenseCategory, DriverExpenseSummary, Driver, Route } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
-import { Plus, X, AlertCircle, CheckCircle, Store, Fuel, Utensils, ParkingCircle, Landmark, Wrench, FileText, Calendar, Filter } from 'lucide-react';
+import {
+  Plus,
+  X,
+  AlertCircle,
+  CheckCircle,
+  Store,
+  Fuel,
+  Utensils,
+  ParkingCircle,
+  Wrench,
+  Trash2,
+  Receipt,
+  Building,
+  UserCheck,
+} from 'lucide-react';
 
 const CATEGORY_OPTIONS: { label: string; value: string }[] = [
   { label: 'All Expense Categories', value: '' },
-  { label: 'Shop Expense', value: 'SHOP_EXPENSE' },
-  { label: 'Petrol / Fuel', value: 'PETROL' },
-  { label: 'Food / Meals', value: 'FOOD' },
-  { label: 'Parking', value: 'PARKING' },
-  { label: 'Toll Gate', value: 'TOLL' },
-  { label: 'Vehicle Maintenance', value: 'MAINTENANCE' },
-  { label: 'Other', value: 'OTHER' },
+  { label: '🏢 Shop / Store Expense', value: 'SHOP_EXPENSE' },
+  { label: '🔧 Shop & Vehicle Maintenance', value: 'MAINTENANCE' },
+  { label: '📦 Raw Materials / Packaging', value: 'RAW_MATERIAL' },
+  { label: '⛽ Petrol / Fuel', value: 'PETROL_FUEL' },
+  { label: '🍽️ Food / Meals / Refreshments', value: 'FOOD' },
+  { label: '🅿️ Parking', value: 'PARKING' },
+  { label: '🛣️ Toll Gate', value: 'TOLL' },
+  { label: '💡 Electricity / Rent / Utilities', value: 'UTILITY' },
+  { label: '💼 Daily Wages / Staff Allowance', value: 'SALARY_WAGES' },
+  { label: '🚗 Vehicle Repair', value: 'VEHICLE_REPAIR' },
+  { label: '📝 Other Miscellaneous', value: 'OTHER' },
 ];
 
 const FORM_CATEGORIES: { label: string; value: DriverExpenseCategory }[] = [
-  { label: 'Shop Expense / Allowance', value: 'SHOP_EXPENSE' },
-  { label: 'Petrol / Fuel', value: 'PETROL' },
-  { label: 'Food / Meals', value: 'FOOD' },
-  { label: 'Parking', value: 'PARKING' },
-  { label: 'Toll Gate', value: 'TOLL' },
-  { label: 'Vehicle Maintenance', value: 'MAINTENANCE' },
-  { label: 'Other', value: 'OTHER' },
+  { label: '🏢 Shop / Store Expense', value: 'SHOP_EXPENSE' },
+  { label: '🔧 Shop & Equipment Maintenance', value: 'MAINTENANCE' },
+  { label: '📦 Raw Materials / Packaging', value: 'RAW_MATERIAL' },
+  { label: '⛽ Petrol / Fuel', value: 'PETROL_FUEL' },
+  { label: '🍽️ Food / Meals / Refreshments', value: 'FOOD' },
+  { label: '🅿️ Parking', value: 'PARKING' },
+  { label: '🛣️ Toll Gate', value: 'TOLL' },
+  { label: '💡 Electricity / Rent / Utilities', value: 'UTILITY' },
+  { label: '💼 Daily Wages / Staff Allowance', value: 'SALARY_WAGES' },
+  { label: '🚗 Vehicle Repair', value: 'VEHICLE_REPAIR' },
+  { label: '📝 Other Miscellaneous', value: 'OTHER' },
 ];
 
 export const ExpensesPage: React.FC = () => {
@@ -129,6 +151,41 @@ export const ExpensesPage: React.FC = () => {
     }
   };
 
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to delete this expense of ${name}?`)) {
+      return;
+    }
+    try {
+      await expenseService.deleteExpense(id);
+      setSuccessMsg('Expense deleted successfully!');
+      setTimeout(() => setSuccessMsg(null), 4000);
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to delete expense:', err);
+      alert('Failed to delete expense. Please try again.');
+    }
+  };
+
+  const getCategoryBadgeClass = (category: string) => {
+    switch (category) {
+      case 'SHOP_EXPENSE':
+        return 'badge-primary';
+      case 'MAINTENANCE':
+        return 'badge-warning';
+      case 'RAW_MATERIAL':
+        return 'badge-info';
+      case 'PETROL_FUEL':
+      case 'PETROL':
+        return 'badge-warning';
+      case 'UTILITY':
+        return 'badge-purple';
+      case 'SALARY_WAGES':
+        return 'badge-success';
+      default:
+        return 'badge-neutral';
+    }
+  };
+
   return (
     <div>
       {/* Toast Alert */}
@@ -168,10 +225,10 @@ export const ExpensesPage: React.FC = () => {
       >
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            Business & Route Expenses
+            Expenses Management
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-            Record shop expenses, audit fuel, food, toll, and vehicle maintenance costs.
+            Record and manage all shop expenses, equipment maintenance, raw materials, fuel, and driver allowances.
           </p>
         </div>
         <button
@@ -236,35 +293,34 @@ export const ExpensesPage: React.FC = () => {
           <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
             Category Breakdown (Month)
           </span>
-          <div style={{ fontSize: '0.8rem', marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Shop / Other:</span>
-              <strong>
-                {formatCurrency(
-                  (
-                    parseFloat(summary?.category_breakdown?.SHOP_EXPENSE || '0') +
-                    parseFloat(summary?.category_breakdown?.OTHER || '0')
-                  ).toFixed(2)
-                )}
-              </strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Petrol / Fuel:</span>
-              <strong>{formatCurrency(summary?.category_breakdown?.PETROL || '0')}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Food & Tolls:</span>
-              <strong>
-                {formatCurrency(
-                  (
-                    parseFloat(summary?.category_breakdown?.FOOD || '0') +
-                    parseFloat(summary?.category_breakdown?.TOLL || '0') +
-                    parseFloat(summary?.category_breakdown?.PARKING || '0') +
-                    parseFloat(summary?.category_breakdown?.MAINTENANCE || '0')
-                  ).toFixed(2)
-                )}
-              </strong>
-            </div>
+          <div
+            style={{
+              fontSize: '0.8rem',
+              marginTop: '0.4rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+              maxHeight: '80px',
+              overflowY: 'auto',
+            }}
+          >
+            {summary?.category_breakdown &&
+            Object.entries(summary.category_breakdown).some(([_, val]) => parseFloat(val || '0') > 0) ? (
+              Object.entries(summary.category_breakdown)
+                .filter(([_, val]) => parseFloat(val || '0') > 0)
+                .map(([cat, val]) => {
+                  const item = FORM_CATEGORIES.find((c) => c.value === cat);
+                  const label = item ? item.label.replace(/^[^\s]+\s/, '') : cat;
+                  return (
+                    <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>{label}:</span>
+                      <strong>{formatCurrency(val)}</strong>
+                    </div>
+                  );
+                })
+            ) : (
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>No expenses recorded this month</span>
+            )}
           </div>
         </div>
       </div>
@@ -273,16 +329,19 @@ export const ExpensesPage: React.FC = () => {
       <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <select
           className="form-select"
-          style={{ minWidth: '180px' }}
+          style={{ minWidth: '220px' }}
           value={selectedDriver}
           onChange={(e) => setSelectedDriver(e.target.value)}
         >
-          <option value="">All Drivers / Direct</option>
-          {drivers.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.driver_name} ({d.assigned_route_details?.name || 'No Route'})
-            </option>
-          ))}
+          <option value="">All Sources (Shop & Drivers)</option>
+          <option value="SHOP_ONLY">🏢 Shop / General Only (No Driver)</option>
+          <optgroup label="Filter by Driver:">
+            {drivers.map((d) => (
+              <option key={d.id} value={d.id}>
+                🚗 {d.driver_name} ({d.assigned_route_details?.name || 'No Route'})
+              </option>
+            ))}
+          </optgroup>
         </select>
 
         <select
@@ -301,7 +360,7 @@ export const ExpensesPage: React.FC = () => {
 
         <select
           className="form-select"
-          style={{ minWidth: '180px' }}
+          style={{ minWidth: '220px' }}
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
         >
@@ -345,13 +404,14 @@ export const ExpensesPage: React.FC = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Driver / Expense Source</th>
-                <th>Route</th>
+                <th>Expense Source</th>
+                <th>Route / Location</th>
                 <th>Category</th>
+                <th>Logged By</th>
                 <th>Amount (₹)</th>
                 <th>Date</th>
-                <th>Notes / Remarks</th>
-                <th>Status</th>
+                <th>Notes / Bill Ref</th>
+                <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -359,45 +419,70 @@ export const ExpensesPage: React.FC = () => {
                 expenses.map((exp) => (
                   <tr key={exp.id}>
                     <td>
-                      <div style={{ fontWeight: 700 }}>
-                        {exp.driver_name || 'General / Shop Expense'}
-                      </div>
+                      {exp.driver ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}>
+                          <span>🚗</span>
+                          <span>{exp.driver_name}</span>
+                        </div>
+                      ) : (
+                        <span className="badge badge-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <Building size={13} />
+                          Shop / Store Expense
+                        </span>
+                      )}
                     </td>
                     <td>
                       <span className="badge badge-neutral">
-                        {exp.route_name || 'General'}
+                        {exp.route_name || 'Shop / Direct'}
                       </span>
                     </td>
                     <td>
-                      <span
-                        className={`badge ${
-                          exp.category === 'SHOP_EXPENSE'
-                            ? 'badge-primary'
-                            : exp.category === 'PETROL'
-                            ? 'badge-warning'
-                            : 'badge-neutral'
-                        }`}
-                      >
-                        {exp.category_display || exp.category}
+                      <span className={`badge ${getCategoryBadgeClass(exp.category)}`}>
+                        {exp.custom_category || exp.category_display || exp.category}
                       </span>
                     </td>
-                    <td style={{ fontWeight: 800, color: '#dc2626', fontSize: '1rem' }}>
+                    <td style={{ fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                      {exp.created_by_name ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <UserCheck size={14} style={{ color: 'var(--primary)' }} />
+                          {exp.created_by_name}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td style={{ fontWeight: 800, color: '#dc2626', fontSize: '1rem', whiteSpace: 'nowrap' }}>
                       {formatCurrency(exp.amount)}
                     </td>
-                    <td>{formatDate(exp.date)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatDate(exp.date)}</td>
                     <td style={{ maxWidth: '240px', color: 'var(--text-secondary)' }}>
-                      {exp.notes || exp.receipt_reference || '—'}
+                      <div>{exp.notes || '—'}</div>
+                      {exp.receipt_reference && (
+                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Ref: {exp.receipt_reference}
+                        </div>
+                      )}
                     </td>
-                    <td>
-                      <span className="badge badge-success">
-                        {exp.status || 'APPROVED'}
-                      </span>
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleDelete(exp.id, `${formatCurrency(exp.amount)} (${exp.category_display || exp.category})`)}
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          padding: '4px 8px',
+                          color: '#dc2626',
+                          borderColor: '#fca5a5',
+                          background: '#fff',
+                        }}
+                        title="Delete expense"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                     No expenses found matching current filters.
                   </td>
                 </tr>
@@ -425,7 +510,7 @@ export const ExpensesPage: React.FC = () => {
             className="card"
             style={{
               width: '100%',
-              maxWidth: '520px',
+              maxWidth: '540px',
               padding: '1.75rem',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
               borderRadius: '12px',
@@ -434,10 +519,15 @@ export const ExpensesPage: React.FC = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <Store size={22} style={{ color: 'var(--primary, #dc2626)' }} />
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
-                  Record Business / Route Expense
-                </h3>
+                <Receipt size={22} style={{ color: 'var(--primary, #dc2626)' }} />
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
+                    Record Business / Shop Expense
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                    Added by Owner or Manager with full audit logging
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -495,7 +585,7 @@ export const ExpensesPage: React.FC = () => {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Driver / Route (Optional)
+                    Expense Source / Driver
                   </label>
                   <select
                     className="form-select"
@@ -503,12 +593,14 @@ export const ExpensesPage: React.FC = () => {
                     value={formData.driver}
                     onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
                   >
-                    <option value="">General / Shop Expense</option>
-                    {drivers.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.driver_name} ({d.assigned_route_details?.name || 'No Route'})
-                      </option>
-                    ))}
+                    <option value="">🏢 Shop / General Expense</option>
+                    <optgroup label="Or assign to a Driver:">
+                      {drivers.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          🚗 {d.driver_name} ({d.assigned_route_details?.name || 'No Route'})
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               </div>
@@ -516,15 +608,16 @@ export const ExpensesPage: React.FC = () => {
               {formData.category === 'OTHER' && (
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Custom Category Name
+                    Custom Category Name *
                   </label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Packing material, Ice block..."
+                    placeholder="e.g. Packing materials, Ice blocks, Bakery maintenance..."
                     style={{ width: '100%' }}
                     value={formData.custom_category}
                     onChange={(e) => setFormData({ ...formData, custom_category: e.target.value })}
+                    required
                   />
                 </div>
               )}
@@ -569,7 +662,7 @@ export const ExpensesPage: React.FC = () => {
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Petrol pump bill #4092, Shop receipt"
+                  placeholder="e.g. Shop Bill #104, Petrol receipt, Electric bill #..."
                   style={{ width: '100%' }}
                   value={formData.receipt_reference}
                   onChange={(e) => setFormData({ ...formData, receipt_reference: e.target.value })}
@@ -583,7 +676,7 @@ export const ExpensesPage: React.FC = () => {
                 <textarea
                   className="form-input"
                   rows={2}
-                  placeholder="e.g. Shop maintenance, delivery allowance, tea expense..."
+                  placeholder="e.g. Shop maintenance repairs, packaging covers, tea refreshments..."
                   style={{ width: '100%', resize: 'vertical' }}
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}

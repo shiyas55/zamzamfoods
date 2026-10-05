@@ -40,6 +40,15 @@ export interface RestoreResult {
   restored_at: string;
 }
 
+export interface ClearAllResult {
+  success: boolean;
+  message: string;
+  deleted_counts: Record<string, number>;
+  total_deleted: number;
+  preserved_users: string[];
+  cleared_at: string;
+}
+
 export const databaseService = {
   async getStats(): Promise<DatabaseStats> {
     return apiClient.get<DatabaseStats>('/database/stats/');
@@ -115,4 +124,9 @@ export const databaseService = {
     }
     return data as RestoreResult;
   },
+
+  async clearAllData(pin: string, confirmation: string): Promise<ClearAllResult> {
+    return apiClient.post<ClearAllResult>('/database/clear-all/', { pin, confirmation });
+  },
 };
+

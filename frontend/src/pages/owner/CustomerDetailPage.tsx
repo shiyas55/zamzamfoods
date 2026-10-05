@@ -1,23 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { customerService } from '../../services/customerService';
 import { routeService } from '../../services/routeService';
 import { orderService } from '../../services/orderService';
 import { paymentService } from '../../services/paymentService';
-import { CustomerDetailSummary, CustomerPricingOverviewItem, Order, Payment, Route } from '../../types';
+import { customerDocumentService } from '../../services/customerDocumentService';
+import { CustomerDetailSummary, CustomerPricingOverviewItem, Order, Payment, Route, CustomerDocument } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { 
   ArrowLeft, Store, Phone, MapPin, Tag, ShoppingBag, 
   CreditCard, Truck, Plus, Edit2, CheckCircle, AlertTriangle, X,
   Repeat, FileText, MessageSquare, ExternalLink, Copy, Check, Smartphone, Send,
-  Trash2, CheckCircle2, AlertCircle, RefreshCw, Printer
+  Trash2, CheckCircle2, AlertCircle, RefreshCw, Printer, FolderArchive, UploadCloud, Download
 } from 'lucide-react';
 import { InvoiceModal } from '../../components/InvoiceModal';
 import { CustomerStatementModal } from '../../components/CustomerStatementModal';
 import { openWhatsApp, generateBalanceReminderMessage, generateInvoiceMessage } from '../../utils/whatsappUtils';
 import { useSettings } from '../../context/SettingsContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const CustomerDetailPage: React.FC = () => {
+  const { user } = useAuth();
   const { isWhatsAppEnabled } = useSettings();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -71,14 +74,18 @@ export const CustomerDetailPage: React.FC = () => {
   const [savingPrice, setSavingPrice] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
 
-  // Active Tab: 'pricing' | 'orders' | 'payments' | 'deliveries'
-  const [activeTab, setActiveTab] = useState<'pricing' | 'orders' | 'payments' | 'deliveries'>('pricing');
+  // Active Tab: 'pricing' | 'orders' | 'payments' | 'deliveries' | 'documents'
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab') as 'pricing' | 'orders' | 'payments' | 'deliveries' | 'documents' | null;
+  const [activeTab, setActiveTab] = useState<'pricing' | 'orders' | 'payments' | 'deliveries' | 'documents'>(urlTab || 'pricing');
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [customerPayments, setCustomerPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [customerDocuments, setCustomerDocuments] = useState<CustomerDocument[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
 
   const loadCustomerOrders = async () => {
     if (!id) return;
@@ -103,6 +110,19 @@ export const CustomerDetailPage: React.FC = () => {
       console.error('Failed to load full payments for customer:', e);
     } finally {
       setPaymentsLoading(false);
+    }
+  };
+
+  const loadCustomerDocuments = async () => {
+    if (!id) return;
+    try {
+      setDocumentsLoading(true);
+      const docs = await customerDocumentService.getDocuments({ customer: id });
+      setCustomerDocuments(docs);
+    } catch (e) {
+      console.error('Failed to load documents for customer:', e);
+    } finally {
+      setDocumentsLoading(false);
     }
   };
 
@@ -132,6 +152,7 @@ export const CustomerDetailPage: React.FC = () => {
     if (id) {
       loadCustomerOrders();
       loadCustomerPayments();
+      loadCustomerDocuments();
     }
   }, [id]);
 
@@ -141,6 +162,9 @@ export const CustomerDetailPage: React.FC = () => {
     }
     if (activeTab === 'payments' && id) {
       loadCustomerPayments();
+    }
+    if (activeTab === 'documents' && id) {
+      loadCustomerDocuments();
     }
   }, [activeTab, id]);
 
@@ -708,6 +732,14 @@ export const CustomerDetailPage: React.FC = () => {
           <Truck size={16} />
           <span>Delivery History ({summary.recent_deliveries?.length || 0})</span>
         </button>
+        <button
+          className={`btn ${activeTab === 'documents' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0', borderBottom: 'none' }}
+          onClick={() => setActiveTab('documents')}
+        >
+          <FolderArchive size={16} />
+          <span>Shop Documents ({customerDocuments.length})</span>
+        </button>
       </div>
 
       {/* Tab 1: Customer Pricing Management */}
@@ -1087,6 +1119,223 @@ export const CustomerDetailPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Tab 5: Shop Documents & Multi-File Storage */}
+      {activeTab === 'documents' && (
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0 }}>Shop Documents & Storage</h3>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Official licenses, GST certificates, supply agreements, and verification proofs.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  const basePath = user?.role === 'MANAGER' ? '/manager' : '/owner';
+                  navigate(`${basePath}/shop-documents?customer=${id}`);
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <UploadCloud size={14} />
+                <span>Upload / Manage Documents</span>
+              </button>
+            </div>
+          </div>
+
+          {documentsLoading ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <RefreshCw size={20} className="spin" style={{ margin: '0 auto 0.5rem auto' }} />
+              <div>Loading documents...</div>
+            </div>
+          ) : customerDocuments.length === 0 ? (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '3rem 1.5rem',
+                background: 'var(--bg-secondary)',
+                borderRadius: 'var(--radius-md)',
+              }}
+            >
+              <FolderArchive size={36} color="var(--text-muted)" style={{ margin: '0 auto 0.75rem auto' }} />
+              <h4 style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)' }}>No documents uploaded yet</h4>
+              <p style={{ margin: '0.25rem 0 1rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Upload this shop's FSSAI license, GST certificate, rent agreement, or photos.
+              </p>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  const basePath = user?.role === 'MANAGER' ? '/manager' : '/owner';
+                  navigate(`${basePath}/shop-documents?customer=${id}`);
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                <UploadCloud size={14} />
+                <span>Upload Documents for {summary?.customer?.name}</span>
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '1rem',
+              }}
+            >
+              {customerDocuments.map((doc) => {
+                const isImg = doc.mime_type?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif)$/i.test(doc.file_name);
+                const isPdf = doc.mime_type === 'application/pdf' || /\.pdf$/i.test(doc.file_name);
+                const todayStr = new Date().toISOString().split('T')[0];
+                const isExpired = doc.expiry_date && doc.expiry_date < todayStr;
+
+                return (
+                  <div
+                    key={doc.id}
+                    style={{
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      overflow: 'hidden',
+                      background: 'var(--bg-card)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '110px',
+                        background: isImg ? '#000' : 'var(--bg-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                      }}
+                    >
+                      {isImg && doc.file_url ? (
+                        <img
+                          src={doc.file_url}
+                          alt={doc.title}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : isPdf ? (
+                        <div style={{ textAlign: 'center', color: '#dc2626' }}>
+                          <FileText size={36} />
+                          <div style={{ fontSize: '0.7rem', fontWeight: 700 }}>PDF</div>
+                        </div>
+                      ) : (
+                        <FileText size={36} color="var(--text-muted)" />
+                      )}
+
+                      <span
+                        className="badge"
+                        style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          left: '0.5rem',
+                          fontSize: '0.7rem',
+                          background: 'rgba(0,0,0,0.7)',
+                          color: '#fff',
+                        }}
+                      >
+                        {doc.document_type_display || doc.document_type}
+                      </span>
+
+                      {isExpired && (
+                        <span
+                          className="badge badge-danger"
+                          style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', fontSize: '0.65rem' }}
+                        >
+                          EXPIRED
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ padding: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                        {doc.title}
+                      </div>
+
+                      {doc.document_number && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                          Doc #: {doc.document_number}
+                        </div>
+                      )}
+
+                      {doc.expiry_date && (
+                        <div
+                          style={{
+                            fontSize: '0.75rem',
+                            color: isExpired ? '#dc2626' : 'var(--text-secondary)',
+                            fontWeight: isExpired ? 700 : 500,
+                            marginTop: '0.2rem',
+                          }}
+                        >
+                          Expires: {formatDate(doc.expiry_date)}
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          marginTop: 'auto',
+                          paddingTop: '0.5rem',
+                          borderTop: '1px solid var(--border)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '0.5rem',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          {formatDate(doc.created_at)}
+                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          {doc.file_url && (
+                            <a
+                              href={doc.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary btn-sm"
+                              style={{ height: '26px', padding: '0 0.4rem', fontSize: '0.75rem' }}
+                              title="Open file"
+                            >
+                              <ExternalLink size={12} />
+                            </a>
+                          )}
+                          {doc.file_url && (
+                            <a
+                              href={doc.file_url}
+                              download={doc.file_name}
+                              className="btn btn-primary btn-sm"
+                              style={{ height: '26px', padding: '0 0.4rem', fontSize: '0.75rem' }}
+                              title="Download"
+                            >
+                              <Download size={12} />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

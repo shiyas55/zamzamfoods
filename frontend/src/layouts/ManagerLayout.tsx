@@ -8,6 +8,7 @@ import {
   LayoutDashboard, PlusCircle, ShoppingCart, Store, Send, CreditCard,
   BookOpen, LogOut, Receipt, Sun, Moon, Activity, History, Truck, Lock,
   BarChart3, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, Menu, X, MessageCircle, Settings, Users,
+  FolderArchive,
 } from 'lucide-react';
 import { ZentrixSidebarCard, ZentrixHelpDeskWidget } from '../components/ZentrixHelpDesk';
 
@@ -51,19 +52,20 @@ export const ManagerLayout: React.FC = () => {
     navigate('/login');
   };
 
-  const { isWhatsAppEnabled } = useSettings();
+  const { isWhatsAppEnabled, isDriverModuleEnabled } = useSettings();
 
   const navItems = [
     { to: '/manager',                    label: 'Operations Dashboard',  icon: LayoutDashboard, end: true },
     { to: '/manager/create-order',                 label: 'Create Order',           icon: PlusCircle      },
     ...(isWhatsAppEnabled ? [{ to: '/manager/create-order?view=whatsapp',   label: '💬 WhatsApp',           icon: MessageCircle   }] : []),
     { to: '/manager/orders',             label: 'Daily Orders',           icon: ShoppingCart    },
-    { to: '/manager/deliveries',         label: 'Deliveries Board',       icon: Send            },
-    { to: '/manager/drivers',            label: 'Driver Fleet',           icon: Truck           },
+    ...(isDriverModuleEnabled ? [{ to: '/manager/deliveries',         label: 'Deliveries Board',       icon: Send            }] : []),
+    ...(isDriverModuleEnabled ? [{ to: '/manager/drivers',            label: 'Staff Drivers',          icon: Truck           }] : []),
     { to: '/manager/customers',          label: 'Customer Shops',         icon: Store           },
+    { to: '/manager/shop-documents',     label: 'Shop Documents',         icon: FolderArchive   },
     { to: '/manager/payments',           label: 'Collections & Payments', icon: CreditCard      },
-    { to: '/manager/expenses',           label: 'Driver Expenses',        icon: Receipt         },
-    { to: '/manager/driver-performance', label: 'Driver Performance',     icon: Activity        },
+    { to: '/manager/expenses',           label: 'Expenses',               icon: Receipt         },
+    ...(isDriverModuleEnabled ? [{ to: '/manager/driver-performance', label: 'Staff Driver Performance', icon: Activity      }] : []),
     { to: '/manager/daily-closing',      label: 'Daily Closing',          icon: Lock            },
     { to: '/manager/credit',             label: 'Credit Ledger',          icon: BookOpen        },
     { to: '/manager/users',              label: 'Staff & Roles',          icon: Users           },

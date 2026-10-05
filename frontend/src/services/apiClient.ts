@@ -19,6 +19,14 @@ export const API_BASE_URL =
     ? '/api/v1'
     : 'https://zamzamfood.up.railway.app/api/v1');
 
+/**
+ * Fire-and-forget background ping to warm up sleeping Railway backend container on app launch.
+ */
+export const warmUpServer = (): void => {
+  if (typeof window === 'undefined') return;
+  fetch(`${API_BASE_URL}/settings/`, { method: 'GET', credentials: 'include' }).catch(() => {});
+};
+
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
   /** Set true to skip auto-refresh on 401 (used for the refresh call itself) */
@@ -50,8 +58,11 @@ class ApiClient {
     }
 
     this.refreshPromise = (async (): Promise<RefreshResult> => {
-      // Try refresh with 1 retry for cold-start / waking server
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      // Retry with progressive backoff for sleeping/cold-start Railway instances (up to 4 attempts)
+      const refreshBackoffs = [800, 1500, 2500];
+      const maxRefreshAttempts = refreshBackoffs.length + 1;
+
+      for (let attempt = 1; attempt <= maxRefreshAttempts; attempt++) {
         try {
           const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
             method: 'POST',
@@ -80,9 +91,9 @@ class ApiClient {
               return { success: false, isAuthFailure: true };
             }
 
-            // 500, 502, 503, 504 server cold-start issues: retry if first attempt
-            if (attempt < 2) {
-              await new Promise((res) => setTimeout(res, 500));
+            // 500, 502, 503, 504 server cold-start issues: retry with backoff
+            if (attempt < maxRefreshAttempts) {
+              await new Promise((res) => setTimeout(res, refreshBackoffs[attempt - 1]));
               continue;
             }
             return { success: false, isAuthFailure: false };
@@ -95,8 +106,8 @@ class ApiClient {
           }
           return { success: false, isAuthFailure: false };
         } catch {
-          if (attempt < 2) {
-            await new Promise((res) => setTimeout(res, 500));
+          if (attempt < maxRefreshAttempts) {
+            await new Promise((res) => setTimeout(res, refreshBackoffs[attempt - 1]));
             continue;
           }
           return { success: false, isAuthFailure: false };
@@ -133,10 +144,13 @@ class ApiClient {
     }
 
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
       Accept: 'application/json',
       ...((fetchOptions.headers as Record<string, string>) || {}),
     };
+
+    if (!(fetchOptions.body instanceof FormData) && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     // Attach Bearer token if available
     const accessToken = localStorage.getItem('zamzam_access_token');
@@ -145,7 +159,9 @@ class ApiClient {
     }
 
     let response: Response | null = null;
-    const maxNetworkAttempts = 3;
+    // Progressive backoff delays for server cold starts (covers up to ~13.5s of Railway container spin-up)
+    const coldStartDelays = [800, 1500, 2500, 3500, 5000];
+    const maxNetworkAttempts = coldStartDelays.length + 1; // 6 attempts
 
     for (let attempt = 1; attempt <= maxNetworkAttempts; attempt++) {
       try {
@@ -155,9 +171,9 @@ class ApiClient {
           credentials: 'include',
         });
 
-        // If server is cold-starting (502/503/504), retry with small backoff
+        // If server is cold-starting (502/503/504), wait and retry with progressive backoff
         if (response.status >= 502 && response.status <= 504 && attempt < maxNetworkAttempts) {
-          await new Promise((res) => setTimeout(res, attempt * 400));
+          await new Promise((res) => setTimeout(res, coldStartDelays[attempt - 1]));
           continue;
         }
 
@@ -169,7 +185,7 @@ class ApiClient {
           );
         }
         if (attempt < maxNetworkAttempts) {
-          await new Promise((res) => setTimeout(res, attempt * 400));
+          await new Promise((res) => setTimeout(res, coldStartDelays[attempt - 1]));
           continue;
         }
         throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
@@ -180,7 +196,7 @@ class ApiClient {
       throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
     }
 
-    // ── 401 handler: attempt single-flight token refresh then retry ONCE ─────────
+    // ── 401 handler: attempt single-flight token refresh then retry with cold-start tolerance ───
     if (
       response.status === 401 &&
       !_skipRefresh &&
@@ -195,16 +211,32 @@ class ApiClient {
         if (freshToken) {
           headers['Authorization'] = `Bearer ${freshToken}`;
         }
-        // Retry fetch ONCE with fresh token and credentials
-        try {
-          response = await fetch(url, {
-            ...fetchOptions,
-            headers,
-            credentials: 'include',
-          });
-        } catch {
+        // Retry fetch with cold-start backoff (up to 3 attempts)
+        let retryResponse: Response | null = null;
+        for (let rAttempt = 1; rAttempt <= 3; rAttempt++) {
+          try {
+            retryResponse = await fetch(url, {
+              ...fetchOptions,
+              headers,
+              credentials: 'include',
+            });
+            if (retryResponse.status >= 502 && retryResponse.status <= 504 && rAttempt < 3) {
+              await new Promise((res) => setTimeout(res, rAttempt * 1000));
+              continue;
+            }
+            break;
+          } catch {
+            if (rAttempt < 3) {
+              await new Promise((res) => setTimeout(res, rAttempt * 1000));
+              continue;
+            }
+            throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
+          }
+        }
+        if (!retryResponse) {
           throw new Error('Unable to connect to the Zamzam server. Please check your connection and try again.');
         }
+        response = retryResponse;
       } else if (refreshResult.isAuthFailure) {
         throw new Error('Session expired. Please log in again.');
       } else {
@@ -242,16 +274,18 @@ class ApiClient {
   }
 
   public post<T>(endpoint: string, body?: unknown) {
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: isForm ? (body as FormData) : (body !== undefined ? JSON.stringify(body) : undefined),
     });
   }
 
   public patch<T>(endpoint: string, body?: unknown) {
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
+      body: isForm ? (body as FormData) : (body !== undefined ? JSON.stringify(body) : undefined),
     });
   }
 

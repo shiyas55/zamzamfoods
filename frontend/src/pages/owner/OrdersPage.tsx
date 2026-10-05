@@ -506,12 +506,40 @@ export const OrdersPage: React.FC = () => {
                     </td>
 
                     {/* Route */}
-                    <td>
-                      <span className="badge badge-neutral">{o.route_details?.name || '—'}</span>
+                    <td style={{ maxWidth: '190px' }}>
+                      <span
+                        className="badge badge-neutral"
+                        style={{
+                          fontSize: '0.75rem',
+                          maxWidth: '175px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-block',
+                          verticalAlign: 'middle',
+                        }}
+                        title={o.route_details?.name || '—'}
+                      >
+                        {o.route_details?.name || '—'}
+                      </span>
                     </td>
 
                     {/* Driver */}
-                    <td style={{ fontSize: '0.82rem' }}>{o.driver_name || 'Unassigned'}</td>
+                    <td style={{ fontSize: '0.82rem', maxWidth: '140px' }}>
+                      <span
+                        style={{
+                          maxWidth: '130px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-block',
+                          verticalAlign: 'middle',
+                        }}
+                        title={o.driver_name || 'Unassigned'}
+                      >
+                        {o.driver_name || 'Unassigned'}
+                      </span>
+                    </td>
 
                     {/* Total Amount */}
                     <td style={{ fontWeight: 800, color: 'var(--primary)', textAlign: 'right' }}>

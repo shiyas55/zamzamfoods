@@ -1,19 +1,28 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSettings } from '../../context/SettingsContext';
 import { Lock, User, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { getDynamicStoreInfo } from '../../utils/whatsappUtils';
 
 export const LoginPage: React.FC = () => {
   const store = getDynamicStoreInfo();
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
+  const { isDriverModuleEnabled } = useSettings();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('error') === 'driver_disabled') {
+      setError('The Delivery Driver portal is currently turned OFF in System Settings. Please contact the administrator.');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +38,11 @@ export const LoginPage: React.FC = () => {
 
       // Route immediately based on role
       if (user.role === 'DRIVER') {
+        if (!isDriverModuleEnabled) {
+          setError('The Delivery Driver portal is currently turned OFF in System Settings.');
+          await logout();
+          return;
+        }
         navigate('/driver');
       } else if (user.role === 'MANAGER') {
         navigate('/manager');

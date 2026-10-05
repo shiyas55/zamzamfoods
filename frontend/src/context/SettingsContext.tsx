@@ -13,6 +13,8 @@ interface SettingsContextType {
   whatsappPlanExpiresAt: string | null;
   whatsappLicenseKey: string;
   isSelfOrderEnabled: boolean;
+  isOrderDiscountEnabled: boolean;
+  isDriverModuleEnabled: boolean;
   isMaintenanceMode: boolean;
   maintenanceMessage: string;
   businessName: string;
@@ -30,6 +32,8 @@ const defaultSettings: SystemSettings = {
   invoice_footer_notes: 'Thank you for your business. Fresh Kubbus & Romali rotis delivered daily.',
   is_whatsapp_enabled: true,
   is_self_order_enabled: true,
+  is_order_discount_enabled: true,
+  is_driver_module_enabled: true,
   is_maintenance_mode: false,
   maintenance_message: 'System is currently undergoing scheduled maintenance. Please check back shortly.',
   whatsapp_is_locked: false,
@@ -90,6 +94,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const whatsappPlanExpiresAt = settings?.whatsapp_plan_expires_at || null;
   const whatsappLicenseKey = settings?.whatsapp_license_key || '';
   const isSelfOrderEnabled = settings ? Boolean(settings.is_self_order_enabled) : true;
+  const isOrderDiscountEnabled = settings ? Boolean(settings.is_order_discount_enabled ?? true) : true;
+  const isDriverModuleEnabled = settings ? Boolean(settings.is_driver_module_enabled ?? true) : true;
   const isMaintenanceMode = settings ? Boolean(settings.is_maintenance_mode) : false;
   const maintenanceMessage = settings?.maintenance_message || defaultSettings.maintenance_message || '';
   const businessName = settings?.business_name || defaultSettings.business_name;
@@ -110,6 +116,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         whatsappPlanExpiresAt,
         whatsappLicenseKey,
         isSelfOrderEnabled,
+        isOrderDiscountEnabled,
+        isDriverModuleEnabled,
         isMaintenanceMode,
         maintenanceMessage,
         businessName,

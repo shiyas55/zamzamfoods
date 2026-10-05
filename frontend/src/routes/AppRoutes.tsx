@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { ProtectedRoute } from './ProtectedRoute';
 
 // Layouts
@@ -28,6 +29,7 @@ import { StaffUsersPage } from '../pages/owner/StaffUsersPage';
 import { DriverPerformancePage } from '../pages/owner/DriverPerformancePage';
 import { ActivityHistoryPage } from '../pages/owner/ActivityHistoryPage';
 import { SettingsPage } from '../pages/owner/SettingsPage';
+import { ShopDocumentsPage } from '../pages/owner/ShopDocumentsPage';
 
 // Manager Pages
 import { ManagerDashboard } from '../pages/manager/ManagerDashboard';
@@ -47,6 +49,7 @@ import { DriverProfilePage } from '../pages/driver/DriverProfilePage';
 
 export const AppRoutes: React.FC = () => {
   const { user, isAuthenticated, isLoading, status } = useAuth();
+  const { isDriverModuleEnabled } = useSettings();
 
   if (isLoading || status === 'INITIALIZING') {
     return (
@@ -59,7 +62,10 @@ export const AppRoutes: React.FC = () => {
   // Root redirect helper
   const getHomeRedirect = () => {
     if (status === 'UNAUTHENTICATED' || !isAuthenticated || !user) return <Navigate to="/login" replace />;
-    if (user.role === 'DRIVER') return <Navigate to="/driver" replace />;
+    if (user.role === 'DRIVER') {
+      if (!isDriverModuleEnabled) return <Navigate to="/login?error=driver_disabled" replace />;
+      return <Navigate to="/driver" replace />;
+    }
     if (user.role === 'MANAGER') return <Navigate to="/manager" replace />;
     return <Navigate to="/owner" replace />;
   };
@@ -84,6 +90,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="driver-performance" element={<DriverPerformancePage />} />
         <Route path="customers" element={<CustomerShopsPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
+        <Route path="shop-documents" element={<ShopDocumentsPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="routes" element={<RoutesPage />} />
         <Route path="drivers" element={<DriversPage />} />
@@ -115,6 +122,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="orders" element={<OrdersPage />} />
         <Route path="customers" element={<CustomerShopsPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
+        <Route path="shop-documents" element={<ShopDocumentsPage />} />
         <Route path="deliveries" element={<DeliveriesPage />} />
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="payments" element={<PaymentsPage />} />
@@ -130,9 +138,13 @@ export const AppRoutes: React.FC = () => {
       <Route
         path="/driver"
         element={
-          <ProtectedRoute allowedRoles={['DRIVER']}>
-            <DriverLayout />
-          </ProtectedRoute>
+          isDriverModuleEnabled ? (
+            <ProtectedRoute allowedRoles={['DRIVER']}>
+              <DriverLayout />
+            </ProtectedRoute>
+          ) : (
+            <Navigate to="/login?error=driver_disabled" replace />
+          )
         }
       >
         <Route index element={<DriverDashboard />} />

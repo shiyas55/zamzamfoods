@@ -228,6 +228,8 @@ export const RoutesPage: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
+                minWidth: 0,
+                overflow: 'hidden',
               }}
             >
               <div>
@@ -244,10 +246,42 @@ export const RoutesPage: React.FC = () => {
                   </div>
                 </div>
 
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                <h3
+                  style={{
+                    fontSize: '1.2rem',
+                    fontWeight: 700,
+                    marginBottom: '0.5rem',
+                    color: 'var(--text-primary)',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.3,
+                  }}
+                  title={r.name}
+                >
                   {r.name}
                 </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', minHeight: '38px' }}>
+                <p
+                  style={{
+                    fontSize: '0.85rem',
+                    color: 'var(--text-secondary)',
+                    marginBottom: '1.25rem',
+                    minHeight: '38px',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                    lineHeight: 1.4,
+                  }}
+                  title={r.description || 'Primary distribution route'}
+                >
                   {r.description || 'Primary distribution route'}
                 </p>
 

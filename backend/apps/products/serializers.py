@@ -11,6 +11,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "description",
             "unit_price",
             "packet_size",
+            "order_number",
             "is_active",
             "created_at",
             "updated_at",

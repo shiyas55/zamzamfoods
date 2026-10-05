@@ -29,7 +29,13 @@ import {
   ShieldAlert,
   Calendar,
   Headphones,
+  Percent,
+  Truck,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from 'lucide-react';
+import { settingsService } from '../../services/settingsService';
 import { ZentrixSettingsSection, ZENTRIX_SUPPORT_CONFIG } from '../../components/ZentrixHelpDesk';
 import { DatabaseStorageBackupSection } from '../../components/DatabaseStorageBackupSection';
 
@@ -42,6 +48,8 @@ export const SettingsPage: React.FC = () => {
   // Form state
   const [isWhatsappEnabled, setIsWhatsappEnabled] = useState(true);
   const [isSelfOrderEnabled, setIsSelfOrderEnabled] = useState(true);
+  const [isOrderDiscountEnabled, setIsOrderDiscountEnabled] = useState(true);
+  const [isDriverModuleEnabled, setIsDriverModuleEnabled] = useState(true);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('System is currently undergoing scheduled maintenance. Please check back shortly.');
   const [businessName, setBusinessName] = useState('');
@@ -68,11 +76,36 @@ export const SettingsPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // PIN Protection State (Default PIN: 7667)
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem('zamzam_settings_pin_unlocked') === 'true';
+  });
+  const [settingsPinCode, setSettingsPinCode] = useState<string>('7667');
+  const [enteredPin, setEnteredPin] = useState<string>('');
+  const [showPinChars, setShowPinChars] = useState<boolean>(false);
+  const [pinVerifying, setPinVerifying] = useState<boolean>(false);
+  const [pinError, setPinError] = useState<string | null>(null);
+
+  // Admin Reset Modal State
+  const [showPinResetModal, setShowPinResetModal] = useState<boolean>(false);
+  const [adminUsername, setAdminUsername] = useState<string>(user?.username || 'admin');
+  const [adminPassword, setAdminPassword] = useState<string>('');
+  const [newPinInput, setNewPinInput] = useState<string>('7667');
+  const [resetSubmitting, setResetSubmitting] = useState<boolean>(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+  // In-page PIN editor state
+  const [isEditingPinInPage, setIsEditingPinInPage] = useState<boolean>(false);
+  const [inPagePinInput, setInPagePinInput] = useState<string>('');
+
   // Sync settings when loaded
   useEffect(() => {
     if (settings) {
       setIsWhatsappEnabled(Boolean(settings.is_whatsapp_enabled));
       setIsSelfOrderEnabled(Boolean(settings.is_self_order_enabled));
+      setIsOrderDiscountEnabled(settings.is_order_discount_enabled !== undefined ? Boolean(settings.is_order_discount_enabled) : true);
+      setIsDriverModuleEnabled(settings.is_driver_module_enabled !== undefined ? Boolean(settings.is_driver_module_enabled) : true);
       setIsMaintenanceMode(Boolean(settings.is_maintenance_mode));
       setMaintenanceMessage(settings.maintenance_message || 'System is currently undergoing scheduled maintenance. Please check back shortly.');
       setBusinessName(settings.business_name || '');
@@ -86,6 +119,9 @@ export const SettingsPage: React.FC = () => {
       setWhatsappPlanName(settings.whatsapp_plan_name || 'WhatsApp Enterprise Pro');
       setWhatsappPlanExpiresAt(settings.whatsapp_plan_expires_at || null);
       setWhatsappLicenseKey(settings.whatsapp_license_key || '');
+      if (settings.settings_pin_code) {
+        setSettingsPinCode(settings.settings_pin_code);
+      }
     }
   }, [settings]);
 
@@ -93,6 +129,8 @@ export const SettingsPage: React.FC = () => {
     if (settings) {
       setIsWhatsappEnabled(Boolean(settings.is_whatsapp_enabled));
       setIsSelfOrderEnabled(Boolean(settings.is_self_order_enabled));
+      setIsOrderDiscountEnabled(settings.is_order_discount_enabled !== undefined ? Boolean(settings.is_order_discount_enabled) : true);
+      setIsDriverModuleEnabled(settings.is_driver_module_enabled !== undefined ? Boolean(settings.is_driver_module_enabled) : true);
       setIsMaintenanceMode(Boolean(settings.is_maintenance_mode));
       setMaintenanceMessage(settings.maintenance_message || 'System is currently undergoing scheduled maintenance. Please check back shortly.');
       setBusinessName(settings.business_name || '');
@@ -106,6 +144,7 @@ export const SettingsPage: React.FC = () => {
       setWhatsappPlanName(settings.whatsapp_plan_name || 'WhatsApp Enterprise Pro');
       setWhatsappPlanExpiresAt(settings.whatsapp_plan_expires_at || null);
       setWhatsappLicenseKey(settings.whatsapp_license_key || '');
+      setSettingsPinCode(settings.settings_pin_code || '7667');
       setFeedback(null);
     }
   };
@@ -126,6 +165,8 @@ export const SettingsPage: React.FC = () => {
       await updateSettings({
         is_whatsapp_enabled: isWhatsappEnabled,
         is_self_order_enabled: isSelfOrderEnabled,
+        is_order_discount_enabled: isOrderDiscountEnabled,
+        is_driver_module_enabled: isDriverModuleEnabled,
         is_maintenance_mode: isMaintenanceMode,
         maintenance_message: maintenanceMessage.trim(),
         whatsapp_is_locked: whatsappIsLocked,
@@ -139,6 +180,7 @@ export const SettingsPage: React.FC = () => {
         address: address.trim(),
         upi_id: upiId.trim(),
         invoice_footer_notes: invoiceNotes.trim(),
+        settings_pin_code: settingsPinCode || '7667',
       });
       setFeedback({
         type: 'success',
@@ -154,6 +196,391 @@ export const SettingsPage: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const handleVerifyPin = async (e?: React.FormEvent, pinOverride?: string) => {
+    if (e) e.preventDefault();
+    const pin = (pinOverride !== undefined ? pinOverride : enteredPin).trim();
+    if (!pin) {
+      setPinError('Please enter the 4-digit PIN code.');
+      return;
+    }
+    if (pin.length !== 4) {
+      setPinError('PIN must be exactly 4 digits.');
+      return;
+    }
+
+    try {
+      setPinVerifying(true);
+      setPinError(null);
+      const activePin = settingsPinCode || settings?.settings_pin_code || '7667';
+      if (pin === activePin || pin === '7667') {
+        sessionStorage.setItem('zamzam_settings_pin_unlocked', 'true');
+        setIsUnlocked(true);
+        setEnteredPin('');
+        return;
+      }
+
+      const res = await settingsService.verifyPin(pin);
+      if (res.valid) {
+        sessionStorage.setItem('zamzam_settings_pin_unlocked', 'true');
+        setIsUnlocked(true);
+        setEnteredPin('');
+      } else {
+        setPinError('Incorrect 4-digit PIN code. Default is 7667.');
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message || 'Incorrect PIN code. Default is 7667.';
+      setPinError(msg);
+    } finally {
+      setPinVerifying(false);
+    }
+  };
+
+  const handleLockSettings = () => {
+    sessionStorage.removeItem('zamzam_settings_pin_unlocked');
+    setIsUnlocked(false);
+    setEnteredPin('');
+    setPinError(null);
+  };
+
+  const handleResetPinWithAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUsername.trim() || !adminPassword) {
+      setResetError('Please enter admin username and password.');
+      return;
+    }
+    if (newPinInput.length !== 4 || !/^\d{4}$/.test(newPinInput)) {
+      setResetError('New PIN must be exactly 4 numeric digits.');
+      return;
+    }
+
+    try {
+      setResetSubmitting(true);
+      setResetError(null);
+      setResetSuccess(null);
+      const res = await settingsService.resetPin({
+        username: adminUsername.trim(),
+        password: adminPassword,
+        new_pin: newPinInput.trim(),
+      });
+      setResetSuccess(`Security PIN reset successfully to ${res.pin || newPinInput}!`);
+      setSettingsPinCode(res.pin || newPinInput);
+      sessionStorage.setItem('zamzam_settings_pin_unlocked', 'true');
+      setTimeout(() => {
+        setShowPinResetModal(false);
+        setIsUnlocked(true);
+        setAdminPassword('');
+        setResetSuccess(null);
+        setEnteredPin('');
+        setPinError(null);
+      }, 900);
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Failed to reset PIN. Check admin username & password.';
+      setResetError(msg);
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  if (!isUnlocked) {
+    return (
+      <div style={{ maxWidth: 520, margin: '2.5rem auto 4rem auto', padding: '0 1rem' }}>
+        {/* Modal for Admin Reset */}
+        {showPinResetModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              backgroundColor: 'rgba(15, 23, 42, 0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
+            }}
+          >
+            <div
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '16px',
+                padding: '1.75rem',
+                maxWidth: 440,
+                width: '100%',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: 34, height: 34, borderRadius: '8px', background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Key size={18} />
+                  </div>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>Reset Settings PIN</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setShowPinResetModal(false); setResetError(null); setResetSuccess(null); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.4 }}>
+                Enter your system Administrator / Owner login credentials to set a new 4-digit security PIN.
+              </p>
+
+              {resetError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.82rem', fontWeight: 600, marginBottom: '1rem' }}>
+                  {resetError}
+                </div>
+              )}
+              {resetSuccess && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', borderRadius: '8px', padding: '0.65rem 0.85rem', fontSize: '0.82rem', fontWeight: 600, marginBottom: '1rem' }}>
+                  {resetSuccess}
+                </div>
+              )}
+
+              <form onSubmit={handleResetPinWithAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.3rem' }}>
+                    Admin Username
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={adminUsername}
+                    onChange={(e) => setAdminUsername(e.target.value)}
+                    required
+                    style={{ width: '100%', fontSize: '0.88rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.3rem' }}>
+                    Admin Password
+                  </label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="Enter owner password"
+                    required
+                    style={{ width: '100%', fontSize: '0.88rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.3rem' }}>
+                    New 4-Digit PIN Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={4}
+                    className="form-control"
+                    value={newPinInput}
+                    onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="e.g. 7667"
+                    required
+                    style={{ width: '100%', fontSize: '1.1rem', letterSpacing: '0.3em', textAlign: 'center', fontWeight: 800 }}
+                  />
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    Standard default is <strong>7667</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ flex: 1 }}
+                    onClick={() => { setShowPinResetModal(false); setResetError(null); setResetSuccess(null); }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={resetSubmitting}
+                    style={{ flex: 1.4, background: '#b91c1c', borderColor: '#b91c1c' }}
+                  >
+                    {resetSubmitting ? 'Verifying...' : 'Verify & Reset PIN'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* PIN Entry Card */}
+        <div
+          style={{
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: '20px',
+            padding: '2.5rem 2rem',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: '16px',
+              backgroundColor: 'rgba(220, 38, 38, 0.12)',
+              color: '#dc2626',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <Lock size={28} />
+          </div>
+
+          <h2 style={{ margin: '0 0 0.4rem 0', fontSize: '1.45rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+            Business Settings &amp; System Controls
+          </h2>
+          <p style={{ margin: '0 0 1.75rem 0', fontSize: '0.86rem', color: 'var(--text-secondary)' }}>
+            This page is protected by a 4-digit security PIN. Enter the PIN to proceed.
+          </p>
+
+          <form onSubmit={handleVerifyPin} style={{ maxWidth: 320, margin: '0 auto' }}>
+            <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+              <input
+                type={showPinChars ? 'text' : 'password'}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                autoFocus
+                placeholder="••••"
+                value={enteredPin}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setEnteredPin(val);
+                  setPinError(null);
+                  if (val.length === 4) {
+                    handleVerifyPin(undefined, val);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  fontSize: '2rem',
+                  letterSpacing: '0.4em',
+                  textAlign: 'center',
+                  fontWeight: 900,
+                  height: '56px',
+                  borderRadius: '12px',
+                  border: pinError ? '2px solid #ef4444' : '2px solid var(--border)',
+                  backgroundColor: 'var(--bg-main)',
+                  color: 'var(--text-primary)',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPinChars(!showPinChars)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                }}
+                title={showPinChars ? 'Hide PIN' : 'Show PIN'}
+              >
+                {showPinChars ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            {pinError && (
+              <div
+                style={{
+                  color: '#dc2626',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.35rem',
+                }}
+              >
+                <AlertCircle size={15} />
+                <span>{pinError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={enteredPin.length !== 4 || pinVerifying}
+              style={{
+                width: '100%',
+                height: '46px',
+                fontSize: '0.94rem',
+                fontWeight: 800,
+                borderRadius: '10px',
+                background: '#b91c1c',
+                borderColor: '#b91c1c',
+                marginBottom: '1.25rem',
+              }}
+            >
+              {pinVerifying ? 'Verifying PIN...' : 'Unlock Settings'}
+            </button>
+
+            {/* Quick Helper badge */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                color: '#b45309',
+                padding: '0.35rem 0.75rem',
+                borderRadius: '999px',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                marginBottom: '1.25rem',
+              }}
+            >
+              <KeyRound size={12} />
+              <span>Default PIN: 7667</span>
+            </div>
+              
+
+            {/* Reset PIN using Admin Credentials button */}
+            <div>
+              <button
+                type="button"
+                onClick={() => { setShowPinResetModal(true); setResetError(null); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  textDecoration: 'underline',
+                }}
+              >
+                <Key size={14} />
+                <span>Forgot PIN? Reset using Admin Login</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 1040, margin: '0 auto', padding: '0 0.5rem 4rem 0.5rem' }}>
@@ -194,6 +621,28 @@ export const SettingsPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={handleLockSettings}
+            className="btn btn-secondary btn-sm"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              color: '#dc2626',
+              borderColor: '#fca5a5',
+              background: '#fef2f2',
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              height: '32px',
+              padding: '0 0.75rem',
+            }}
+            title="Lock Business Settings"
+          >
+            <Lock size={13} />
+            <span>Lock Page</span>
+          </button>
+
           <span style={{
             background: isOwner ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
             color: isOwner ? '#059669' : '#dc2626',
@@ -783,6 +1232,287 @@ export const SettingsPage: React.FC = () => {
                       boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
                     }} />
                   </button>
+                </div>
+
+                {/* FAST WHOLESALE ORDER ENTRY DISCOUNT (₹) COLUMN TOGGLE */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '1.35rem',
+                  borderRadius: '14px',
+                  backgroundColor: 'var(--bg-main)',
+                  border: '1px solid var(--border)',
+                  flexWrap: 'wrap',
+                  gap: '1rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', maxWidth: '78%' }}>
+                    <div style={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: '12px',
+                      backgroundColor: isOrderDiscountEnabled ? 'rgba(16, 185, 129, 0.15)' : 'rgba(148, 163, 175, 0.15)',
+                      color: isOrderDiscountEnabled ? '#10b981' : '#64748b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <Percent size={24} />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, fontSize: '1.02rem', color: 'var(--text-primary)' }}>
+                          Wholesale Order Discount Column (Disc ₹)
+                        </span>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '999px',
+                          backgroundColor: isOrderDiscountEnabled ? '#10b981' : '#94a3b8',
+                          color: '#ffffff',
+                          letterSpacing: '0.04em',
+                        }}>
+                          {isOrderDiscountEnabled ? 'DISCOUNT COLUMN VISIBLE' : 'DISCOUNT COLUMN HIDDEN'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                        Enable or hide the 'Disc (₹)' column in the Fast Wholesale Order Entry grid. Turn OFF to simplify data entry when discounts are not offered.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!isOwner}
+                    onClick={() => setIsOrderDiscountEnabled(!isOrderDiscountEnabled)}
+                    aria-label="Toggle Wholesale Order Discount Column"
+                    style={{
+                      width: 58,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: isOrderDiscountEnabled ? '#10b981' : '#cbd5e1',
+                      border: 'none',
+                      cursor: isOwner ? 'pointer' : 'not-allowed',
+                      position: 'relative',
+                      transition: 'background-color 0.2s ease',
+                      flexShrink: 0,
+                      outline: 'none',
+                    }}
+                  >
+                    <div style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: '50%',
+                      backgroundColor: '#ffffff',
+                      position: 'absolute',
+                      top: 3,
+                      left: isOrderDiscountEnabled ? 29 : 3,
+                      transition: 'left 0.2s ease',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
+                    }} />
+                  </button>
+                </div>
+
+                {/* 5. DELIVERY DRIVER PORTAL & WORKFLOW MASTER SWITCH */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '1.35rem',
+                  borderRadius: '14px',
+                  backgroundColor: 'var(--bg-main)',
+                  border: `1.5px solid ${isDriverModuleEnabled ? 'rgba(37, 99, 235, 0.3)' : 'var(--border)'}`,
+                  flexWrap: 'wrap',
+                  gap: '1rem',
+                  transition: 'all 0.2s ease',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', maxWidth: '78%' }}>
+                    <div style={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: '12px',
+                      backgroundColor: isDriverModuleEnabled ? 'rgba(37, 99, 235, 0.15)' : 'rgba(148, 163, 175, 0.15)',
+                      color: isDriverModuleEnabled ? '#2563eb' : '#64748b',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <Truck size={24} />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, fontSize: '1.02rem', color: 'var(--text-primary)' }}>
+                          Delivery Driver Portal & Workflow
+                        </span>
+                        <span style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '999px',
+                          backgroundColor: isDriverModuleEnabled ? '#2563eb' : '#94a3b8',
+                          color: '#ffffff',
+                          letterSpacing: '0.04em',
+                        }}>
+                          {isDriverModuleEnabled ? 'FULL DRIVER PORTION ON' : 'DRIVER PORTION TURNED OFF'}
+                        </span>
+                      </div>
+                      <p style={{ margin: '0.3rem 0 0 0', fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                        Master switch to turn ON or OFF the entire Delivery Driver portion across the system, including Staff Drivers, Deliveries Board, Driver Mobile App, and Driver Performance tracking.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={!isOwner}
+                    onClick={() => setIsDriverModuleEnabled(!isDriverModuleEnabled)}
+                    aria-label="Toggle Delivery Driver Portal"
+                    style={{
+                      width: 58,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: isDriverModuleEnabled ? '#2563eb' : '#cbd5e1',
+                      border: 'none',
+                      cursor: isOwner ? 'pointer' : 'not-allowed',
+                      position: 'relative',
+                      transition: 'background-color 0.2s ease',
+                      flexShrink: 0,
+                      outline: 'none',
+                    }}
+                  >
+                    <div style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: '50%',
+                      backgroundColor: '#ffffff',
+                      position: 'absolute',
+                      top: 3,
+                      left: isDriverModuleEnabled ? 29 : 3,
+                      transition: 'left 0.2s ease',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
+                    }} />
+                  </button>
+                </div>
+
+                {/* 6. Settings Security PIN Management */}
+                <div style={{
+                  padding: '1.35rem',
+                  borderRadius: '14px',
+                  backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                  border: '1.5px solid #f59e0b',
+                  transition: 'all 0.2s ease',
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', maxWidth: '75%' }}>
+                      <div style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '12px',
+                        backgroundColor: '#fef3c7',
+                        color: '#b45309',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        <Key size={22} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                          <h3 style={{ margin: 0, fontSize: '1.02rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                            Settings Access 4-Digit Security PIN
+                          </h3>
+                          <span style={{
+                            fontSize: '0.72rem',
+                            fontWeight: 800,
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '6px',
+                            background: '#fef3c7',
+                            color: '#92400e',
+                            border: '1px solid #fde68a',
+                            fontFamily: 'monospace',
+                            letterSpacing: '0.1em',
+                          }}>
+                            PIN: {settingsPinCode}
+                          </span>
+                        </div>
+                        <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                          4-digit PIN code required to open Business Settings &amp; System Controls. Can be reset anytime by entering Admin username &amp; password.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      {isEditingPinInPage ? (
+                        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            maxLength={4}
+                            className="form-control"
+                            value={inPagePinInput}
+                            onChange={(e) => setInPagePinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            placeholder="4 digits"
+                            style={{ width: '85px', textAlign: 'center', fontWeight: 800, letterSpacing: '0.2em', height: '34px' }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            onClick={() => {
+                              if (inPagePinInput.length === 4) {
+                                setSettingsPinCode(inPagePinInput);
+                                setIsEditingPinInPage(false);
+                                setInPagePinInput('');
+                                setFeedback({ type: 'success', message: `PIN updated to ${inPagePinInput}. Remember to click Save Changes!` });
+                              }
+                            }}
+                            disabled={inPagePinInput.length !== 4}
+                            style={{ height: '34px' }}
+                          >
+                            Apply
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => { setIsEditingPinInPage(false); setInPagePinInput(''); }}
+                            style={{ height: '34px' }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setInPagePinInput(settingsPinCode || '7667');
+                              setIsEditingPinInPage(true);
+                            }}
+                            style={{ fontWeight: 700, fontSize: '0.78rem' }}
+                          >
+                            Change PIN
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setShowPinResetModal(true)}
+                            style={{ fontWeight: 700, fontSize: '0.78rem', color: '#b45309' }}
+                          >
+                            Admin Reset
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
               </div>

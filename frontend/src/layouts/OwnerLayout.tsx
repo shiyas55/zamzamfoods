@@ -9,7 +9,7 @@ import {
   CreditCard, BookOpen, BarChart3, Users, LogOut, Receipt, Sun, Moon,
   History, Activity, Lock, ChevronLeft, ChevronRight,
   PanelLeftClose, PanelLeftOpen, Menu, X, PlusCircle, MessageCircle, Settings,
-  Wrench, AlertTriangle, Headphones,
+  Wrench, AlertTriangle, Headphones, FolderArchive,
 } from 'lucide-react';
 import { ZentrixSidebarCard, ZentrixHelpDeskWidget } from '../components/ZentrixHelpDesk';
 
@@ -53,21 +53,22 @@ export const OwnerLayout: React.FC = () => {
     navigate('/login');
   };
 
-  const { isWhatsAppEnabled, isMaintenanceMode } = useSettings();
+  const { isWhatsAppEnabled, isMaintenanceMode, isDriverModuleEnabled } = useSettings();
 
   const navItems = [
     { to: '/owner',                    label: 'Dashboard',          icon: LayoutDashboard, end: true },
     { to: '/owner/daily-closing',      label: 'Daily Closing',      icon: Lock            },
-    { to: '/owner/driver-performance', label: 'Driver Performance', icon: Activity        },
+    ...(isDriverModuleEnabled ? [{ to: '/owner/driver-performance', label: 'Staff Driver Performance', icon: Activity }] : []),
     { to: '/owner/customers',          label: 'Customer Shops',     icon: Store           },
+    { to: '/owner/shop-documents',     label: 'Shop Documents',     icon: FolderArchive   },
     { to: '/owner/products',           label: 'Products',           icon: Package         },
     { to: '/owner/routes',             label: 'Delivery Routes',    icon: MapPin          },
-    { to: '/owner/drivers',            label: 'Drivers',            icon: Truck           },
+    ...(isDriverModuleEnabled ? [{ to: '/owner/drivers',            label: 'Staff Drivers',      icon: Truck           }] : []),
     { to: '/owner/create-order',                 label: 'Create Order',       icon: PlusCircle      },
     ...(isWhatsAppEnabled ? [{ to: '/owner/create-order?view=whatsapp',   label: '💬 WhatsApp',       icon: MessageCircle   }] : []),
     { to: '/owner/orders',             label: 'Sales Orders',       icon: ShoppingCart    },
-    { to: '/owner/deliveries',         label: 'Deliveries',         icon: Send            },
-    { to: '/owner/expenses',           label: 'Driver Expenses',    icon: Receipt         },
+    ...(isDriverModuleEnabled ? [{ to: '/owner/deliveries',         label: 'Deliveries',         icon: Send            }] : []),
+    { to: '/owner/expenses',           label: 'Expenses',           icon: Receipt         },
     { to: '/owner/payments',           label: 'Payments',           icon: CreditCard      },
     { to: '/owner/credit',             label: 'Credit Ledger',      icon: BookOpen        },
     { to: '/owner/reports',            label: 'Financial Reports',  icon: BarChart3       },

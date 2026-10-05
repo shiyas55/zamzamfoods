@@ -214,6 +214,9 @@ input, select, textarea {
   letter-spacing: 0.03em;
   white-space: nowrap;
   flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badge-success { background-color: var(--success-bg); color: #15803d; border: 1px solid #86efac; }
@@ -394,9 +397,20 @@ input, select, textarea {
   white-space: nowrap;
 }
 
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #f8fafc;
+}
+
 [data-theme="dark"] .data-table th {
   background-color: #1f0d0d;
   border-bottom-color: #381212;
+}
+
+[data-theme="dark"] .data-table thead th {
+  background-color: #1f0d0d;
 }
 
 .data-table td {
@@ -415,6 +429,27 @@ input, select, textarea {
 
 [data-theme="dark"] .data-table tr:hover {
   background-color: #240f0f;
+}
+
+/* Selected Shop Row Highlight — Light Yellow across the full customer line */
+.order-row-selected,
+.order-row-selected > td {
+  background-color: #fef9c3 !important;
+}
+
+.order-row-selected {
+  border-left: 4px solid #eab308 !important;
+  box-shadow: inset 0 1px 0 rgba(234, 179, 8, 0.35), inset 0 -1px 0 rgba(234, 179, 8, 0.35);
+}
+
+[data-theme="dark"] .order-row-selected,
+[data-theme="dark"] .order-row-selected > td {
+  background-color: #3b2e05 !important;
+}
+
+[data-theme="dark"] .order-row-selected {
+  border-left: 4px solid #facc15 !important;
+  box-shadow: inset 0 1px 0 rgba(250, 204, 21, 0.3), inset 0 -1px 0 rgba(250, 204, 21, 0.3);
 }
 
 /* =========================================================

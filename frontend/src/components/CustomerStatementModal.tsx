@@ -19,25 +19,41 @@ interface CustomerStatementModalProps {
 export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
   customer,
   summary: initialSummary,
-  orders: initialOrders = [],
+  orders: initialOrders,
   onClose,
 }) => {
   const statementRef = useRef<HTMLDivElement>(null);
   const { isWhatsAppEnabled, gstNumber, businessPhone, businessName, settings } = useSettings();
   const [summary, setSummary] = useState<CustomerDetailSummary | null>(initialSummary || null);
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>(initialOrders || []);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!customer.id) return;
+    if (!customer?.id) {
+      setLoading(false);
+      return;
+    }
     let isCancelled = false;
     setLoading(true);
 
     const promises: Promise<any>[] = [
-      initialSummary ? Promise.resolve(initialSummary) : customerService.getCustomerSummary(customer.id).catch(() => null),
-      initialOrders.length > 0 ? Promise.resolve(initialOrders) : orderService.getOrders({ customer: customer.id }).catch(() => []),
-      paymentService.getPayments({ customer: customer.id }).catch(() => []),
+      initialSummary
+        ? Promise.resolve(initialSummary)
+        : customerService.getCustomerSummary(customer.id).catch((err) => {
+            console.error('Error fetching statement summary:', err);
+            return null;
+          }),
+      initialOrders && initialOrders.length > 0
+        ? Promise.resolve(initialOrders)
+        : orderService.getOrders({ customer: customer.id }).catch((err) => {
+            console.error('Error fetching statement orders:', err);
+            return [];
+          }),
+      paymentService.getPayments({ customer: customer.id }).catch((err) => {
+        console.error('Error fetching statement payments:', err);
+        return [];
+      }),
     ];
 
     Promise.all(promises)
@@ -55,7 +71,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [customer.id, initialSummary, initialOrders]);
+  }, [customer?.id]);
 
   const storeName = businessName || settings?.business_name || 'Zamzam Foods Wholesale';
   const storePhone = businessPhone || settings?.phone_number || '+91 98470 12345';
@@ -64,8 +80,10 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
   const storeEmail = settings?.email || 'info@zamzamfoods.com';
   const storeUpi = settings?.upi_id || '';
 
-  const balance = Number(summary?.outstanding_balance ?? customer.current_balance ?? 0);
-  const creditLimit = Number(customer.credit_limit || 0);
+  const rawBalance = Number(summary?.outstanding_balance ?? customer.current_balance ?? 0);
+  const balance = isNaN(rawBalance) ? 0 : rawBalance;
+  const rawCreditLimit = Number(customer.credit_limit || 0);
+  const creditLimit = isNaN(rawCreditLimit) ? 0 : rawCreditLimit;
 
   // Compile combined ledger transactions (orders & payments)
   const transactions: Array<{
@@ -83,7 +101,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
 
   validOrders.forEach((o: any) => {
     transactions.push({
-      date: o.order_date || o.created_at,
+      date: o.order_date || o.created_at || '',
       type: 'ORDER',
       ref: o.order_number,
       description: `Wholesale Order #${o.order_number} (${(o.items || []).length} items)`,
@@ -98,7 +116,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
 
   validPayments.forEach((p: any) => {
     transactions.push({
-      date: p.received_at,
+      date: p.received_at || '',
       type: 'PAYMENT',
       ref: p.payment_number || 'RECEIPT',
       description: `Payment Received (${p.payment_method === 'GPAY_UPI' ? 'GPay / UPI' : 'Cash'}${p.reference_number ? ` • Ref: ${p.reference_number}` : ''})`,
@@ -108,16 +126,18 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
   });
 
   // Sort descending by date (latest first)
-  transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  transactions.sort((a, b) => (new Date(b.date || 0).getTime() || 0) - (new Date(a.date || 0).getTime() || 0));
 
   // Aggregate totals
-  const totalOrdersAmount = summary?.total_sales !== undefined 
+  const rawOrdersAmount = summary?.total_sales !== undefined 
     ? Number(summary.total_sales) 
-    : transactions.filter(t => t.type === 'ORDER').reduce((acc, t) => acc + t.debit, 0);
+    : transactions.filter(t => t.type === 'ORDER').reduce((acc, t) => acc + (t.debit || 0), 0);
+  const totalOrdersAmount = isNaN(rawOrdersAmount) ? 0 : rawOrdersAmount;
 
-  const totalPaidAmount = summary?.total_paid !== undefined 
+  const rawPaidAmount = summary?.total_paid !== undefined 
     ? Number(summary.total_paid) 
-    : transactions.filter(t => t.type === 'PAYMENT').reduce((acc, t) => acc + t.credit, 0);
+    : transactions.filter(t => t.type === 'PAYMENT').reduce((acc, t) => acc + (t.credit || 0), 0);
+  const totalPaidAmount = isNaN(rawPaidAmount) ? 0 : rawPaidAmount;
 
   const totalOrdersCount = summary?.total_orders ?? validOrders.length;
   const todayStr = new Date().toLocaleDateString('en-IN', {

@@ -23,6 +23,7 @@ export interface OrderDraft {
   productQuantities?: Record<string, string>;
   cashAmount: string;
   gpayAmount: string;
+  discountAmount?: string;
   updatedAt: number;
 }
 

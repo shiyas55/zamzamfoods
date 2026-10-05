@@ -37,8 +37,14 @@ import {
   Upload,
   UploadCloud,
   FileUp,
+  Trash2,
+  AlertOctagon,
+  Lock,
+  X,
+  KeyRound,
 } from 'lucide-react';
-import { databaseService, DatabaseStats, DatabaseModuleStat } from '../services/databaseService';
+import { useAuth } from '../context/AuthContext';
+import { databaseService, DatabaseStats, DatabaseModuleStat, ClearAllResult } from '../services/databaseService';
 import { tauriBackupService, TauriBackupConfig, TauriBackupFileInfo, isTauriEnvironment } from '../services/tauriBackupService';
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -52,18 +58,20 @@ const ICON_MAP: Record<string, React.ElementType> = {
   MessageCircle,
   Users,
   ShieldCheck,
+  FileText,
 };
 
 const DEFAULT_MODULE_LIST: DatabaseModuleStat[] = [
-  { id: 'products', name: 'Products & Categories', count: 0, icon: 'Package' },
-  { id: 'customers', name: 'Customers & Price Lists', count: 0, icon: 'Store' },
+  { id: 'accounts', name: 'Users & Staff Profiles', count: 0, icon: 'Users' },
+  { id: 'products', name: 'Products & Pricing', count: 0, icon: 'Package' },
+  { id: 'routes', name: 'Routes, Drivers & Shifts', count: 0, icon: 'MapPin' },
+  { id: 'customers', name: 'Customer Shops & Documents', count: 0, icon: 'Store' },
   { id: 'orders', name: 'Orders & Order Items', count: 0, icon: 'ShoppingCart' },
-  { id: 'deliveries', name: 'Deliveries & Stops', count: 0, icon: 'Truck' },
-  { id: 'payments', name: 'Payments', count: 0, icon: 'CreditCard' },
-  { id: 'credits', name: 'Credit Ledger', count: 0, icon: 'BookOpen' },
-  { id: 'routes', name: 'Routes & Shifts', count: 0, icon: 'MapPin' },
-  { id: 'whatsapp', name: 'WhatsApp Conversations', count: 0, icon: 'MessageCircle' },
-  { id: 'accounts', name: 'Users & Sessions', count: 0, icon: 'Users' },
+  { id: 'deliveries', name: 'Deliveries & Dispatches', count: 0, icon: 'Truck' },
+  { id: 'payments', name: 'Payments & Receipts', count: 0, icon: 'CreditCard' },
+  { id: 'credits', name: 'Credit Ledger Transactions', count: 0, icon: 'BookOpen' },
+  { id: 'reports', name: 'Daily Closing Reports', count: 0, icon: 'FileText' },
+  { id: 'whatsapp', name: 'WhatsApp Messages & Customers', count: 0, icon: 'MessageCircle' },
   { id: 'logs', name: 'Audit & System Settings', count: 0, icon: 'ShieldCheck' },
 ];
 
@@ -97,6 +105,43 @@ export const DatabaseStorageBackupSection: React.FC = () => {
   const [restoreFeedback, setRestoreFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Clear All System Data (Owner & Admin Only) State
+  const { user } = useAuth();
+  const isOwnerOrAdmin = user?.role === 'OWNER' || (user as { is_superuser?: boolean } | null)?.is_superuser === true;
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [clearPin, setClearPin] = useState('');
+  const [clearConfirmation, setClearConfirmation] = useState('');
+  const [isClearing, setIsClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
+  const [clearSuccess, setClearSuccess] = useState<ClearAllResult | null>(null);
+
+  const handleClearAllSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (clearPin.trim().length !== 4) {
+      setClearError('Please enter your 4-digit security PIN (e.g. 7667).');
+      return;
+    }
+    if (clearConfirmation.trim().toUpperCase() !== 'CLEAR ALL DATA') {
+      setClearError('Confirmation phrase must match exactly: CLEAR ALL DATA');
+      return;
+    }
+
+    try {
+      setIsClearing(true);
+      setClearError(null);
+      const res = await databaseService.clearAllData(clearPin.trim(), clearConfirmation.trim().toUpperCase());
+      setClearSuccess(res);
+      setClearPin('');
+      setClearConfirmation('');
+      await fetchStats(true);
+      await loadTauriData();
+    } catch (err: unknown) {
+      setClearError(err instanceof Error ? err.message : 'Failed to clear database. Please verify your PIN.');
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -1640,7 +1685,533 @@ export const DatabaseStorageBackupSection: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* ── SECTION: DANGER ZONE - CLEAR ALL SYSTEM DATA (OWNER & ADMIN ONLY) ── */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            border: '1.5px solid #fecaca',
+            overflow: 'hidden',
+            boxShadow: '0 4px 16px rgba(239, 68, 68, 0.07)',
+            marginTop: '1.5rem',
+          }}
+        >
+          <div
+            style={{
+              padding: '1.25rem 1.5rem',
+              background: 'linear-gradient(90deg, #fff1f2 0%, #fff5f5 100%)',
+              borderBottom: '1.5px solid #fee2e2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.15)',
+                }}
+              >
+                <AlertOctagon size={24} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#991b1b' }}>
+                    Danger Zone: Clear All System Data
+                  </h3>
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '3px 9px',
+                      borderRadius: '999px',
+                      background: '#dc2626',
+                      color: '#ffffff',
+                    }}
+                  >
+                    Owner & Admin Only
+                  </span>
+                </div>
+                <p style={{ margin: '3px 0 0', fontSize: '0.82rem', color: '#7f1d1d' }}>
+                  Wipe all business and transactional data. Only Administrator and Owner accounts are preserved.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsClearModalOpen(true);
+                  setClearError(null);
+                  setClearSuccess(null);
+                  setClearPin('');
+                  setClearConfirmation('');
+                }}
+                disabled={!isOwnerOrAdmin}
+                style={{
+                  background: isOwnerOrAdmin ? '#dc2626' : '#94a3b8',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.65rem 1.35rem',
+                  borderRadius: '10px',
+                  fontWeight: 800,
+                  fontSize: '0.88rem',
+                  cursor: isOwnerOrAdmin ? 'pointer' : 'not-allowed',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: isOwnerOrAdmin ? '0 3px 10px rgba(220, 38, 38, 0.3)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Trash2 size={16} />
+                <span>Clear All Data</span>
+              </button>
+            </div>
+          </div>
+
+          <div style={{ padding: '1.25rem 1.5rem', background: '#ffffff' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '1rem',
+                fontSize: '0.82rem',
+              }}
+            >
+              <div
+                style={{
+                  background: '#fff1f2',
+                  border: '1px solid #fecdd3',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                }}
+              >
+                <div style={{ fontWeight: 800, color: '#9f1239', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <AlertTriangle size={16} /> Data that will be permanently removed:
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#881337', lineHeight: 1.6 }}>
+                  <li><strong>Orders & Invoices:</strong> All orders, line items, and activity logs.</li>
+                  <li><strong>Customers & Shops:</strong> All shop profiles, customer documents, and custom prices.</li>
+                  <li><strong>Products:</strong> All bakery items and inventory records.</li>
+                  <li><strong>Deliveries & Routes:</strong> All trips, routes, driver expenses, and shifts.</li>
+                  <li><strong>Financial Ledger:</strong> All payments, receipts, and credit transactions.</li>
+                  <li><strong>Staff Records:</strong> All employee profiles, attendances, and payouts.</li>
+                  <li><strong>Non-Admin Accounts:</strong> All driver and staff login credentials.</li>
+                  <li><strong>WhatsApp & Audits:</strong> All chat conversations and old audit logs.</li>
+                </ul>
+              </div>
+
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                }}
+              >
+                <div style={{ fontWeight: 800, color: '#166534', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <ShieldCheck size={16} /> Data that is guaranteed to stay intact:
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '1.2rem', color: '#14532d', lineHeight: 1.6 }}>
+                  <li>
+                    <strong>Admin & Owner Accounts:</strong> Only Owner and Admin user accounts ({user?.username || 'Owner'}) remain active so you can log back in.
+                  </li>
+                  <li>
+                    <strong>System Configuration:</strong> Business name, tax information, contact numbers, and security PIN code.
+                  </li>
+                  <li>
+                    <strong>Database Structure:</strong> All tables and schema constraints remain ready for immediate fresh business use.
+                  </li>
+                  <li>
+                    <strong>Authentication Session:</strong> Your current login session stays valid without disruption.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {!isOwnerOrAdmin && (
+              <div
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem 1rem',
+                  background: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: '#92400e',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                }}
+              >
+                <Lock size={16} />
+                <span>Restricted Action: Only user accounts with role OWNER or System Superuser can perform database clear-all.</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── MODAL: CLEAR ALL SYSTEM DATA CONFIRMATION & EXECUTION ── */}
+        {isClearModalOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '1rem',
+            }}
+          >
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '18px',
+                width: '100%',
+                maxWidth: '560px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                overflow: 'hidden',
+                border: '1.5px solid #fecaca',
+                animation: 'modalSlideIn 0.2s ease-out',
+              }}
+            >
+              {/* Modal Header */}
+              <div
+                style={{
+                  padding: '1.25rem 1.5rem',
+                  background: clearSuccess ? '#f0fdf4' : '#fff1f2',
+                  borderBottom: `1.5px solid ${clearSuccess ? '#bbf7d0' : '#fee2e2'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      background: clearSuccess ? '#dcfce7' : '#fee2e2',
+                      color: clearSuccess ? '#15803d' : '#dc2626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {clearSuccess ? <CheckCircle2 size={22} /> : <AlertOctagon size={22} />}
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: clearSuccess ? '#166534' : '#991b1b' }}>
+                      {clearSuccess ? 'Database Cleared Successfully' : 'Confirm Complete System Wipe'}
+                    </h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: clearSuccess ? '#15803d' : '#7f1d1d' }}>
+                      {clearSuccess ? 'All operational data removed • Owner accounts intact' : 'This action is PERMANENT and CANNOT be undone'}
+                    </p>
+                  </div>
+                </div>
+
+                {!isClearing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsClearModalOpen(false);
+                      if (clearSuccess) {
+                        window.location.reload();
+                      }
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: '#64748b',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      borderRadius: '6px',
+                    }}
+                  >
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: '1.5rem' }}>
+                {clearSuccess ? (
+                  <div>
+                    <div
+                      style={{
+                        padding: '1rem',
+                        background: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
+                        borderRadius: '10px',
+                        marginBottom: '1.25rem',
+                      }}
+                    >
+                      <div style={{ fontWeight: 800, color: '#166534', fontSize: '0.95rem', marginBottom: '0.35rem' }}>
+                        {clearSuccess.message}
+                      </div>
+                      <div style={{ fontSize: '0.82rem', color: '#15803d' }}>
+                        <strong>{clearSuccess.total_deleted}</strong> total records permanently removed from the database.
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.5rem' }}>
+                        Preserved Admin & Owner Accounts:
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {clearSuccess.preserved_users.map((uname) => (
+                          <span
+                            key={uname}
+                            style={{
+                              padding: '4px 10px',
+                              background: '#dbeafe',
+                              color: '#1d4ed8',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                              fontSize: '0.82rem',
+                            }}
+                          >
+                            🛡️ {uname}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.5rem' }}>
+                        Deleted Record Breakdown:
+                      </div>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, 1fr)',
+                          gap: '0.5rem',
+                          fontSize: '0.78rem',
+                          background: '#f8fafc',
+                          padding: '0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid #e2e8f0',
+                        }}
+                      >
+                        {Object.entries(clearSuccess.deleted_counts).map(([k, v]) => (
+                          <div key={k} style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                            <span style={{ textTransform: 'capitalize' }}>{k.replace(/_/g, ' ')}:</span>
+                            <strong style={{ color: '#0f172a' }}>{v}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsClearModalOpen(false);
+                        window.location.reload();
+                      }}
+                      style={{
+                        width: '100%',
+                        background: '#15803d',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '0.75rem',
+                        borderRadius: '10px',
+                        fontWeight: 800,
+                        fontSize: '0.92rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <CheckCircle2 size={18} />
+                      <span>Done & Reload Clean Application</span>
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleClearAllSubmit}>
+                    {/* Warning Notice */}
+                    <div
+                      style={{
+                        padding: '0.85rem 1rem',
+                        background: '#fff1f2',
+                        border: '1px solid #fecdd3',
+                        borderRadius: '10px',
+                        color: '#9f1239',
+                        fontSize: '0.82rem',
+                        lineHeight: 1.5,
+                        marginBottom: '1.25rem',
+                      }}
+                    >
+                      <strong>Attention:</strong> You are about to clear all orders, customers, products, routes, payments, staff profiles, and non-admin users. <strong>Only Admin & Owner accounts will remain.</strong>
+                    </div>
+
+                    {clearError && (
+                      <div
+                        style={{
+                          padding: '0.75rem 1rem',
+                          background: '#fee2e2',
+                          border: '1px solid #fca5a5',
+                          borderRadius: '8px',
+                          color: '#b91c1c',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          marginBottom: '1rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                        }}
+                      >
+                        <AlertCircle size={16} />
+                        <span>{clearError}</span>
+                      </div>
+                    )}
+
+                    {/* Step 1: Security PIN */}
+                    <div style={{ marginBottom: '1.2rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.35rem' }}>
+                        1. Owner Security PIN (4 Digits)
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="password"
+                          maxLength={4}
+                          value={clearPin}
+                          onChange={(e) => setClearPin(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Enter 4-digit PIN (Default: 7667)"
+                          disabled={isClearing}
+                          style={{
+                            width: '100%',
+                            padding: '0.65rem 0.85rem 0.65rem 2.2rem',
+                            borderRadius: '8px',
+                            border: '1.5px solid #cbd5e1',
+                            fontSize: '0.92rem',
+                            letterSpacing: '2px',
+                            fontWeight: 700,
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        <KeyRound size={16} color="#64748b" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                        Authorizes Owner administrative clearance.
+                      </span>
+                    </div>
+
+                    {/* Step 2: Confirmation phrase */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e293b', marginBottom: '0.35rem' }}>
+                        2. Type Confirmation Phrase: <code style={{ color: '#b91c1c', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px' }}>CLEAR ALL DATA</code>
+                      </label>
+                      <input
+                        type="text"
+                        value={clearConfirmation}
+                        onChange={(e) => setClearConfirmation(e.target.value)}
+                        placeholder="Type CLEAR ALL DATA here"
+                        disabled={isClearing}
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: '8px',
+                          border: clearConfirmation.toUpperCase() === 'CLEAR ALL DATA' ? '1.5px solid #16a34a' : '1.5px solid #cbd5e1',
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                        Confirms you understand all non-admin data will be deleted.
+                      </span>
+                    </div>
+
+                    {/* Buttons */}
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={() => setIsClearModalOpen(false)}
+                        disabled={isClearing}
+                        className="btn btn-secondary"
+                        style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={
+                          isClearing ||
+                          clearPin.length !== 4 ||
+                          clearConfirmation.trim().toUpperCase() !== 'CLEAR ALL DATA'
+                        }
+                        style={{
+                          background:
+                            clearPin.length === 4 && clearConfirmation.trim().toUpperCase() === 'CLEAR ALL DATA' && !isClearing
+                              ? '#dc2626'
+                              : '#cbd5e1',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '0.65rem 1.35rem',
+                          borderRadius: '8px',
+                          fontWeight: 800,
+                          fontSize: '0.88rem',
+                          cursor:
+                            clearPin.length === 4 && clearConfirmation.trim().toUpperCase() === 'CLEAR ALL DATA' && !isClearing
+                              ? 'pointer'
+                              : 'not-allowed',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                          boxShadow:
+                            clearPin.length === 4 && clearConfirmation.trim().toUpperCase() === 'CLEAR ALL DATA'
+                              ? '0 3px 10px rgba(220, 38, 38, 0.3)'
+                              : 'none',
+                        }}
+                      >
+                        {isClearing ? (
+                          <>
+                            <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                            <span>Clearing All System Data...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 size={16} />
+                            <span>Wipe All Data & Keep Admin/Owner</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+

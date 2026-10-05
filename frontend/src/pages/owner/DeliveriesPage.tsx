@@ -262,14 +262,14 @@ export const DeliveriesPage: React.FC = () => {
             ))}
           </select>
 
-          {/* Driver Filter */}
+          {/* Staff Driver Filter */}
           <select
             className="form-select"
             style={{ width: '170px', fontSize: '0.85rem' }}
             value={selectedDriver}
             onChange={(e) => setSelectedDriver(e.target.value)}
           >
-            <option value="">All Drivers</option>
+            <option value="">All Staff Drivers</option>
             {drivers.map((d) => (
               <option key={d.id} value={d.id}>
                 {d.driver_name}
@@ -316,7 +316,7 @@ export const DeliveriesPage: React.FC = () => {
               <tr>
                 <th>Customer Shop</th>
                 <th>Route</th>
-                <th>Driver</th>
+                <th>Staff Driver</th>
                 <th>Order #</th>
                 <th>Amount</th>
                 <th>Payment Status</th>
@@ -344,16 +344,39 @@ export const DeliveriesPage: React.FC = () => {
                       </td>
 
                       {/* Route */}
-                      <td>
-                        <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
+                      <td style={{ maxWidth: '190px' }}>
+                        <span
+                          className="badge badge-neutral"
+                          style={{
+                            fontSize: '0.75rem',
+                            maxWidth: '175px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-block',
+                          }}
+                          title={d.route_details?.name || 'Route'}
+                        >
                           {d.route_details?.name || 'Route'}
                         </span>
                       </td>
 
                       {/* Driver */}
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <span style={{ fontWeight: 600 }}>{d.driver_name || 'Unassigned'}</span>
+                      <td style={{ maxWidth: '170px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              maxWidth: '120px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'inline-block',
+                            }}
+                            title={d.driver_name || 'Unassigned'}
+                          >
+                            {d.driver_name || 'Unassigned'}
+                          </span>
                           {!isDelivered && (
                             <button
                               type="button"
@@ -559,7 +582,7 @@ export const DeliveriesPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <UserCheck size={22} color="var(--primary)" />
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
-                Assign Driver to Delivery
+                Assign Staff Driver to Delivery
               </h3>
             </div>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
@@ -568,14 +591,14 @@ export const DeliveriesPage: React.FC = () => {
 
             <form onSubmit={handleSubmitAssignDriver}>
               <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Select Driver *</label>
+                <label className="form-label">Select Staff Driver *</label>
                 <select
                   className="form-select"
                   value={newDriverId}
                   onChange={(e) => setNewDriverId(e.target.value)}
                   required
                 >
-                  <option value="">Choose Driver...</option>
+                  <option value="">Choose Staff Driver...</option>
                   {drivers.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.driver_name} — Route: {d.assigned_route_details?.name || 'Unassigned'} ({d.active_deliveries_count || 0} active today)
@@ -630,7 +653,7 @@ export const DeliveriesPage: React.FC = () => {
                   disabled={submittingAssign || !newDriverId || Boolean(isCrossRouteTarget && !allowCrossRoute)}
                 >
 
-                  <span>{submittingAssign ? 'Assigning...' : 'Confirm Driver Assignment'}</span>
+                  <span>{submittingAssign ? 'Assigning...' : 'Confirm Staff Driver Assignment'}</span>
                 </button>
               </div>
             </form>

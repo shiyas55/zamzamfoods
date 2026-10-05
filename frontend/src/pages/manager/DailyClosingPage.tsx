@@ -391,17 +391,17 @@ export const DailyClosingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 3. Driver Expenses */}
+            {/* 3. Expenses */}
             <div className="card" style={{ padding: '1.25rem', borderLeft: '4px solid #dc2626' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Driver Expenses</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Expenses</span>
                 <Receipt size={18} color="#dc2626" />
               </div>
               <p style={{ fontSize: '1.6rem', fontWeight: 900, color: '#dc2626', margin: '0.3rem 0 0' }}>
                 {formatCurrency(figures?.driver_expenses || '0.00')}
               </p>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Fuel, meals, route maintenance
+                Shop expenses, maintenance, fuel & route costs
               </span>
             </div>
 
@@ -545,7 +545,7 @@ export const DailyClosingPage: React.FC = () => {
                 <div>Total Sales: <strong>{formatCurrency(figures.total_sales)}</strong></div>
                 <div>Cash Handover: <strong style={{ color: '#059669' }}>{formatCurrency(figures.cash_collected)}</strong></div>
                 <div>UPI Collected: <strong style={{ color: 'var(--primary)' }}>{formatCurrency(figures.upi_collected)}</strong></div>
-                <div>Driver Expenses: <strong style={{ color: '#dc2626' }}>{formatCurrency(figures.driver_expenses)}</strong></div>
+                <div>Expenses: <strong style={{ color: '#dc2626' }}>{formatCurrency(figures.driver_expenses)}</strong></div>
                 <div style={{ gridColumn: 'span 2', fontWeight: 800, color: '#b45309' }}>
                   Net Expected Handover: {formatCurrency(figures.net_collection)}
                 </div>

@@ -125,10 +125,10 @@ export const DriverPerformancePage: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', margin: 0 }}>
-            Driver Operational Performance
+            Staff Driver Performance
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '0.2rem 0 0' }}>
-            Factual delivery fulfillment, collections, and expense accounting by driver.
+            Factual delivery fulfillment, collections, and expense accounting by staff driver.
           </p>
         </div>
 
@@ -203,14 +203,14 @@ export const DriverPerformancePage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Driver:</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Staff Driver:</span>
               <select
                 className="form-input"
                 style={{ padding: '0.3rem 0.6rem', fontSize: '0.82rem', minWidth: '130px' }}
                 value={selectedDriver}
                 onChange={(e) => setSelectedDriver(e.target.value)}
               >
-                <option value="">All Drivers</option>
+                <option value="">All Staff Drivers</option>
                 {drivers.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.driver_name}

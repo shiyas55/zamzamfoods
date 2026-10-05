@@ -137,10 +137,10 @@ export const ManagerDashboard: React.FC = () => {
       setNewCustError(null);
 
       const product_prices = availableProducts
-        .filter((p) => newCustProductPrices[p.id] !== undefined && newCustProductPrices[p.id].trim() !== '')
+        .filter((p) => newCustProductPrices[p.id] !== undefined && newCustProductPrices[p.id] !== null && String(newCustProductPrices[p.id]).trim() !== '')
         .map((p) => ({
           product_id: p.id,
-          price: newCustProductPrices[p.id].trim(),
+          price: String(newCustProductPrices[p.id]).trim(),
         }));
 
       const created = await customerService.createCustomer({
@@ -274,7 +274,7 @@ export const ManagerDashboard: React.FC = () => {
             { label: 'Deliveries', icon: <Send size={17} />, onClick: () => navigate('/manager/deliveries'), color: '#15803d', bg: '#ffffff', border: '#cbd5e1' },
             { label: 'Payments', icon: <CreditCard size={17} />, onClick: () => navigate('/manager/payments'), color: '#b45309', bg: '#ffffff', border: '#cbd5e1' },
             { label: 'Customers', icon: <Users size={17} />, onClick: () => navigate('/manager/customers'), color: '#0f766e', bg: '#ffffff', border: '#cbd5e1' },
-            { label: 'Driver Expenses', icon: <Receipt size={17} />, onClick: () => navigate('/manager/expenses'), color: '#b91c1c', bg: '#ffffff', border: '#cbd5e1' },
+            { label: 'Expenses', icon: <Receipt size={17} />, onClick: () => navigate('/manager/expenses'), color: '#b91c1c', bg: '#ffffff', border: '#cbd5e1' },
             { label: 'Daily Closing', icon: <Lock size={17} />, onClick: () => navigate('/manager/daily-closing'), color: '#78350f', bg: '#ffffff', border: '#cbd5e1' },
           ].map((action) => (
             <button
@@ -549,10 +549,10 @@ export const ManagerDashboard: React.FC = () => {
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Shop closed / refused</span>
             </div>
 
-            {/* 8. Driver Expenses */}
+            {/* 8. Expenses */}
             <div className="card" style={{ padding: '1.2rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Driver Expenses</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total Expenses</span>
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Receipt size={16} />
                 </div>
@@ -560,7 +560,7 @@ export const ManagerDashboard: React.FC = () => {
               <p style={{ fontSize: '1.75rem', fontWeight: 900, color: '#dc2626', margin: '0 0 0.15rem', lineHeight: 1 }}>
                 {formatCurrency(data?.today_expenses || '0.00')}
               </p>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Fuel, meal & route costs</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Shop, maintenance & route costs</span>
             </div>
 
             {/* 9. Total Outstanding */}

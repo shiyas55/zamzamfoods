@@ -34,7 +34,7 @@ export const ActivityHistoryPage: React.FC = () => {
   const [entityType, setEntityType] = useState<ActivityEntityType | ''>('');
   const [search, setSearch] = useState('');
 
-  const fetchLogs = async (overrideParams?: ActivityFilterParams) => {
+  const fetchLogs = async (overrideParams?: ActivityFilterParams, isAutoRetry = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -51,6 +51,13 @@ export const ActivityHistoryPage: React.FC = () => {
       const data = await auditService.getActivityLogs(params);
       setLogs(data);
     } catch (err: unknown) {
+      // If first attempt failed on server cold-start, automatically retry once after a short delay
+      if (!isAutoRetry && err instanceof Error && err.message.includes('Unable to connect to the Zamzam server')) {
+        setTimeout(() => {
+          fetchLogs(overrideParams, true);
+        }, 2000);
+        return;
+      }
       if (err instanceof Error) setError(err.message);
       else setError('Failed to load system activity logs.');
     } finally {
@@ -291,9 +298,34 @@ export const ActivityHistoryPage: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ padding: '1rem', background: 'var(--danger-bg)', color: 'var(--danger)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <ShieldAlert size={18} />
-          <span>{error}</span>
+        <div
+          style={{
+            padding: '0.85rem 1.25rem',
+            background: 'var(--danger-bg)',
+            color: 'var(--danger)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ShieldAlert size={18} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: '0.86rem', fontWeight: 600 }}>{error}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={() => fetchLogs()}
+            disabled={loading}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <span>Retry Connection</span>
+          </button>
         </div>
       )}
 

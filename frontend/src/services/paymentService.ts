@@ -46,6 +46,7 @@ export const paymentService = {
     payment_method: 'CASH' | 'GPAY_UPI';
     order_id?: string | null;
     payment_type?: 'ORDER_PAYMENT' | 'PREVIOUS_CREDIT';
+    staff_member_id?: string | null;
     reference_number?: string;
     notes?: string;
   }): Promise<Payment> {

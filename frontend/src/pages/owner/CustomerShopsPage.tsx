@@ -9,7 +9,7 @@ import { formatCurrency } from '../../utils/formatters';
 import { 
   Plus, Search, Store, AlertCircle, X, ChevronRight, Eye, Tag, 
   ExternalLink, Copy, Check, Smartphone, Edit2, Trash2, AlertTriangle, 
-  CheckCircle2, Save, FileText 
+  CheckCircle2, Save, FileText, FolderArchive 
 } from 'lucide-react';
 import { CustomerStatementModal } from '../../components/CustomerStatementModal';
 
@@ -122,10 +122,10 @@ export const CustomerShopsPage: React.FC = () => {
 
       // Package customer product wholesale prices
       const product_prices = availableProducts
-        .filter((p) => productPrices[p.id] !== undefined && productPrices[p.id].trim() !== '')
+        .filter((p) => productPrices[p.id] !== undefined && productPrices[p.id] !== null && String(productPrices[p.id]).trim() !== '')
         .map((p) => ({
           product_id: p.id,
-          price: productPrices[p.id].trim(),
+          price: String(productPrices[p.id]).trim(),
         }));
 
       await customerService.createCustomer({
@@ -185,7 +185,7 @@ export const CustomerShopsPage: React.FC = () => {
     // Default prices from products
     const initialEditPrices: Record<string, string> = {};
     availableProducts.forEach((p) => {
-      initialEditPrices[p.id] = p.unit_price;
+      initialEditPrices[p.id] = String(p.unit_price ?? '');
     });
     setEditProductPrices(initialEditPrices);
 
@@ -195,7 +195,10 @@ export const CustomerShopsPage: React.FC = () => {
       const customerPricingList = await customerService.getCustomerPricing(c.id);
       const mergedPrices: Record<string, string> = { ...initialEditPrices };
       customerPricingList.forEach((item) => {
-        mergedPrices[item.product_id] = item.effective_price || item.default_price;
+        const val = item.effective_price ?? item.default_price;
+        if (val !== undefined && val !== null) {
+          mergedPrices[item.product_id] = String(val);
+        }
       });
       setEditProductPrices(mergedPrices);
     } catch (e) {
@@ -219,10 +222,10 @@ export const CustomerShopsPage: React.FC = () => {
 
       // Package updated customer product wholesale prices
       const product_prices = availableProducts
-        .filter((p) => editProductPrices[p.id] !== undefined && editProductPrices[p.id].trim() !== '')
+        .filter((p) => editProductPrices[p.id] !== undefined && editProductPrices[p.id] !== null && String(editProductPrices[p.id]).trim() !== '')
         .map((p) => ({
           product_id: p.id,
-          price: editProductPrices[p.id].trim(),
+          price: String(editProductPrices[p.id]).trim(),
         }));
 
       await customerService.updateCustomer(editingCustomer.id, {
@@ -405,114 +408,179 @@ export const CustomerShopsPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="table-container">
+      <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         {loading ? (
           <div style={{ padding: '3rem', textAlign: 'center' }}>
             <div className="spinner" style={{ margin: '0 auto' }} />
           </div>
         ) : (
-          <table className="data-table">
+          <table className="data-table" style={{ minWidth: '1020px', width: '100%' }}>
             <thead>
               <tr>
-                <th>Shop Name</th>
-                <th>Owner / Contact</th>
-                <th>Route</th>
-                <th>Address</th>
-                <th>Current Balance</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th style={{ minWidth: '150px' }}>Shop Name</th>
+                <th style={{ minWidth: '140px' }}>Owner / Contact</th>
+                <th style={{ minWidth: '130px' }}>Route</th>
+                <th style={{ minWidth: '160px' }}>Address</th>
+                <th style={{ minWidth: '120px', textAlign: 'right' }}>Current Balance</th>
+                <th style={{ minWidth: '110px' }}>Status</th>
+                <th style={{ minWidth: '290px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {customers.length > 0 ? (
                 customers.map((c) => (
                   <tr key={c.id}>
-                    <td>
+                    {/* 1. Shop Name */}
+                    <td style={{ minWidth: '150px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontWeight: 600 }}>{c.name}</span>
+                        <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{c.name}</span>
                         {!c.is_active && (
                           <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>Inactive</span>
                         )}
                       </div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{c.phone}</div>
                     </td>
-                    <td>{c.owner_name || '—'}</td>
-                    <td>
-                      <span className="badge badge-neutral">{c.route_details?.name || 'Assigned'}</span>
+
+                    {/* 2. Owner / Contact */}
+                    <td style={{ minWidth: '140px' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.86rem' }}>
+                        {c.owner_name || '—'}
+                      </div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        {c.phone}
+                        {c.alternative_phone && ` • ${c.alternative_phone}`}
+                      </div>
                     </td>
-                    <td style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {c.address}
+
+                    {/* 3. Route */}
+                    <td style={{ minWidth: '130px', maxWidth: '170px' }}>
+                      <span
+                        className="badge badge-neutral"
+                        style={{
+                          maxWidth: '155px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'inline-block',
+                          verticalAlign: 'middle',
+                        }}
+                        title={c.route_details?.name || 'Assigned'}
+                      >
+                        {c.route_details?.name || 'Assigned'}
+                      </span>
                     </td>
-                    <td style={{ fontWeight: 700, color: c.is_credit_exceeded ? 'var(--danger)' : 'var(--text-primary)' }}>
+
+                    {/* 4. Address */}
+                    <td style={{ minWidth: '160px', maxWidth: '210px' }}>
+                      <div
+                        style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          fontSize: '0.84rem',
+                        }}
+                        title={c.address}
+                      >
+                        {c.address || '—'}
+                      </div>
+                      {c.landmark && (
+                        <div
+                          style={{
+                            fontSize: '0.74rem',
+                            color: 'var(--text-muted)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                          title={`Landmark: ${c.landmark}`}
+                        >
+                          Near: {c.landmark}
+                        </div>
+                      )}
+                    </td>
+
+                    {/* 5. Current Balance */}
+                    <td
+                      style={{
+                        minWidth: '120px',
+                        textAlign: 'right',
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                        color: c.is_credit_exceeded ? 'var(--danger)' : 'var(--text-primary)',
+                      }}
+                    >
                       {formatCurrency(c.current_balance)}
                     </td>
-                    <td>
+
+                    {/* 6. Status */}
+                    <td style={{ minWidth: '110px', whiteSpace: 'nowrap' }}>
                       {c.is_credit_exceeded ? (
                         <span className="badge badge-danger">Credit Exceeded</span>
                       ) : (
                         <span className="badge badge-success">Good Standing</span>
                       )}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+
+                    {/* 7. Actions (Responsive & zoom-proof with nowrap) */}
+                    <td style={{ minWidth: '290px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: '0.3rem',
+                          flexWrap: 'nowrap',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {/* Edit Button */}
                         <button
+                          type="button"
                           className="btn btn-secondary btn-sm"
                           onClick={() => handleOpenEditModal(c)}
                           title="Edit Customer Shop Details"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#0284c7' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#0284c7', height: '28px', padding: '0 0.45rem' }}
                         >
-                          <Edit2 size={13} />
+                          <Edit2 size={12} />
                           <span>Edit</span>
-                        </button>
-
-                        {/* Delete Button */}
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleOpenDeleteModal(c)}
-                          title="Delete Customer Shop"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#dc2626' }}
-                        >
-                          <Trash2 size={13} />
-                          <span>Delete</span>
                         </button>
 
                         {/* Profile & Pricing */}
                         <button
+                          type="button"
                           className="btn btn-secondary btn-sm"
                           onClick={() => handleViewCustomer(c.id)}
                           title="View Customer Profile & Wholesale Pricing"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '28px', padding: '0 0.45rem' }}
                         >
-                          <Eye size={13} />
+                          <Eye size={12} />
                           <span>Profile</span>
                         </button>
 
                         {/* Statement Print / Share */}
                         <button
+                          type="button"
                           className="btn btn-secondary btn-sm"
                           onClick={() => setStatementCustomer(c)}
                           title="Print Customer Account Statement & Ledger"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#b91c1c' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#b91c1c', height: '28px', padding: '0 0.45rem' }}
                         >
-                          <FileText size={13} />
+                          <FileText size={12} />
                           <span>Statement</span>
                         </button>
 
-                        {/* Self-Order Link */}
+                        {/* Shop Documents Storage */}
                         <button
+                          type="button"
                           className="btn btn-secondary btn-sm"
                           onClick={() => {
-                            const url = `${window.location.origin}/customer/${c.id}`;
-                            navigator.clipboard.writeText(url);
-                            setCopiedId(c.id);
-                            setTimeout(() => setCopiedId(null), 2000);
+                            const basePath = user?.role === 'MANAGER' ? '/manager' : '/owner';
+                            navigate(`${basePath}/customers/${c.id}?tab=documents`);
                           }}
-                          title="Copy Customer Self-Order Link to share with shop"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                          title="View & Upload Shop Documents"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#7c3aed', height: '28px', padding: '0 0.45rem' }}
                         >
-                          {copiedId === c.id ? <Check size={13} color="#10b981" /> : <Copy size={13} />}
-                          <span>{copiedId === c.id ? 'Copied' : 'Link'}</span>
+                          <FolderArchive size={12} />
+                          <span>Docs{c.documents_count ? ` (${c.documents_count})` : ''}</span>
                         </button>
 
                         {/* Open Self-Order Portal */}
@@ -522,11 +590,38 @@ export const CustomerShopsPage: React.FC = () => {
                           rel="noopener noreferrer"
                           className="btn btn-secondary btn-sm"
                           title="Open Customer Self-Order Portal in new tab"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#10b981' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#10b981', height: '28px', padding: '0 0.45rem', textDecoration: 'none' }}
                         >
-                          <ExternalLink size={13} />
+                          <ExternalLink size={12} />
                           <span>Order</span>
                         </a>
+
+                        {/* Self-Order Link Copy */}
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => {
+                            const url = `${window.location.origin}/customer/${c.id}`;
+                            navigator.clipboard.writeText(url);
+                            setCopiedId(c.id);
+                            setTimeout(() => setCopiedId(null), 2000);
+                          }}
+                          title="Copy Customer Self-Order Link to share with shop"
+                          style={{ display: 'inline-flex', alignItems: 'center', height: '28px', padding: '0 0.45rem' }}
+                        >
+                          {copiedId === c.id ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                        </button>
+
+                        {/* Delete Button */}
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleOpenDeleteModal(c)}
+                          title="Delete Customer Shop"
+                          style={{ display: 'inline-flex', alignItems: 'center', color: '#dc2626', height: '28px', padding: '0 0.45rem' }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
                     </td>
                   </tr>

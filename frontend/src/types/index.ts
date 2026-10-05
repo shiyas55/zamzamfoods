@@ -1,7 +1,7 @@
 export type UserRole = 'OWNER' | 'MANAGER' | 'DRIVER';
 
 export interface User {
-  id: number;
+  id: number | string;
   username: string;
   email: string;
   first_name: string;
@@ -9,6 +9,7 @@ export interface User {
   role: UserRole;
   phone_number?: string;
   is_active: boolean;
+  date_joined?: string;
   driver_profile_id?: string | null;
   assigned_route_id?: string | null;
   assigned_route_name?: string | null;
@@ -65,10 +66,54 @@ export interface Customer {
   is_credit_exceeded: boolean;
   is_active: boolean;
   notes?: string;
+  documents_count?: number;
   product_prices?: Array<{ product_id: string; price: string }>;
   custom_prices?: Record<string, string>;
   created_at?: string;
   updated_at?: string;
+}
+
+export type CustomerDocumentType =
+  | 'FSSAI_LICENSE'
+  | 'GST_CERTIFICATE'
+  | 'TRADE_LICENSE'
+  | 'RENT_AGREEMENT'
+  | 'ID_PROOF'
+  | 'SHOP_PHOTO'
+  | 'BANK_PROOF'
+  | 'CONTRACT'
+  | 'OTHER';
+
+export interface CustomerDocument {
+  id: string;
+  customer: string;
+  customer_name?: string;
+  customer_route_name?: string;
+  title: string;
+  document_type: CustomerDocumentType;
+  document_type_display?: string;
+  file: string;
+  file_url: string;
+  file_name: string;
+  file_size: number;
+  mime_type: string;
+  document_number?: string;
+  expiry_date?: string | null;
+  notes?: string;
+  uploaded_by?: number | string | null;
+  uploaded_by_name?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerDocumentBatchUploadPayload {
+  customer: string;
+  document_type?: CustomerDocumentType;
+  title?: string;
+  document_number?: string;
+  expiry_date?: string;
+  notes?: string;
+  files: File[];
 }
 
 export interface CustomerProductPrice {
@@ -147,7 +192,9 @@ export interface Product {
   description: string;
   unit_price: string;
   packet_size: string;
+  order_number?: number;
   is_active: boolean;
+  created_at?: string;
 }
 
 export interface OrderItem {
@@ -209,22 +256,37 @@ export interface Delivery {
 
 
 
-export type DriverExpenseCategory = 'PETROL' | 'FOOD' | 'PARKING' | 'TOLL' | 'MAINTENANCE' | 'SHOP_EXPENSE' | 'OTHER';
+export type DriverExpenseCategory =
+  | 'SHOP_EXPENSE'
+  | 'MAINTENANCE'
+  | 'RAW_MATERIAL'
+  | 'PETROL_FUEL'
+  | 'PETROL'
+  | 'FOOD'
+  | 'PARKING'
+  | 'TOLL'
+  | 'UTILITY'
+  | 'SALARY_WAGES'
+  | 'VEHICLE_REPAIR'
+  | 'OTHER';
 export type DriverExpenseStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED';
 
 export interface DriverExpense {
   id: string;
-  driver: string;
+  driver?: string | null;
   driver_name: string;
   route_name?: string;
   category: DriverExpenseCategory;
   category_display: string;
+  custom_category?: string;
   amount: string;
   date: string;
   notes?: string;
   receipt_url?: string;
   receipt_reference?: string;
   status: DriverExpenseStatus;
+  created_by?: string;
+  created_by_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -255,6 +317,9 @@ export interface Payment {
   reference_number?: string;
   collected_by: number;
   collected_by_name?: string;
+  staff_member?: string | null;
+  staff_member_name?: string | null;
+  staff_member_role?: string | null;
   received_at: string;
   notes?: string;
   reversed_by?: string | null;
@@ -516,3 +581,105 @@ export interface ActivityLog {
   timestamp: string;
   created_at?: string;
 }
+
+export type StaffWageType = 'DEFAULT_SLAB' | 'CUSTOM';
+export type StaffRoleType = 'STAFF' | 'MEMBER';
+
+export interface StaffMember {
+  id: string;
+  user?: string | null;
+  user_details?: {
+    id: string;
+    username: string;
+    role: string;
+    email: string;
+    is_active: boolean;
+  } | null;
+  has_login_account: boolean;
+  full_name: string;
+  phone_number: string;
+  role_type?: StaffRoleType;
+  designation: string;
+  joined_date: string;
+  wage_type: StaffWageType;
+  custom_daily_wage?: string | null;
+  current_daily_wage: string;
+  tenure_days: number;
+  tenure_slab_label: string;
+  proof_document?: string | null;
+  proof_document_url?: string | null;
+  is_active: boolean;
+  notes?: string;
+  total_earned: string;
+  total_paid: string;
+  balance_due: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AttendanceStatus = 'FULL' | 'HALF' | 'LEAVE';
+
+export interface StaffAttendance {
+  id: string;
+  staff: string;
+  staff_name: string;
+  staff_designation: string;
+  date: string;
+  status: AttendanceStatus;
+  status_display: string;
+  daily_wage: string;
+  notes?: string;
+  marked_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DailySheetItem {
+  staff_id: string;
+  full_name: string;
+  phone_number: string;
+  role_type?: StaffRoleType;
+  designation: string;
+  has_login_account: boolean;
+  joined_date: string | null;
+  wage_type?: StaffWageType;
+  custom_daily_wage?: string | null;
+  tenure_slab_label: string;
+  base_daily_wage: string;
+  attendance_id: string | null;
+  status: AttendanceStatus;
+  is_marked: boolean;
+  calculated_wage: string;
+  notes: string;
+}
+
+export type StaffPayoutType = 'SALARY' | 'ADVANCE' | 'BONUS' | 'OTHER';
+export type StaffPaymentMethod = 'CASH' | 'GPAY_UPI';
+
+export interface StaffPayout {
+  id: string;
+  staff: string;
+  staff_name: string;
+  amount: string;
+  payout_type: StaffPayoutType;
+  payout_type_display: string;
+  payment_method: StaffPaymentMethod;
+  payment_method_display: string;
+  date: string;
+  reference?: string;
+  notes?: string;
+  paid_by_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StaffSummary {
+  total_staff: number;
+  active_staff: number;
+  login_staff: number;
+  worker_staff: number;
+  today_present: number;
+  month_wages_earned: string;
+  month_payouts_given: string;
+}
+

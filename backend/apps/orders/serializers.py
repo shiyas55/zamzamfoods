@@ -7,7 +7,7 @@ from .models import Order, OrderItem
 from apps.customers.serializers import CustomerSerializer
 from apps.products.serializers import ProductSerializer
 from apps.routes.serializers import RouteSerializer, DriverSerializer
-from .services import create_order_service, update_order_service
+from .services import create_order_service, update_order_service, _UNSET
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_details = ProductSerializer(source="product", read_only=True)
@@ -135,7 +135,7 @@ class CreateOrderSerializer(serializers.Serializer):
 
         items_data = validated_data["items"]
         customer_id = validated_data["customer_id"]
-        driver_id = validated_data.get("driver_id")
+        driver_id = validated_data.get("driver_id") if "driver_id" in validated_data else _UNSET
         order_date = validated_data.get("order_date")
         shop_expense = validated_data.get("shop_expense", Decimal("0.00"))
         shop_expense_notes = validated_data.get("shop_expense_notes", "")

@@ -367,11 +367,11 @@ export const OwnerDashboard: React.FC = () => {
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Shop closed or failed</span>
               </div>
 
-              {/* 8. Driver Expenses */}
+              {/* 8. Total Expenses */}
               <div className="card" style={{ padding: '1.15rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                    Driver Expenses
+                    Total Expenses
                   </span>
                   <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#fef2f2', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Receipt size={16} />
@@ -380,7 +380,7 @@ export const OwnerDashboard: React.FC = () => {
                 <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#b91c1c', margin: 0 }}>
                   {formatCurrency(data.today_expenses || '0.00')}
                 </p>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Fuel, food, toll, repairs</span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Shop, maintenance, fuel & route</span>
               </div>
 
               {/* 9. Net Collection (Highlighted Card) */}
@@ -404,7 +404,7 @@ export const OwnerDashboard: React.FC = () => {
                   {formatCurrency(data.net_collection || '0.00')}
                 </p>
                 <span style={{ fontSize: '0.72rem', color: '#78350f', fontWeight: 600 }}>
-                  Collection − Driver Expenses
+                  Collection − Total Expenses
                 </span>
               </div>
             </div>
