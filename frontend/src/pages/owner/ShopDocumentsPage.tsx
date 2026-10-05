@@ -191,9 +191,22 @@ export const ShopDocumentsPage: React.FC = () => {
     setIsUploadOpen(true);
   };
 
+  const isImageFile = (file: File) => {
+    return file.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|heic)$/i.test(file.name);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+      const incoming = Array.from(e.target.files);
+      const validImages = incoming.filter(isImageFile);
+      if (validImages.length < incoming.length) {
+        setUploadError('Only photo/image files (JPG, PNG, WEBP) are allowed. Non-image files were skipped.');
+      } else {
+        setUploadError(null);
+      }
+      if (validImages.length > 0) {
+        setSelectedFiles((prev) => [...prev, ...validImages]);
+      }
     }
   };
 
@@ -202,7 +215,16 @@ export const ShopDocumentsPage: React.FC = () => {
     e.currentTarget.style.borderColor = 'var(--border)';
     e.currentTarget.style.background = 'var(--bg-secondary)';
     if (e.dataTransfer.files.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]);
+      const incoming = Array.from(e.dataTransfer.files);
+      const validImages = incoming.filter(isImageFile);
+      if (validImages.length < incoming.length) {
+        setUploadError('Only photo/image files (JPG, PNG, WEBP) are allowed. Non-image files were skipped.');
+      } else {
+        setUploadError(null);
+      }
+      if (validImages.length > 0) {
+        setSelectedFiles((prev) => [...prev, ...validImages]);
+      }
     }
   };
 
@@ -986,10 +1008,10 @@ export const ShopDocumentsPage: React.FC = () => {
                 >
                   <UploadCloud size={30} color="#16a34a" style={{ margin: '0 auto 0.5rem' }} />
                   <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Click or drag &amp; drop document files
+                    Click or drag &amp; drop photo files
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    PDF, JPG, PNG, WEBP, DOCX (up to 20MB)
+                  <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600, marginTop: '2px' }}>
+                    Photo / Image files only (JPG, PNG, WEBP, JPEG up to 20MB)
                   </div>
                   <input
                     ref={fileInputRef}
@@ -997,7 +1019,7 @@ export const ShopDocumentsPage: React.FC = () => {
                     multiple
                     style={{ display: 'none' }}
                     onChange={handleFileChange}
-                    accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx"
+                    accept="image/*,.jpg,.jpeg,.png,.webp"
                   />
                 </div>
 
