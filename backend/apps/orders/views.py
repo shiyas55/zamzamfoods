@@ -36,7 +36,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Order.objects.none()
 
-        queryset = Order.objects.select_related("customer", "route", "driver", "driver__user").prefetch_related("items__product")
+        queryset = Order.objects.select_related("customer", "route", "driver", "driver__user").prefetch_related("items__product", "credit_ledger_entries", "payments")
 
         # Query filters for managers/owners
         route_id = self.request.query_params.get("route")

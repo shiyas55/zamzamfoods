@@ -128,17 +128,16 @@ export const DriverDashboard: React.FC = () => {
     const todayAmount = parseFloat(d.order_details?.total_amount || '0');
     const customerBalance = parseFloat(d.order_details?.customer_details?.current_balance || '0');
 
-    // In backend: if DELIVERED, today's order was already posted to current_balance
-    let previousOutstanding = 0;
-    let totalDue = 0;
+    // Accurate previous outstanding before today's order
+    const orderPrevBal = d.order_details?.previous_balance !== undefined && d.order_details?.previous_balance !== null
+      ? parseFloat(d.order_details.previous_balance)
+      : undefined;
 
-    if (d.status === 'DELIVERED') {
-      previousOutstanding = Math.max(0, customerBalance - todayAmount);
-      totalDue = customerBalance;
-    } else {
-      previousOutstanding = customerBalance;
-      totalDue = previousOutstanding + todayAmount;
-    }
+    const previousOutstanding = orderPrevBal !== undefined
+      ? Math.max(0, orderPrevBal)
+      : Math.max(0, customerBalance - todayAmount);
+
+    const totalDue = previousOutstanding + todayAmount;
 
     // Collected for this specific delivery order if tracked, or payments today
     const collectedAmount = parseFloat(

@@ -20,8 +20,17 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, customer, onC
   const subtotal = Number(order.total_amount || 0);
   const gstAmount = applyGst ? subtotal * 0.05 : 0;
   const finalTotal = subtotal + gstAmount;
-  const prevCredit = cust?.current_balance ? Number(cust.current_balance) : 0;
-  const totalAccountDue = prevCredit + finalTotal;
+
+  // Exact previous due prior to this order
+  const prevCredit =
+    order.previous_balance !== undefined && order.previous_balance !== null
+      ? Math.max(0, Number(order.previous_balance))
+      : cust?.current_balance
+      ? Math.max(0, Number(cust.current_balance) - subtotal)
+      : 0;
+
+  const paidAmount = Number(order.paid_amount || (order as any).paid_amount || 0);
+  const totalAccountDue = Math.max(0, prevCredit + finalTotal - paidAmount);
 
   const storeName = businessName || settings?.business_name || 'Zamzam Foods Wholesale';
   const storePhone = businessPhone || settings?.phone_number || '+91 98470 12345';

@@ -48,6 +48,7 @@ export const paymentService = {
     payment_type?: 'ORDER_PAYMENT' | 'PREVIOUS_CREDIT';
     staff_member_id?: string | null;
     reference_number?: string;
+    received_at?: string;
     notes?: string;
   }): Promise<Payment> {
     return apiClient.post<Payment>('/payments/', payload);

@@ -403,62 +403,6 @@ export const CreateOrderPage: React.FC = () => {
     setIsPrevDueModalOpen(true);
   };
 
-  const handleSavePrevDue = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prevDueRow) return;
-
-    const val = parseFloat(prevDueAmount.trim() || '0');
-    if (isNaN(val) || val < 0) {
-      setPrevDueError('Please enter a valid positive amount.');
-      return;
-    }
-
-    const formattedAmount = val.toFixed(2);
-    const targetRow = prevDueRow;
-
-    // 1. Update in rows state immediately so today's sheet, previous due, and balance due update dynamically live
-    setRows((prev) =>
-      prev.map((r) =>
-        r.rowId === targetRow.rowId || (targetRow.customerId && r.customerId === targetRow.customerId)
-          ? { ...r, customerBalance: formattedAmount }
-          : r
-      )
-    );
-
-    // 2. Also update in customers state for software display
-    if (targetRow.customerId) {
-      setCustomers((prev) =>
-        prev.map((c) => (c.id === targetRow.customerId ? { ...c, current_balance: formattedAmount } : c))
-      );
-    }
-
-    setSuccessBanner(`Previous Due for "${targetRow.customerName || 'shop'}" updated to ${formatCurrency(formattedAmount)}!`);
-    setTimeout(() => setSuccessBanner(null), 3000);
-    setIsPrevDueModalOpen(false);
-
-    // 3. Persist automatically & dynamically to backend database!
-    if (targetRow.customerId) {
-      try {
-        await customerService.setBalance(targetRow.customerId, formattedAmount);
-      } catch (err) {
-        console.warn('Direct setBalance failed, trying credit adjustment fallback:', err);
-        try {
-          const oldBal = parseFloat(targetRow.customerBalance || '0');
-          const delta = (val - oldBal).toFixed(2);
-          if (parseFloat(delta) !== 0) {
-            await creditService.recordAdjustment({
-              customer_id: targetRow.customerId,
-              amount: delta,
-              notes: `Previous due set to ₹${formattedAmount} from Fast Wholesale Entry`,
-            });
-          }
-        } catch (fallbackErr) {
-          console.error('Failed to persist previous due to database:', fallbackErr);
-        }
-      }
-    }
-  };
-
   // Selected Customer and Row for Billing & WhatsApp Panel
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
@@ -771,11 +715,15 @@ export const CreateOrderPage: React.FC = () => {
 
           // Calculate previous due prior to this order so today's order is not double-counted in Previous Due column
           let initialRowBalance = cust.current_balance || '0.00';
-          if (existingOrder && existingOrder.total_amount) {
-            const oTot = parseFloat(existingOrder.total_amount) || 0;
-            const pPaid = (cAmt || 0) + (gAmt || 0);
-            const currentTotalBal = parseFloat(cust.current_balance || '0');
-            initialRowBalance = (currentTotalBal - oTot + pPaid).toFixed(2);
+          if (existingOrder) {
+            if (existingOrder.previous_balance !== undefined && existingOrder.previous_balance !== null) {
+              initialRowBalance = String(existingOrder.previous_balance);
+            } else if (existingOrder.total_amount) {
+              const oTot = parseFloat(existingOrder.total_amount) || 0;
+              const pPaid = (cAmt || 0) + (gAmt || 0);
+              const currentTotalBal = parseFloat(cust.current_balance || '0');
+              initialRowBalance = Math.max(0, currentTotalBal - oTot + pPaid).toFixed(2);
+            }
           }
 
           return {
@@ -939,13 +887,19 @@ export const CreateOrderPage: React.FC = () => {
   }, [loadOrdersForDate]);
 
   // When orderDate changes, automatically re-query database for that date!
-  const handleDateChange = (newDate: string) => {
+  const handleDateChange = async (newDate: string) => {
     setOrderDate(newDate);
     localStorage.setItem('zamzam_selected_order_date', newDate);
     setSuccessBanner(null);
     setUnlockedSelfOrderIds(new Set());
-    if (customers.length > 0) {
-      loadOrdersForDate(newDate, customers, drivers, false, true);
+    try {
+      const freshCusts = await customerService.getCustomers(undefined, undefined, true);
+      setCustomers(freshCusts);
+      loadOrdersForDate(newDate, freshCusts, drivers, false, true);
+    } catch {
+      if (customers.length > 0) {
+        loadOrdersForDate(newDate, customers, drivers, false, true);
+      }
     }
   };
 
@@ -1578,6 +1532,65 @@ export const CreateOrderPage: React.FC = () => {
     };
   };
 
+  const handleSavePrevDue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prevDueRow) return;
+
+    const val = parseFloat(prevDueAmount.trim() || '0');
+    if (isNaN(val) || val < 0) {
+      setPrevDueError('Please enter a valid positive amount.');
+      return;
+    }
+
+    const formattedAmount = val.toFixed(2);
+    const targetRow = prevDueRow;
+    const fin = getRowFinancials(targetRow);
+    const todayUnpaid = targetRow.orderId ? Math.max(0, fin.netBill - fin.rowPaid) : 0;
+    const targetTotalBalance = (val + todayUnpaid).toFixed(2);
+
+    // 1. Update in rows state immediately so today's sheet, previous due, and balance due update dynamically live
+    setRows((prev) =>
+      prev.map((r) =>
+        r.rowId === targetRow.rowId || (targetRow.customerId && r.customerId === targetRow.customerId)
+          ? { ...r, customerBalance: formattedAmount }
+          : r
+      )
+    );
+
+    // 2. Also update in customers state for software display
+    if (targetRow.customerId) {
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === targetRow.customerId ? { ...c, current_balance: targetTotalBalance } : c))
+      );
+    }
+
+    setSuccessBanner(`Previous Due for "${targetRow.customerName || 'shop'}" updated to ${formatCurrency(formattedAmount)}!`);
+    setTimeout(() => setSuccessBanner(null), 3000);
+    setIsPrevDueModalOpen(false);
+
+    // 3. Persist automatically & dynamically to backend database!
+    if (targetRow.customerId) {
+      try {
+        await customerService.setBalance(targetRow.customerId, targetTotalBalance);
+      } catch (err) {
+        console.warn('Direct setBalance failed, trying credit adjustment fallback:', err);
+        try {
+          const oldBal = parseFloat(targetRow.customerBalance || '0');
+          const delta = (val - oldBal).toFixed(2);
+          if (parseFloat(delta) !== 0) {
+            await creditService.recordAdjustment({
+              customer_id: targetRow.customerId,
+              amount: delta,
+              notes: `Previous due set to ₹${formattedAmount} from Fast Wholesale Entry`,
+            });
+          }
+        } catch (fallbackErr) {
+          console.error('Failed to persist previous due to database:', fallbackErr);
+        }
+      }
+    }
+  };
+
   // Select customer for a custom row or existing row
   const handleSelectCustomerForRow = (rowId: string, customerId: string) => {
     const cust = customers.find((c) => c.id === customerId);
@@ -1700,6 +1713,7 @@ export const CreateOrderPage: React.FC = () => {
           amount: fin.cash.toFixed(2),
           payment_method: 'CASH',
           order_id: order?.id || row.orderId,
+          received_at: `${orderDate}T12:00:00Z`,
           notes: order ? `Cash collection for Order #${order.order_number}` : 'Wholesale counter cash payment',
         });
       }
@@ -1710,6 +1724,7 @@ export const CreateOrderPage: React.FC = () => {
           amount: fin.gpay.toFixed(2),
           payment_method: 'GPAY_UPI',
           order_id: order?.id || row.orderId,
+          received_at: `${orderDate}T12:00:00Z`,
           notes: order ? `GPay collection for Order #${order.order_number}` : 'Wholesale counter GPay payment',
         });
       }
@@ -2633,6 +2648,7 @@ export const CreateOrderPage: React.FC = () => {
             amount: fin.cash.toFixed(2),
             payment_method: 'CASH',
             order_id: order?.id || row.orderId,
+            received_at: `${orderDate}T12:00:00Z`,
             notes: order ? `Cash collection for Order #${order.order_number}` : 'Wholesale counter cash payment',
           });
         }
@@ -2644,6 +2660,7 @@ export const CreateOrderPage: React.FC = () => {
             amount: fin.gpay.toFixed(2),
             payment_method: 'GPAY_UPI',
             order_id: order?.id || row.orderId,
+            received_at: `${orderDate}T12:00:00Z`,
             notes: order ? `GPay collection for Order #${order.order_number}` : 'Wholesale counter GPay payment',
           });
         }
@@ -2758,6 +2775,8 @@ export const CreateOrderPage: React.FC = () => {
       });
 
       const parsedListOrder = newCustListOrder.trim() ? parseInt(newCustListOrder.trim(), 10) : undefined;
+      const parsedOpeningDue = parseFloat(newCustOpeningBalance.trim() || '0');
+      const openingBalanceStr = !isNaN(parsedOpeningDue) && parsedOpeningDue > 0 ? parsedOpeningDue.toFixed(2) : undefined;
 
       const created = await customerService.createCustomer({
         name: newCustName.trim(),
@@ -2767,13 +2786,19 @@ export const CreateOrderPage: React.FC = () => {
         route: newCustRoute,
         notes: parsedListOrder ? `[Stop #${parsedListOrder}]` : undefined,
         product_prices: product_prices.length > 0 ? product_prices : undefined,
+        opening_balance: openingBalanceStr,
       });
 
       let initialBalance = created.current_balance || '0.00';
-      const parsedOpeningDue = parseFloat(newCustOpeningBalance.trim() || '0');
-      if (!isNaN(parsedOpeningDue) && parsedOpeningDue > 0) {
-        initialBalance = parsedOpeningDue.toFixed(2);
+      if (openingBalanceStr) {
+        initialBalance = openingBalanceStr;
         created.current_balance = initialBalance;
+        // Ensure balance is committed to DB if not set during creation
+        try {
+          await customerService.setBalance(created.id, openingBalanceStr, 'Initial shop opening balance');
+        } catch {
+          // ignore if already set
+        }
       }
 
       setCustomers((prev) => [created, ...prev]);
@@ -3329,7 +3354,15 @@ export const CreateOrderPage: React.FC = () => {
         <button
           type="button"
           className="btn btn-secondary btn-sm"
-          onClick={() => loadOrdersForDate(orderDate, customers, drivers, false)}
+          onClick={async () => {
+            try {
+              const freshCusts = await customerService.getCustomers(undefined, undefined, true);
+              setCustomers(freshCusts);
+              await loadOrdersForDate(orderDate, freshCusts, drivers, false);
+            } catch {
+              await loadOrdersForDate(orderDate, customers, drivers, false);
+            }
+          }}
           disabled={ordersLoading || isSyncing}
           style={{ height: '28px', padding: '0 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600, fontSize: '0.74rem', flex: '0 0 auto' }}
           title={`Click to refresh orders. Last refreshed: ${lastUpdatedTime}`}

@@ -15,6 +15,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     route_details = RouteSerializer(source="route", read_only=True)
     is_credit_exceeded = serializers.BooleanField(read_only=True)
     credit_limit = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, default=Decimal("5000.00"))
+    opening_balance = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, write_only=True)
     product_prices = CustomerProductPriceInputSerializer(many=True, required=False, write_only=True)
     custom_prices = serializers.SerializerMethodField(read_only=True)
     documents_count = serializers.IntegerField(source="documents.count", read_only=True)
@@ -32,6 +33,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             "route",
             "route_details",
             "credit_limit",
+            "opening_balance",
             "current_balance",
             "notes",
             "is_credit_exceeded",
@@ -70,6 +72,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        opening_balance = validated_data.pop("opening_balance", None)
         product_prices_data = validated_data.pop("product_prices", [])
         request = self.context.get("request")
         user = request.user if request else None
@@ -77,6 +80,13 @@ class CustomerSerializer(serializers.ModelSerializer):
         from django.db import transaction
         with transaction.atomic():
             customer = super().create(validated_data)
+            if opening_balance is not None and Decimal(str(opening_balance)) > Decimal("0.00"):
+                from apps.credits.services import record_opening_balance_service
+                record_opening_balance_service(
+                    customer=customer,
+                    opening_balance=opening_balance,
+                    recorded_by=user,
+                )
             if product_prices_data:
                 from .services import set_customer_product_price
                 for item in product_prices_data:
@@ -86,6 +96,7 @@ class CustomerSerializer(serializers.ModelSerializer):
                         price=item["price"],
                         user=user,
                     )
+            customer.refresh_from_db()
             return customer
 
     def update(self, instance, validated_data):

@@ -232,6 +232,9 @@ export interface Order {
   created_at: string;
   updated_at?: string;
   submitted_at?: string;
+  previous_balance?: string;
+  balance_after?: string;
+  paid_amount?: string;
 }
 
 export type DeliveryStatus = 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'NOT_DELIVERED' | 'FAILED' | 'RETURNED';

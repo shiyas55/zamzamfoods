@@ -47,6 +47,7 @@ export const customerService = {
     landmark?: string;
     route: string;
     credit_limit?: string;
+    opening_balance?: string;
     notes?: string;
     product_prices?: Array<{ product_id: string; price: string }>;
   }): Promise<Customer> {

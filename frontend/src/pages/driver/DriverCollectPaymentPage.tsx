@@ -112,15 +112,14 @@ export const DriverCollectPaymentPage: React.FC = () => {
     let totalDue = 0;
 
     if (activeOrder) {
-      if (activeOrder.status === 'DELIVERED') {
-        // Delivered order is already reflected in customer's current balance
-        previousOutstanding = Math.max(0, customerBal - todayAmount);
-        totalDue = customerBal;
-      } else {
-        // Pending/undelivered order: customer balance is previous due; total due is previous + today
-        previousOutstanding = customerBal;
-        totalDue = previousOutstanding + todayAmount;
-      }
+      const orderPrevBal = activeOrder.previous_balance !== undefined && activeOrder.previous_balance !== null
+        ? parseFloat(activeOrder.previous_balance)
+        : undefined;
+
+      previousOutstanding = orderPrevBal !== undefined
+        ? Math.max(0, orderPrevBal)
+        : Math.max(0, customerBal - todayAmount);
+      totalDue = previousOutstanding + todayAmount;
     } else {
       // Customer with outstanding credit but no today's order
       previousOutstanding = customerBal;
