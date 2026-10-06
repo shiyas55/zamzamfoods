@@ -810,13 +810,23 @@ export const ReportsPage: React.FC = () => {
                   </span>
                 </div>
 
+                <div style={{ background: 'white', padding: '1.25rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Staff Wages &amp; Advances</span>
+                  <p style={{ fontSize: '1.75rem', fontWeight: 800, color: '#7c3aed', marginTop: '0.3rem' }}>
+                    {formatCurrency(financialSummary.total_staff_payouts || '0.00')}
+                  </p>
+                  <span style={{ fontSize: '0.78rem', color: '#7c3aed' }}>
+                    Cash: {formatCurrency(financialSummary.staff_cash_paid || '0.00')} • GPay: {formatCurrency(financialSummary.staff_gpay_paid || '0.00')}
+                  </span>
+                </div>
+
                 <div style={{ background: '#0f172a', color: 'white', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid #1e293b' }}>
                   <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#94a3b8' }}>Net Cashflow Handover</span>
                   <p style={{ fontSize: '1.85rem', fontWeight: 800, color: '#facc15', marginTop: '0.3rem' }}>
                     {formatCurrency(financialSummary.net_collection)}
                   </p>
                   <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
-                    Collections minus Expenses
+                    Collections minus Expenses &amp; Staff Wages
                   </span>
                 </div>
               </div>
@@ -883,6 +893,35 @@ export const ReportsPage: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-secondary)' }}>Audit Source</span>
                       <span className="badge badge-success">Live Database Ledger</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card" style={{ padding: '1.5rem', background: 'white' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary)' }}>
+                    Staff Wages &amp; Advances Payouts
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.92rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Staff Cash Wages Paid</span>
+                      <strong style={{ color: '#16a34a' }}>- {formatCurrency(financialSummary.staff_cash_paid || '0.00')}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Staff GPay / UPI Wages Paid</span>
+                      <strong style={{ color: '#2563eb' }}>- {formatCurrency(financialSummary.staff_gpay_paid || '0.00')}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Total Staff Deductions</span>
+                      <strong style={{ color: '#7c3aed', fontSize: '1.05rem' }}>
+                        - {formatCurrency(financialSummary.total_staff_payouts || '0.00')}
+                      </strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-secondary)' }}>Deduction Source</span>
+                      <span className="badge badge-info">Attendance Sheet &amp; Wage Payouts</span>
                     </div>
                   </div>
                 </div>

@@ -78,6 +78,9 @@ export interface DailyClosingFigures {
   today_order_collected: string;
   previous_credit_collected: string;
   driver_expenses: string;
+  staff_cash_paid?: string;
+  staff_gpay_paid?: string;
+  total_staff_payouts?: string;
   net_collection: string;
   total_deliveries: number;
   delivered_count: number;

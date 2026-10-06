@@ -443,6 +443,9 @@ export interface DailyFinancialSummaryResponse {
   previous_credit_collected: string;
   credit_generated: string;
   driver_expenses: string;
+  staff_cash_paid?: string;
+  staff_gpay_paid?: string;
+  total_staff_payouts?: string;
   net_collection: string;
   total_receivable: string;
 }

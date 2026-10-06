@@ -457,7 +457,7 @@ export const DailyClosingPage: React.FC = () => {
                 {formatCurrency(figures?.expected_cash_in_hand ?? figures?.net_collection ?? '0.00')}
               </p>
               <span style={{ fontSize: '0.75rem', color: '#78350f' }}>
-                Float ({formatCurrency(figures?.opening_cash || '0.00')}) + Cash Rec. ({formatCurrency(figures?.cash_collected || '0.00')}) − Driver Exp.
+                Float ({formatCurrency(figures?.opening_cash || '0.00')}) + Cash Rec. ({formatCurrency(figures?.cash_collected || '0.00')}) − Exp. ({formatCurrency(figures?.driver_expenses || '0.00')}) − Staff Wages ({formatCurrency(figures?.staff_cash_paid || '0.00')})
               </span>
             </div>
           </div>
@@ -499,10 +499,24 @@ export const DailyClosingPage: React.FC = () => {
                   </strong>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.45rem 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.45rem 0', borderBottom: '1px solid var(--border)' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>Total Received Today:</span>
                   <strong style={{ fontSize: '0.95rem', color: '#059669' }}>
                     {formatCurrency(figures?.total_collected || '0.00')}
+                  </strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.45rem 0' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#16a34a' }}>Staff Cash Wages Paid:</span>
+                  <strong style={{ fontSize: '0.88rem', color: '#16a34a' }}>
+                    - {formatCurrency(figures?.staff_cash_paid || '0.00')}
+                  </strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.45rem 0' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#2563eb' }}>Staff GPay Wages Paid:</span>
+                  <strong style={{ fontSize: '0.88rem', color: '#2563eb' }}>
+                    - {formatCurrency(figures?.staff_gpay_paid || '0.00')}
                   </strong>
                 </div>
               </div>
