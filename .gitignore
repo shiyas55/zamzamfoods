@@ -31,6 +31,8 @@ backups/
 *.bak
 zamzam_backup_*.sql
 zamzam_backup_*.json
+last.sql
+last.json
 
 # ─── Environment Variables ── NEVER commit these ──────────────────────────────
 .env
