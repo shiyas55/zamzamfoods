@@ -105,28 +105,40 @@ for d in deliveries:
         d["fields"]["notes"] = d["fields"]["notes"].replace("ORD-20261003-", "ORD-20261002-")
 
 # --- Step B: Determine True Pre-Due on Oct 1 for every customer ---
-oct1_orders = {o["fields"]["customer"]: o for o in orders_records if o["fields"]["order_date"] == "2026-10-01"}
-oct2_orders = {o["fields"]["customer"]: o for o in orders_records if o["fields"]["order_date"] == "2026-10-02"}
+# Compute exact Oct 1 opening balances from customer current balance in last.json
+# rolling back subsequent legitimate orders (>= 2026-10-01) and payments (>= 2026-10-01),
+# matching the authoritative 3.09 Lakh total pre-due baseline.
+target_date = "2026-10-01"
+orders_by_cust_sub = defaultdict(Decimal)
+for o in orders_records:
+    if o["fields"]["order_date"] >= target_date and o["fields"]["status"] != "CANCELLED":
+        orders_by_cust_sub[o["fields"]["customer"]] += quant(Decimal(o["fields"]["total_amount"]))
+
+pmts_by_cust_sub = defaultdict(Decimal)
+for p in payments_records:
+    if p["fields"]["received_at"][:10] >= target_date and p["fields"]["status"] == "COMPLETED":
+        pmts_by_cust_sub[p["fields"]["customer"]] += quant(Decimal(p["fields"]["amount"]))
+
+adj_by_cust_sub = defaultdict(Decimal)
+for c in credits_records:
+    if c["fields"]["transaction_type"] == "ADJUSTMENT":
+        if c["fields"]["created_at"][:10] >= target_date:
+            if not c["fields"]["reference_order"] and "Fast Wholesale Entry" not in c["fields"]["notes"]:
+                adj_by_cust_sub[c["fields"]["customer"]] += quant(Decimal(c["fields"]["amount"]))
 
 pre_dues_oct1 = {}
 for cid, c in customers_by_id.items():
-    o1 = oct1_orders.get(cid)
-    o2 = oct2_orders.get(cid)
-    
-    pre_due = None
-    if o1:
-        tx = next((c for c in credits_records if c["fields"]["reference_order"] == o1["pk"] and c["fields"]["transaction_type"] == "CREDIT_SALE"), None)
-        if tx:
-            pre_due = quant(Decimal(tx["fields"]["balance_after"]) - Decimal(tx["fields"]["amount"]))
-    elif o2:
-        tx = next((c for c in credits_records if c["fields"]["reference_order"] == o2["pk"] and c["fields"]["transaction_type"] == "CREDIT_SALE"), None)
-        if tx:
-            pre_due = quant(Decimal(tx["fields"]["balance_after"]) - Decimal(tx["fields"]["amount"]))
-            
-    if pre_due is None:
-        pre_due = quant(Decimal(c["fields"]["current_balance"]))
-        
+    cur_bal = quant(Decimal(c["fields"]["current_balance"]))
+    sub_ord = orders_by_cust_sub[cid]
+    sub_pmt = pmts_by_cust_sub[cid]
+    sub_adj = adj_by_cust_sub[cid]
+    pre_due = quant(cur_bal - sub_ord + sub_pmt - sub_adj)
     pre_dues_oct1[cid] = pre_due
+
+# Famous Kattangal: verified in screenshot media_1791358037334.png as ₹5,010.00
+fk_id = "2c4e3160-a549-42e5-81e7-007f6759d558"
+if fk_id in pre_dues_oct1:
+    pre_dues_oct1[fk_id] = quant(Decimal("5010.00"))
 
 # --- Step C: Chronological Ledger Roll-Forward ---
 # Organize all events (orders and payments) by customer and date
