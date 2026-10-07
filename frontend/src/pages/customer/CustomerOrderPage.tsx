@@ -147,17 +147,36 @@ export const CustomerOrderPage: React.FC = () => {
         quantity: quantities[p.id],
       }));
 
+      // Explicitly determine business order date in Indian Standard Time (Asia/Kolkata)
+      let kolkataDate = '';
+      try {
+        kolkataDate = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Kolkata',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date());
+      } catch {
+        const d = new Date();
+        kolkataDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+
+      const orderPayload = {
+        items: itemsPayload,
+        order_date: kolkataDate,
+      };
+
       const apiBase = API_BASE_URL;
       let res = await fetch(`${apiBase}/public/customer-order/${customerId}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: itemsPayload }),
+        body: JSON.stringify(orderPayload),
       });
       if (!res.ok && res.status === 404) {
         res = await fetch(`${apiBase}/orders/public/customer-order/${customerId}/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: itemsPayload }),
+          body: JSON.stringify(orderPayload),
         });
       }
 

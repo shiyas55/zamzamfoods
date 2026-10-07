@@ -62,8 +62,8 @@ export const customerService = {
     return apiClient.delete<void>(`/customers/${id}/`);
   },
 
-  async setBalance(id: string, balance: string, notes?: string): Promise<{ id: string; name: string; current_balance: string }> {
-    return apiClient.post<{ id: string; name: string; current_balance: string }>(`/customers/${id}/set-balance/`, { balance, notes });
+  async setBalance(id: string, balance: string, date?: string, notes?: string): Promise<{ id: string; name: string; current_balance: string }> {
+    return apiClient.post<{ id: string; name: string; current_balance: string }>(`/customers/${id}/set-balance/`, { balance, date, notes });
   },
 
   async getCustomerPricing(id: string): Promise<import('../types').CustomerPricingOverviewItem[]> {
@@ -79,5 +79,9 @@ export const customerService = {
 
   async getCustomerSummary(id: string): Promise<import('../types').CustomerDetailSummary> {
     return apiClient.get<import('../types').CustomerDetailSummary>(`/customers/${id}/summary/`);
+  },
+
+  async getBalancesForDate(date: string): Promise<Record<string, string>> {
+    return apiClient.get<Record<string, string>>('/customers/balances-for-date/', { date });
   },
 };

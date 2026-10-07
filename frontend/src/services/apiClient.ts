@@ -264,11 +264,15 @@ class ApiClient {
 
     if (!response.ok) {
       let errorMessage = 'An error occurred while processing the request.';
-      if (data?.error?.message) {
+      if (typeof data?.error === 'string') {
+        errorMessage = data.error;
+      } else if (data?.error?.message) {
         errorMessage = data.error.message;
       } else if (data?.detail) {
         errorMessage = data.detail;
-      } else if (typeof data === 'object') {
+      } else if (data?.message) {
+        errorMessage = data.message;
+      } else if (typeof data === 'object' && data !== null) {
         const firstKey = Object.keys(data)[0];
         if (firstKey) {
           const val = data[firstKey];

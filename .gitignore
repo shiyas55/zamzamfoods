@@ -29,6 +29,8 @@ media/
 staticfiles/
 backups/
 *.bak
+zamzam_backup_*.sql
+zamzam_backup_*.json
 
 # ─── Environment Variables ── NEVER commit these ──────────────────────────────
 .env

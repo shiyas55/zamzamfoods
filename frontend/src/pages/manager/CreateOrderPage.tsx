@@ -579,10 +579,11 @@ export const CreateOrderPage: React.FC = () => {
       setError(null);
 
       try {
-        const [existingOrders, payments, closingRes] = await Promise.all([
+        const [existingOrders, payments, closingRes, historicalBalances] = await Promise.all([
           orderService.getOrders({ date: targetDate }),
           paymentService.getPayments({ date: targetDate }),
           reportService.getDailyClosing(targetDate).catch(() => null),
+          customerService.getBalancesForDate(targetDate).catch(() => ({} as Record<string, string>)),
         ]);
 
         if (closingRes) {
@@ -685,17 +686,19 @@ export const CreateOrderPage: React.FC = () => {
 
           const isLocked = existingOrder && ['DELIVERED', 'COMPLETED', 'CANCELLED'].includes(existingOrder.status);
 
-          // Calculate previous due prior to this order so today's order is not double-counted in Previous Due column
-          let initialRowBalance = cust.current_balance || '0.00';
-          if (existingOrder) {
-            if (existingOrder.previous_balance !== undefined && existingOrder.previous_balance !== null) {
-              initialRowBalance = String(existingOrder.previous_balance);
-            } else if (existingOrder.total_amount) {
-              const oTot = parseFloat(existingOrder.total_amount) || 0;
-              const pPaid = (cAmt || 0) + (gAmt || 0);
-              const currentTotalBal = parseFloat(cust.current_balance || '0');
-              initialRowBalance = Math.max(0, currentTotalBal - oTot + pPaid).toFixed(2);
-            }
+          // Calculate historical previous due prior to this order so balance carries forward chronologically
+          let initialRowBalance = '0.00';
+          if (historicalBalances?.[cust.id] !== undefined && historicalBalances?.[cust.id] !== null) {
+            initialRowBalance = String(historicalBalances[cust.id]);
+          } else if (existingOrder?.previous_balance !== undefined && existingOrder?.previous_balance !== null) {
+            initialRowBalance = String(existingOrder.previous_balance);
+          } else if (existingOrder?.total_amount) {
+            const oTot = parseFloat(existingOrder.total_amount) || 0;
+            const pPaid = (cAmt || 0) + (gAmt || 0);
+            const currentTotalBal = parseFloat(cust.current_balance || '0');
+            initialRowBalance = (currentTotalBal - oTot + pPaid).toFixed(2);
+          } else {
+            initialRowBalance = cust.current_balance || '0.00';
           }
 
           return {
@@ -1551,25 +1554,17 @@ export const CreateOrderPage: React.FC = () => {
     setTimeout(() => setSuccessBanner(null), 3000);
     setIsPrevDueModalOpen(false);
 
-    // 3. Persist automatically & dynamically to backend database!
+    // 3. Persist date-aware previous due to backend database!
     if (targetRow.customerId) {
       try {
-        await customerService.setBalance(targetRow.customerId, targetTotalBalance);
+        await customerService.setBalance(
+          targetRow.customerId,
+          formattedAmount,
+          orderDate,
+          `Previous due on ${orderDate} set to ₹${formattedAmount} from Fast Wholesale Entry`
+        );
       } catch (err) {
-        console.warn('Direct setBalance failed, trying credit adjustment fallback:', err);
-        try {
-          const oldBal = parseFloat(targetRow.customerBalance || '0');
-          const delta = (val - oldBal).toFixed(2);
-          if (parseFloat(delta) !== 0) {
-            await creditService.recordAdjustment({
-              customer_id: targetRow.customerId,
-              amount: delta,
-              notes: `Previous due set to ₹${formattedAmount} from Fast Wholesale Entry`,
-            });
-          }
-        } catch (fallbackErr) {
-          console.error('Failed to persist previous due to database:', fallbackErr);
-        }
+        console.error('Failed to persist previous due to database:', err);
       }
     }
   };
@@ -1710,7 +1705,8 @@ export const CreateOrderPage: React.FC = () => {
             ? {
                 ...r,
                 status: 'SAVED',
-                customerBalance: paymentRes?.current_balance !== undefined ? paymentRes.current_balance : r.customerBalance,
+                // Keep customerBalance as Previous Due (do NOT overwrite with closing balance to prevent double-counting)
+                customerBalance: r.customerBalance,
                 orderId: order?.id || r.orderId,
                 orderNumber: order?.order_number || r.orderNumber,
                 driverId: order?.driver || assignedDriverId || r.driverId || undefined,
@@ -2654,7 +2650,8 @@ export const CreateOrderPage: React.FC = () => {
               ? {
                   ...r,
                   status: 'SAVED',
-                  customerBalance: paymentRes?.current_balance !== undefined ? paymentRes.current_balance : r.customerBalance,
+                  // Keep customerBalance as Previous Due (do NOT overwrite with closing balance to prevent double-counting)
+                  customerBalance: r.customerBalance,
                   orderId: order?.id || r.orderId,
                   orderNumber: order?.order_number || r.orderNumber,
                   driverId: order?.driver || assignedDriverId || r.driverId || undefined,
@@ -4527,11 +4524,14 @@ export const CreateOrderPage: React.FC = () => {
                               {row.orderNumber ? (
                                 <span title={`Order #${row.orderNumber}`} style={{ fontSize: '0.6rem', fontWeight: 800, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '3px', padding: '0.03rem 0.25rem', whiteSpace: 'nowrap', flexShrink: 0 }}>#{row.orderNumber}</span>
                               ) : (
-                                <button type="button" onClick={() => { const v = window.prompt(`Order # for ${row.customerName || 'shop'}:`, ''); if (v !== null) handleSetRowOrderDetails(row.rowId, v.trim() || undefined); }} style={{ fontSize: '0.58rem', padding: '0.03rem 0.22rem', background: 'transparent', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: '3px', cursor: 'pointer', flexShrink: 0 }} title="Add order#">+Ord#</button>
+                                <button type="button" onClick={() => { const v = window.prompt(`Custom Order # / Token for ${row.customerName || 'shop'} (optional, leave blank to auto-generate):`, ''); if (v !== null) handleSetRowOrderDetails(row.rowId, v.trim() || undefined); }} style={{ fontSize: '0.58rem', padding: '0.03rem 0.22rem', background: 'transparent', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: '3px', cursor: 'pointer', flexShrink: 0 }} title="Add custom order # / token for this order">+Ord#</button>
                               )}
                               {(orderSort === 'SHOP_CREATE_ASC' || orderSort === 'CUSTOM') && row.customerCreatedAt && (
-                                <span style={{ fontSize: '0.59rem', color: '#475569', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '0.03rem 0.25rem', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-                                  <Store size={9} style={{ color: '#64748b' }} />Reg: {new Date(row.customerCreatedAt).toLocaleDateString([], { day: '2-digit', month: 'short' })}
+                                <span
+                                  title={`Customer shop registered in database on ${new Date(row.customerCreatedAt).toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' })}`}
+                                  style={{ fontSize: '0.59rem', color: '#475569', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '3px', padding: '0.03rem 0.25rem', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}
+                                >
+                                  <Store size={9} style={{ color: '#64748b' }} />Shop Added: {new Date(row.customerCreatedAt).toLocaleDateString([], { day: '2-digit', month: 'short' })}
                                 </span>
                               )}
                               {row.customerId && isSelfOrderEnabled && (

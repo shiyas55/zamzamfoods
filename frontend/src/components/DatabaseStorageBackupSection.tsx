@@ -191,9 +191,17 @@ export const DatabaseStorageBackupSection: React.FC = () => {
       await fetchStats(true);
       await loadTauriData();
     } catch (err: unknown) {
+      let msg = 'Database import failed. Please verify file format and database connection.';
+      if (err instanceof Error) {
+        msg = err.message === '[object Object]' ? 'Authentication or session error. Please refresh the page and try again.' : err.message;
+      } else if (typeof err === 'string') {
+        msg = err;
+      } else if (typeof err === 'object' && err !== null) {
+        msg = (err as any).message || (err as any).error || JSON.stringify(err);
+      }
       setRestoreFeedback({
         type: 'error',
-        message: err instanceof Error ? err.message : 'Database import failed. Please verify file format and database connection.',
+        message: msg,
       });
     } finally {
       setIsRestoring(false);

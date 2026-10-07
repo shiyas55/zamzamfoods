@@ -98,31 +98,12 @@ export const databaseService = {
   },
 
   async restoreDatabase(file: File, format?: 'sql' | 'json'): Promise<RestoreResult> {
-    const url = `${API_BASE_URL}/database/restore/`;
-    const token = localStorage.getItem('zamzam_access_token');
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const formData = new FormData();
     formData.append('file', file);
     if (format) {
       formData.append('format', format);
     }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-      body: formData,
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data?.error || 'Database restoration failed');
-    }
-    return data as RestoreResult;
+    return apiClient.post<RestoreResult>('/database/restore/', formData);
   },
 
   async clearAllData(pin: string, confirmation: string): Promise<ClearAllResult> {
