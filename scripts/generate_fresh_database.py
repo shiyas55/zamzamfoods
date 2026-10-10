@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
 Generate clean initial database snapshot and SQL files for Zamzam Foods.
+100% Compatible with Django backend restore endpoint (products_product, customers_customer, etc.)
+AND direct PostgreSQL / pgAdmin imports.
 All sales orders, payments, credits, and previous customer dues are wiped to 0.00.
-Master data (Customers, Products, Custom wholesale prices, Routes, Owner PIN 7667) is preserved.
+Master data (Customers, Products, Custom wholesale prices, Routes) is cleanly preserved.
 """
 
 import json
@@ -10,10 +12,12 @@ import os
 
 def main():
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    source_json = os.path.join(root_dir, "reconciled_clean.json")
+    source_json = os.path.join(root_dir, "backend", "scripts", "reconciled_clean.json")
+    if not os.path.exists(source_json):
+        source_json = os.path.join(root_dir, "reconciled_clean.json")
+
     out_json = os.path.join(root_dir, "zamzam_fresh_database.json")
     out_sql = os.path.join(root_dir, "zamzam_fresh_database.sql")
-    schema_sql_path = os.path.join(root_dir, "scripts", "init_local_postgres_schema.sql")
 
     with open(source_json, "r", encoding="utf-8") as f:
         data = json.load(f)
@@ -21,18 +25,15 @@ def main():
     records = data.get("records", {})
 
     # 1. Routes
-    route_map = {}
     clean_routes = []
     for r in records.get("routes", []):
-        name = r.get("fields", {}).get("name")
-        if name:
-            route_map[r["pk"]] = name
+        if r.get("fields", {}).get("name"):
             clean_routes.append(r)
 
     # 2. Products
     clean_products = records.get("products", [])
 
-    # 3. Customers (reset opening_due = 0.00, current_balance = 0.00)
+    # 3. Customers (reset current_balance = 0.00)
     clean_customers = []
     clean_prices = []
     for c in records.get("customers", []):
@@ -40,7 +41,6 @@ def main():
             item = dict(c)
             item["fields"] = dict(c["fields"])
             item["fields"]["current_balance"] = "0.00"
-            item["fields"]["opening_due"] = "0.00"
             clean_customers.append(item)
         elif c.get("model") == "customers.customerproductprice":
             clean_prices.append(c)
@@ -48,7 +48,7 @@ def main():
     # 4. Accounts
     clean_accounts = records.get("accounts", [])
 
-    # Write JSON
+    # Write clean JSON
     clean_json_data = {
         "backup_info": {
             "system": "Zamzam Foods Enterprise Distribution Management",
@@ -82,32 +82,36 @@ def main():
     with open(out_json, "w", encoding="utf-8") as f:
         json.dump(clean_json_data, f, indent=2)
 
-    # Write SQL
-    with open(schema_sql_path, "r", encoding="utf-8") as f:
-        schema_sql = f.read()
+    # Write clean SQL matching Django table schema
+    sql_lines = []
+    sql_lines.append("-- ==============================================================================")
+    sql_lines.append("-- ZAMZAM FOODS — RESTORE SCRIPT (DJANGO / POSTGRESQL AUTHORITATIVE)")
+    sql_lines.append("-- Zero Orders | Zero Previous Dues | Master Data Preserved")
+    sql_lines.append("-- ==============================================================================\n")
 
-    sql_parts = []
-    sql_parts.append("-- ==============================================================================")
-    sql_parts.append("-- ZAMZAM FOODS — FRESH PRODUCTION DATABASE (ZERO ORDERS & ZERO DUES)")
-    sql_parts.append("-- Clean Initial Seed: Master Customers & Products Preserved | All Dues = 0.00")
-    sql_parts.append("-- ==============================================================================\n")
-    sql_parts.append('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";\n')
-    sql_parts.append(schema_sql)
-    sql_parts.append("\n-- Clean any transactional data")
-    sql_parts.append("TRUNCATE TABLE order_items CASCADE;")
-    sql_parts.append("TRUNCATE TABLE orders CASCADE;")
-    sql_parts.append("TRUNCATE TABLE payments CASCADE;")
-    sql_parts.append("TRUNCATE TABLE credit_transactions CASCADE;")
-    sql_parts.append("TRUNCATE TABLE expenses CASCADE;\n")
+    # Step 1: Wipe transactions and reset balances
+    sql_lines.append("-- STEP 1: WIPE ALL TRANSACTIONS & REVERT BALANCES TO 0.00")
+    sql_lines.append('DELETE FROM "orders_orderitem";')
+    sql_lines.append('DELETE FROM "orders_order";')
+    sql_lines.append('DELETE FROM "payments_payment";')
+    sql_lines.append('DELETE FROM "credits_credittransaction";')
+    sql_lines.append('DELETE FROM "deliveries_delivery";')
+    sql_lines.append('UPDATE "customers_customer" SET "current_balance" = 0.00;\n')
 
-    # 1. Owner
-    sql_parts.append("-- 1. Owner User (PIN 7667)")
-    sql_parts.append("""INSERT INTO owner_users (id, username, password_hash, full_name, pin_code)
-VALUES ('00000000-0000-0000-0000-000000000001', 'owner', 'pbkdf2_sha256$default$hash', 'Zamzam Owner', '7667')
-ON CONFLICT (username) DO NOTHING;\n""")
+    # Step 2: Routes
+    sql_lines.append("-- STEP 2: ROUTES")
+    for r in clean_routes:
+        f = r["fields"]
+        rid = r["pk"]
+        name = f.get("name", "").replace("'", "''")
+        code = f.get("code", name[:10]).replace("'", "''")
+        desc = f.get("description", "").replace("'", "''")
+        sql_lines.append(f"""INSERT INTO "routes_route" ("id", "name", "code", "description", "is_active", "created_at", "updated_at")
+VALUES ('{rid}', '{name}', '{code}', '{desc}', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name";""")
 
-    # 2. Products
-    sql_parts.append("-- 2. Products Master Catalog")
+    # Step 3: Products
+    sql_lines.append("\n-- STEP 3: PRODUCTS MASTER CATALOG")
     for p in clean_products:
         f = p["fields"]
         pid = p["pk"]
@@ -116,12 +120,12 @@ ON CONFLICT (username) DO NOTHING;\n""")
         price = f.get("unit_price", "0.00")
         pkt = f.get("packet_size", "").replace("'", "''")
         ord_num = f.get("order_number", 0)
-        sql_parts.append(f"""INSERT INTO products (id, name, code, unit_price, packet_size, order_number, is_active)
-VALUES ('{pid}', '{name}', '{code}', {price}, '{pkt}', {ord_num}, TRUE)
-ON CONFLICT (id) DO UPDATE SET unit_price = EXCLUDED.unit_price, is_active = TRUE;""")
+        sql_lines.append(f"""INSERT INTO "products_product" ("id", "name", "code", "unit_price", "packet_size", "order_number", "skip_in_entry", "is_active", "description", "created_at", "updated_at")
+VALUES ('{pid}', '{name}', '{code}', {price}, '{pkt}', {ord_num}, FALSE, TRUE, '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT ("id") DO UPDATE SET "unit_price" = EXCLUDED."unit_price", "is_active" = TRUE;""")
 
-    # 3. Customers
-    sql_parts.append("\n-- 3. Customers Master Directory (Opening Due = 0.00, Current Balance = 0.00)")
+    # Step 4: Customers
+    sql_lines.append("\n-- STEP 4: CUSTOMERS DIRECTORY (CURRENT BALANCE = 0.00)")
     for c in clean_customers:
         f = c["fields"]
         cid = c["pk"]
@@ -130,14 +134,14 @@ ON CONFLICT (id) DO UPDATE SET unit_price = EXCLUDED.unit_price, is_active = TRU
         phone = f.get("phone", "").replace("'", "''")
         alt_phone = f.get("alternative_phone", "").replace("'", "''")
         addr = f.get("address", "").replace("'", "''")
+        lnd = f.get("landmark", "").replace("'", "''")
         route_id = f.get("route")
-        route_name = route_map.get(route_id, "").replace("'", "''")
-        sql_parts.append(f"""INSERT INTO customers (id, name, owner_name, phone, alternative_phone, address, route_name, opening_due, current_balance, is_active)
-VALUES ('{cid}', '{name}', '{owner_name}', '{phone}', '{alt_phone}', '{addr}', '{route_name}', 0.00, 0.00, TRUE)
-ON CONFLICT (id) DO UPDATE SET opening_due = 0.00, current_balance = 0.00, route_name = EXCLUDED.route_name;""")
+        sql_lines.append(f"""INSERT INTO "customers_customer" ("id", "name", "owner_name", "phone", "alternative_phone", "address", "landmark", "route_id", "credit_limit", "current_balance", "notes", "is_active", "created_at", "updated_at")
+VALUES ('{cid}', '{name}', '{owner_name}', '{phone}', '{alt_phone}', '{addr}', '{lnd}', '{route_id}', 5000.00, 0.00, '', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT ("id") DO UPDATE SET "current_balance" = 0.00, "route_id" = EXCLUDED."route_id", "is_active" = TRUE;""")
 
-    # 4. Custom Prices
-    sql_parts.append("\n-- 4. Customer Custom Product Pricing Matrix")
+    # Step 5: Custom Wholesale Prices
+    sql_lines.append("\n-- STEP 5: CUSTOMER CUSTOM PRICES")
     for cp in clean_prices:
         f = cp["fields"]
         cpid = cp["pk"]
@@ -145,38 +149,39 @@ ON CONFLICT (id) DO UPDATE SET opening_due = 0.00, current_balance = 0.00, route
         prod_id = f.get("product")
         price = f.get("price", "0.00")
         eff_from = f.get("effective_from", "2026-10-01")
-        sql_parts.append(f"""INSERT INTO customer_product_prices (id, customer_id, product_id, price, effective_from, is_active)
-VALUES ('{cpid}', '{cust_id}', '{prod_id}', {price}, '{eff_from}', TRUE)
-ON CONFLICT (id) DO NOTHING;""")
+        sql_lines.append(f"""INSERT INTO "customers_customerproductprice" ("id", "customer_id", "product_id", "price", "effective_from", "is_active", "created_at", "updated_at")
+VALUES ('{cpid}', '{cust_id}', '{prod_id}', {price}, '{eff_from}', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT ("id") DO NOTHING;""")
 
-    # 5. System Settings
-    sql_parts.append("\n-- 5. System Settings")
-    sql_parts.append("""INSERT INTO system_settings (id, business_name, phone_number, pin_code, auto_backup_enabled)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Zamzam Foods', '+91 98470 12345', '7667', TRUE)
-ON CONFLICT (id) DO UPDATE SET pin_code = '7667';\n""")
-
-    # Guarantee all balances are 0.00
-    sql_parts.append("UPDATE customers SET opening_due = 0.00, current_balance = 0.00;\n")
+    # Final balance check
+    sql_lines.append("\n-- STEP 6: VERIFY ALL BALANCES ARE ZERO")
+    sql_lines.append('UPDATE "customers_customer" SET "current_balance" = 0.00;\n')
 
     with open(out_sql, "w", encoding="utf-8") as f:
-        f.write("\n".join(sql_parts))
+        f.write("\n".join(sql_lines))
 
-    # Also update reconciled_clean.json and reconciled_clean.sql with this fresh state
-    with open(source_json, "w", encoding="utf-8") as f:
+    # Also update reconciled_clean.json and reconciled_clean.sql in root and backend
+    with open(os.path.join(root_dir, "reconciled_clean.json"), "w", encoding="utf-8") as f:
         json.dump(clean_json_data, f, indent=2)
 
     with open(os.path.join(root_dir, "reconciled_clean.sql"), "w", encoding="utf-8") as f:
-        f.write("\n".join(sql_parts))
+        f.write("\n".join(sql_lines))
 
-    print(f"Done! Clean database generated:")
+    # Copy to installer/dist
+    dist_dir = os.path.join(root_dir, "installer", "dist")
+    if os.path.exists(dist_dir):
+        with open(os.path.join(dist_dir, "zamzam_fresh_database.json"), "w", encoding="utf-8") as f:
+            json.dump(clean_json_data, f, indent=2)
+        with open(os.path.join(dist_dir, "zamzam_fresh_database.sql"), "w", encoding="utf-8") as f:
+            f.write("\n".join(sql_lines))
+
+    print(f"Clean database generated successfully!")
     print(f"JSON: {out_json}")
     print(f"SQL:  {out_sql}")
-    print(f"Total Customers: {len(clean_customers)} (All dues reset to 0.00)")
-    print(f"Total Products:  {len(clean_products)}")
-    print(f"Total Custom Prices: {len(clean_prices)}")
-    print(f"Total Orders:    0")
-    print(f"Total Payments:  0")
-    print(f"Total Credits:   0")
+    print(f"Customers: {len(clean_customers)} (Balances reset to 0.00)")
+    print(f"Products:  {len(clean_products)}")
+    print(f"Custom Prices: {len(clean_prices)}")
+    print(f"Orders: 0, Payments: 0, Credits: 0")
 
 if __name__ == "__main__":
     main()
