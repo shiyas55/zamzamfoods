@@ -1,28 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useSettings } from '../../context/SettingsContext';
 import { Lock, User, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { getDynamicStoreInfo } from '../../utils/whatsappUtils';
 
 export const LoginPage: React.FC = () => {
   const store = getDynamicStoreInfo();
-  const { login, logout } = useAuth();
-  const { isDriverModuleEnabled } = useSettings();
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (searchParams.get('error') === 'driver_disabled') {
-      setError('The Delivery Driver portal is currently turned OFF in System Settings. Please contact the administrator.');
-    }
-  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,21 +25,8 @@ export const LoginPage: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const user = await login(username.trim(), password);
-
-      // Route immediately based on role
-      if (user.role === 'DRIVER') {
-        if (!isDriverModuleEnabled) {
-          setError('The Delivery Driver portal is currently turned OFF in System Settings.');
-          await logout();
-          return;
-        }
-        navigate('/driver');
-      } else if (user.role === 'MANAGER') {
-        navigate('/manager');
-      } else {
-        navigate('/owner');
-      }
+      await login(username.trim(), password);
+      navigate('/owner');
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -363,7 +341,7 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Zentrix 24x7 Help Desk Support Footer */}
+          {/* Zamzam Foods Footer */}
           <div
             style={{
               marginTop: '1.75rem',
@@ -378,72 +356,29 @@ export const LoginPage: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.45rem',
-                marginBottom: '0.5rem',
+                marginBottom: '0.25rem',
               }}
             >
-              <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Software by</span>
-              <strong style={{ fontSize: '0.82rem', color: '#0f172a', letterSpacing: '0.04em' }}>
-                ZENTRIX
+              <strong style={{ fontSize: '0.82rem', color: '#b91c1c', letterSpacing: '0.02em' }}>
+                Zamzam Foods
               </strong>
               <span
-                className="status-badge-pulse"
                 style={{
-                  fontSize: '0.62rem',
-                  fontWeight: 800,
-                  backgroundColor: '#ecfdf5',
-                  color: '#059669',
-                  padding: '0.12rem 0.45rem',
+                  fontSize: '0.65rem',
+                  fontWeight: 600,
+                  backgroundColor: '#fee2e2',
+                  color: '#dc2626',
+                  padding: '0.1rem 0.45rem',
                   borderRadius: '999px',
-                  border: '1px solid #a7f3d0',
+                  border: '1px solid #fca5a5',
                 }}
               >
-                24x7 Help Desk
+                Enterprise Distribution
               </span>
             </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.85rem',
-                flexWrap: 'wrap',
-              }}
-            >
-              <a
-                href={`https://wa.me/${store.businessPhone.replace(/[^0-9]/g, '') || '917012587705'}?text=Hello%20Support%2C%20I%20need%20assistance%20logging%20in`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="support-link"
-                style={{
-                  color: '#059669',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                }}
-              >
-                <span>💬 WhatsApp: {store.businessPhone}</span>
-              </a>
-              <span style={{ color: '#cbd5e1' }}>|</span>
-              <a
-                href={`tel:${store.businessPhone.replace(/[^0-9+]/g, '') || '+917012587705'}`}
-                className="support-link"
-                style={{
-                  color: '#334155',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                }}
-              >
-                <span>📞 Call: {store.businessPhone}</span>
-              </a>
-            </div>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
+              Wholesale Billing & Daily Route Dispatch System
+            </p>
           </div>
         </div>
       </div>

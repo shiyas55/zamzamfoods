@@ -1,44 +1,57 @@
 :root {
-  /* Zamzam Foods Professional Enterprise Brand Identity */
-  --brand-red: #b91c1c;
-  --brand-red-dark: #991b1b;
-  --brand-red-deep: #7f1d1d;
+  /* Zamzam Foods - Professional Crimson Red & White Theme */
+  --brand-green: #047857;
+  --brand-green-hover: #065f46;
+  --brand-green-light: #ecfdf5;
+  --brand-red: #dc2626;
+  --brand-red-dark: #b91c1c;
+  --brand-red-deep: #991b1b;
+  --brand-red-light: #fee2e2;
   --brand-yellow: #d97706;
   --brand-yellow-dark: #b45309;
   --brand-yellow-light: #fef3c7;
 
-  --primary: #b91c1c;
-  --primary-hover: #991b1b;
-  --primary-dark: #7f1d1d;
+  --primary: #dc2626;
+  --primary-hover: #b91c1c;
+  --primary-dark: #991b1b;
   --primary-light: #fef2f2;
-  --primary-text: #7f1d1d;
+  --primary-text: #dc2626;
 
-  --secondary: #334155;
+  /* App Zoom & Viewport Variables */
+  --app-zoom: 100%;
+  --app-zoom-factor: 1;
+  --app-viewport-h: calc(100vh / var(--app-zoom-factor, 1));
+
+  --secondary: #475569;
   --secondary-light: #f8fafc;
 
   --bg-main: #f8fafc;
   --bg-card: #ffffff;
-  --bg-sidebar: #180808;
-  --sidebar-hover: #2e1010;
-  --sidebar-text: #fecaca;
-  --sidebar-text-active: #ffffff;
+  --bg-sidebar: #ffffff;
+  --sidebar-hover: #fef2f2;
+  --sidebar-text: #475569;
+  --sidebar-text-active: #dc2626;
+  --sidebar-active-bg: #fee2e2;
+
+  --header-bg: #b91c1c;
+  --header-text: #ffffff;
 
   --text-primary: #0f172a;
-  --text-secondary: #334155;
+  --text-secondary: #475569;
   --text-muted: #64748b;
 
-  --border: #cbd5e1;
-  --border-focus: #b91c1c;
-  --border-subtle: #e2e8f0;
+  --border: #e2e8f0;
+  --border-focus: #dc2626;
+  --border-subtle: #f8fafc;
 
-  --success: #16a34a;
-  --success-bg: #dcfce7;
+  --success: #059669;
+  --success-bg: #ecfdf5;
   --warning: #d97706;
   --warning-bg: #fef3c7;
   --danger: #dc2626;
   --danger-bg: #fee2e2;
-  --info: #2563eb;
-  --info-bg: #eff6ff;
+  --info: #0284c7;
+  --info-bg: #f0f9ff;
 
   /* Standard crisp software shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -65,20 +78,24 @@
 }
 
 [data-theme="dark"] {
-  --bg-main: #0c0808;
-  --bg-card: #170e0e;
-  --bg-sidebar: #120606;
-  --sidebar-hover: #260c0c;
-  --sidebar-text: #fca5a5;
-  --sidebar-text-active: #ffffff;
+  --bg-main: #0f1117;
+  --bg-card: #181b24;
+  --bg-sidebar: #13161f;
+  --sidebar-hover: #261618;
+  --sidebar-text: #cbd5e1;
+  --sidebar-text-active: #f87171;
+  --sidebar-active-bg: #450a0a;
+
+  --header-bg: #881337;
+  --header-text: #ffffff;
 
   --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
 
-  --border: #381212;
+  --border: #2a2e3d;
   --border-focus: #ef4444;
-  --border-subtle: #240c0c;
+  --border-subtle: #1c202d;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --shadow-md: 0 2px 4px -1px rgba(0, 0, 0, 0.5);
@@ -98,6 +115,7 @@
 html {
   overflow-x: hidden;
   height: 100%;
+  min-height: calc(100vh / var(--app-zoom-factor, 1));
   height: -webkit-fill-available;
   color-scheme: light;
 }
@@ -114,13 +132,17 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   height: 100%;
+  min-height: calc(100vh / var(--app-zoom-factor, 1));
   height: -webkit-fill-available;
   -webkit-text-size-adjust: 100%;
 }
 
 #root {
   height: 100%;
+  min-height: calc(100vh / var(--app-zoom-factor, 1));
   height: -webkit-fill-available;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
@@ -579,7 +601,8 @@ input, select, textarea {
 .manager-main-area {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: calc(100vh / var(--app-zoom-factor, 1));
+  flex: 1;
   min-width: 0;
   max-width: 100%;
   overflow-x: hidden;
@@ -589,8 +612,10 @@ input, select, textarea {
 
 .manager-topbar {
   height: var(--header-h);
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
+  background: var(--header-bg, #047857);
+  color: var(--header-text, #ffffff);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -602,6 +627,166 @@ input, select, textarea {
   flex-shrink: 0;
   min-width: 0;
   box-sizing: border-box;
+}
+
+/* Translucent search pill inside Foodager-style header */
+.header-search-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 9999px;
+  padding: 0.35rem 0.95rem;
+  color: #ffffff;
+  transition: all 0.15s ease;
+}
+.header-search-pill:focus-within {
+  background: rgba(255, 255, 255, 0.26);
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+.header-search-pill input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 0.84rem;
+  width: 100%;
+}
+.header-search-pill input::placeholder {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* Header Action Buttons */
+.header-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 34px;
+  padding: 0 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.header-action-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Header User Pill */
+.header-user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 34px;
+  padding: 0.2rem 0.65rem 0.2rem 0.3rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.header-user-pill:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* Foodager Row Actions */
+.action-pill-delete {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.action-pill-delete:hover {
+  background: #fecdd3;
+  color: #b91c1c;
+}
+
+.action-pill-edit {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.action-pill-edit:hover {
+  background: #d1fae5;
+  color: #047857;
+}
+
+/* Foodager Bottom Action Buttons */
+.btn-approve-outline {
+  background: #ffffff;
+  color: #059669;
+  border: 1.5px solid #059669;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.82rem;
+}
+.btn-approve-outline:hover {
+  background: #ecfdf5;
+}
+
+.btn-approve-solid {
+  background: #059669;
+  color: #ffffff;
+  border: 1.5px solid #059669;
+  border-radius: 8px;
+  padding: 0.4rem 1rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.82rem;
+}
+.btn-approve-solid:hover {
+  background: #047857;
+}
+
+.btn-delete-outline {
+  background: #ffffff;
+  color: #dc2626;
+  border: 1.5px solid #f87171;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.82rem;
+}
+.btn-delete-outline:hover {
+  background: #fee2e2;
 }
 
 .manager-page-content {
@@ -753,20 +938,28 @@ input, select, textarea {
    BILLING PAGE SIZING & RESPONSIVENESS
    ========================================================= */
 .manager-page-content:has(.billing-page-container) {
-  padding: 0.5rem 0.85rem;
+  padding: 0.35rem 0.65rem !important;
+  height: calc((100vh / var(--app-zoom-factor, 1)) - var(--header-h)) !important;
+  max-height: calc((100vh / var(--app-zoom-factor, 1)) - var(--header-h)) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  flex: 1 !important;
 }
 
 .billing-page-container {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 64px - 1.25rem);
-  max-height: calc(100vh - 64px - 1.25rem);
-  overflow-x: hidden;
-  overflow-y: hidden;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .billing-workspace-grid {
@@ -1002,17 +1195,11 @@ div:hover > .resize-handle-bar {
   }
 }
 
-/* Tablet (768px - 1023px): Stack WhatsApp viewport & Billing table vertically when in split mode */
+/* Tablet (768px - 1023px): WhatsApp viewport & Billing table adjustments */
 @media (max-width: 1023px) {
-  .billing-page-container {
-    height: auto;
-    max-height: none;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
   .billing-workspace-grid {
     flex-direction: column !important;
-    overflow: visible;
+    overflow: hidden;
   }
   .billing-whatsapp-desktop-wrapper {
     width: 100% !important;

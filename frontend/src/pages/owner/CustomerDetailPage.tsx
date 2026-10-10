@@ -60,15 +60,6 @@ export const CustomerDetailPage: React.FC = () => {
   // Price Modal State
   const [isPriceModalOpen, setIsPriceModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<CustomerPricingOverviewItem | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  const selfOrderUrl = `${window.location.origin}/customer/${id}`;
-
-  const handleCopySelfOrderLink = () => {
-    navigator.clipboard.writeText(selfOrderUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2200);
-  };
   const [newPrice, setNewPrice] = useState('');
   const [isActivePrice, setIsActivePrice] = useState(true);
   const [savingPrice, setSavingPrice] = useState(false);
@@ -388,117 +379,6 @@ export const CustomerDetailPage: React.FC = () => {
             <Trash2 size={14} />
             <span>Delete</span>
           </button>
-
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={handleCopySelfOrderLink}
-            title="Copy Customer Self-Order Link"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-          >
-            {copiedLink ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-            <span>{copiedLink ? 'Link Copied!' : 'Copy Order Link'}</span>
-          </button>
-          <a
-            href={`/customer/${customer.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#10b981', borderColor: '#10b981' }}
-            title="Open Customer Self-Order Screen in new tab"
-          >
-            <ExternalLink size={14} />
-            <span>Open Self-Order</span>
-          </a>
-        </div>
-      </div>
-
-      {/* Customer Self-Order Upgrade Feature Card */}
-      <div
-        className="card"
-        style={{
-          padding: '1rem 1.25rem',
-          marginBottom: '1.25rem',
-          background: '#f8fafc',
-          border: '1px solid #cbd5e1',
-          borderRadius: 'var(--radius-md)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '10px',
-              background: '#10b981',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              boxShadow: '0 2px 6px rgba(16, 185, 129, 0.25)',
-            }}
-          >
-            <Smartphone size={22} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                Customer Self-Order Upgrade (Direct Mobile Portal)
-              </h4>
-              <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
-                Active • No OTP Required
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.2rem', lineHeight: 1.35 }}>
-              This customer can place daily wholesale Kubbus & Romali orders online using their shop link with 1-click confirmation.
-            </p>
-            <div style={{ fontSize: '0.74rem', color: 'var(--primary)', marginTop: '0.25rem', fontFamily: 'monospace', wordBreak: 'break-all' }}>
-              {selfOrderUrl}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={handleCopySelfOrderLink}
-            title="Copy URL"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-          >
-            {copiedLink ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
-            <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
-          </button>
-
-          <a
-            href={`https://wa.me/${(customer.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-              `Hello ${customer.name}, you can now place your daily Kubbus & Romali wholesale orders directly online: ${selfOrderUrl}`
-            )}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-secondary btn-sm"
-            style={{ color: '#16a34a', borderColor: '#86efac', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            title="Send Self-Order Link to customer on WhatsApp"
-          >
-            <Send size={14} />
-            <span>Send on WhatsApp</span>
-          </a>
-
-          <a
-            href={`/customer/${customer.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-            title="Preview Self-Order Portal as customer"
-          >
-            <ExternalLink size={14} />
-            <span>Open Portal</span>
-          </a>
         </div>
       </div>
 

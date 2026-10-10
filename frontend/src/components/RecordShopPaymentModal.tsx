@@ -504,24 +504,27 @@ export const RecordShopPaymentModal: React.FC<RecordShopPaymentModalProps> = ({
         className="card"
         style={{
           width: '100%',
-          maxWidth: '580px',
-          padding: '1.75rem',
-          borderRadius: '14px',
-          maxHeight: '92vh',
-          overflowY: 'auto',
+          maxWidth: '600px',
+          maxHeight: 'min(90vh, 740px)',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 0,
+          borderRadius: '16px',
           backgroundColor: 'var(--card-bg, #ffffff)',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.08)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+          overflow: 'hidden',
         }}
       >
-        {/* Header */}
+        {/* Header - Pinned at top */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '1.25rem',
-            paddingBottom: '0.75rem',
+            padding: '1.25rem 1.5rem',
             borderBottom: '1px solid var(--border)',
+            flexShrink: 0,
+            backgroundColor: 'var(--card-bg, #ffffff)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
@@ -563,26 +566,42 @@ export const RecordShopPaymentModal: React.FC<RecordShopPaymentModalProps> = ({
           </button>
         </div>
 
-        {errorMessage && (
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {/* Scrollable Form Body */}
           <div
             style={{
-              padding: '0.75rem 1rem',
-              backgroundColor: '#fee2e2',
-              color: '#991b1b',
-              borderRadius: '8px',
-              marginBottom: '1rem',
-              fontSize: '0.84rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
+              padding: '1.25rem 1.5rem',
+              overflowY: 'auto',
+              flex: 1,
             }}
           >
-            <AlertCircle size={16} />
-            <span>{errorMessage}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
+            {errorMessage && (
+              <div
+                style={{
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#fee2e2',
+                  color: '#991b1b',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  fontSize: '0.84rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <AlertCircle size={16} />
+                <span>{errorMessage}</span>
+              </div>
+            )}
           {/* ─── SECTION 1: CUSTOMER SHOP SELECTION ──────────────────────── */}
           <div style={{ marginBottom: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
@@ -829,7 +848,7 @@ export const RecordShopPaymentModal: React.FC<RecordShopPaymentModalProps> = ({
                 ) : (
                   <div
                     style={{
-                      maxHeight: '280px',
+                      maxHeight: '200px',
                       overflowY: 'auto',
                       border: '1px solid var(--border)',
                       borderRadius: '8px',
@@ -1314,7 +1333,7 @@ export const RecordShopPaymentModal: React.FC<RecordShopPaymentModalProps> = ({
           </div>
 
           {/* Notes / Remarks */}
-          <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ marginBottom: '0.5rem' }}>
             <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
               Additional Notes / Remarks (Optional)
             </label>
@@ -1327,38 +1346,51 @@ export const RecordShopPaymentModal: React.FC<RecordShopPaymentModalProps> = ({
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
+        </div>
 
-          {/* Actions */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-              disabled={submitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={submitting || !selectedCustomer || paidAmount <= 0}
-              style={{
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                backgroundColor: '#059669',
-                borderColor: '#059669',
-              }}
-            >
-              <Check size={16} />
-              {submitting
-                ? 'Creating Collection...'
-                : `Create Collection of ${formatCurrency(paidAmount.toFixed(2))}`}
-            </button>
-          </div>
-        </form>
-      </div>
+        {/* Fixed Action Footer - Always visible, never cut off */}
+        <div
+          style={{
+            padding: '0.9rem 1.5rem',
+            borderTop: '1px solid var(--border)',
+            backgroundColor: 'var(--bg-main, #f8fafc)',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: '0.75rem',
+            flexShrink: 0,
+          }}
+        >
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={submitting || !selectedCustomer || paidAmount <= 0}
+            style={{
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              backgroundColor: '#059669',
+              borderColor: '#059669',
+              padding: '0.55rem 1.25rem',
+            }}
+          >
+            <Check size={16} />
+            {submitting
+              ? 'Creating Collection...'
+              : `Create Collection of ${formatCurrency(paidAmount.toFixed(2))}`}
+          </button>
+        </div>
+      </form>
     </div>
-  );
+  </div>
+);
 };

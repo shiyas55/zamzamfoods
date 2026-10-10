@@ -16,10 +16,11 @@ React (Vite + TypeScript + PWA)
     Django Service Layer (transaction.atomic(), Decimal arithmetic)
            ↓  (Audit trails & Ledger integrity)
        Django ORM
-           ↓
- SQLite (Dev) / PostgreSQL (Prod)
+           ↓  (TLS 1.3 SSL, Connection Pooling, Storage Quota Monitoring)
+Cloud Database: Aiven for PostgreSQL (Authoritative Business Database)
 ```
 
+* **Cloud-First Architecture**: Authoritative cloud database hosted on **Aiven for PostgreSQL Free** (1 GB storage quota). All desktop clients (Windows `.exe` and macOS `.dmg`) synchronize seamlessly in real-time through the secure Django REST API.
 * **Backend Authority**: Django enforces all business logic, validation, financial calculations, and data isolation. Frontend never accesses the database directly.
 * **Three Dedicated Interfaces**:
   1. **Owner / Admin**: Full business oversight (KPI dashboard, customer directory, pricing, routes, drivers, orders, deliveries, receipts, credit ledger, financial reports, staff roles).
@@ -162,15 +163,16 @@ npm run desktop:build:mac
 npm run desktop:build:linux
 ```
 
-### Native Automated Backup Manager:
-The desktop application features a native Rust backup manager running independently in the background:
-* **Settings → Database Backup**:
-  * Native folder picker dialog to select local backup directory.
-  * One-click "Backup Now" with instant verification.
-  * Configurable retention (default 30 backups, never deletes prior backups on failure).
-  * Automatic daily closing backup when counter application closes.
-  * 23:59 safety backup daemon (runs if daily closing backup was not completed).
-  * Duplicate daily backup prevention.
-  * Real restorable PostgreSQL SQL transactional dumps.
-  * Zero database credential exposure to the frontend.
+---
+
+## 10. Project Documentation & Delivery Artifacts
+
+Comprehensive enterprise engineering and deployment documentation is available in the root directory:
+
+* 📄 **[DATABASE.md](file:///Users/shiyasahmad/Documents/zamzam%20foods/DATABASE.md)** — Cloud PostgreSQL architecture on Aiven, SSL/TLS 1.3 configuration, 1 GB storage quota monitoring, index performance, and migration procedures.
+* 💻 **[INSTALLATION.md](file:///Users/shiyasahmad/Documents/zamzam%20foods/INSTALLATION.md)** — Clean Windows (`.exe`) and macOS (`.dmg`) installation guides, environment setup, and zero local PostgreSQL dependency guide.
+* 🚀 **[DEPLOYMENT.md](file:///Users/shiyasahmad/Documents/zamzam%20foods/DEPLOYMENT.md)** — Production deployment guide (Docker, Railway, Cloud VPS), Gunicorn configuration, systemd services, and domain setup.
+* 🔒 **[SECURITY.md](file:///Users/shiyasahmad/Documents/zamzam%20foods/SECURITY.md)** — Security architecture, JWT token lifecycle, role-based authorization, IDOR driver isolation, Decimal financial precision, and credential sanitization.
+* 🧪 **[TESTING.md](file:///Users/shiyasahmad/Documents/zamzam%20foods/TESTING.md)** — Complete test suite coverage, test runner commands, and automated test results matrix.
+* 🤝 **[CLIENT_HANDOVER.md](file:///Users/shiyasahmad/Documents/zamzam%20foods/CLIENT_HANDOVER.md)** — Official client delivery report, production acceptance criteria, credential handover instructions, and sign-off checklist.
 

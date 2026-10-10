@@ -418,15 +418,6 @@ export const OwnerDashboard: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.6rem' }}>
               <button
                 className="btn btn-secondary btn-sm"
-                onClick={() => navigate('/owner/driver-performance')}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem' }}
-              >
-                <Truck size={14} color="var(--primary)" />
-                <span style={{ fontWeight: 600 }}>Driver Performance</span>
-              </button>
-
-              <button
-                className="btn btn-secondary btn-sm"
                 onClick={() => navigate('/owner/customers')}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.6rem' }}
               >

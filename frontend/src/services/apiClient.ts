@@ -43,6 +43,10 @@ interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
   /** Set true to skip auto-refresh on 401 (used for the refresh call itself) */
   _skipRefresh?: boolean;
+  /** Set true to bypass cache and force network fetch */
+  bypassCache?: boolean;
+  /** Custom TTL in ms for this request */
+  cacheTtlMs?: number;
 }
 
 export interface RefreshResult {
@@ -52,6 +56,8 @@ export interface RefreshResult {
 
 class ApiClient {
   private refreshPromise: Promise<RefreshResult> | null = null;
+  private cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>();
+  private inflight = new Map<string, Promise<unknown>>();
 
   /**
    * Silently obtain a new access token by calling the refresh endpoint.
@@ -137,8 +143,46 @@ class ApiClient {
     window.dispatchEvent(new CustomEvent('auth:logout'));
   }
 
+  public clearCache(prefix?: string) {
+    if (!prefix) {
+      this.cache.clear();
+      return;
+    }
+    const cleanPrefix = prefix.replace(/^\//, '');
+    for (const key of this.cache.keys()) {
+      if (key.includes(cleanPrefix)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  private invalidateCacheForEndpoint(endpoint: string) {
+    if (endpoint.includes('/order')) {
+      this.clearCache('order');
+      this.clearCache('daily-closing');
+      this.clearCache('report');
+      this.clearCache('credit');
+      this.clearCache('customer');
+    } else if (endpoint.includes('/customer')) {
+      this.clearCache('customer');
+      this.clearCache('balance');
+    } else if (endpoint.includes('/payment')) {
+      this.clearCache('payment');
+      this.clearCache('customer');
+      this.clearCache('daily-closing');
+    } else if (endpoint.includes('/product')) {
+      this.clearCache('product');
+    } else if (endpoint.includes('/route')) {
+      this.clearCache('route');
+      this.clearCache('driver');
+    } else {
+      this.clearCache();
+    }
+  }
+
   public async request<T = unknown>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { _skipRefresh, params, ...fetchOptions } = options;
+    const { _skipRefresh, params, bypassCache, cacheTtlMs, ...fetchOptions } = options;
+    const method = (fetchOptions.method || 'GET').toUpperCase();
 
     let url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
@@ -152,6 +196,34 @@ class ApiClient {
       const queryString = queryParams.toString();
       if (queryString) {
         url += (url.includes('?') ? '&' : '?') + queryString;
+      }
+    }
+
+    const defaultTtl =
+      endpoint.includes('/products') || endpoint.includes('/routes') || endpoint.includes('/drivers') || endpoint.includes('/settings')
+        ? 60_000
+        : 15_000;
+    const ttl = cacheTtlMs ?? defaultTtl;
+
+    if (method !== 'GET') {
+      this.invalidateCacheForEndpoint(endpoint);
+    } else if (!bypassCache) {
+      const cached = this.cache.get(url);
+      const now = Date.now();
+      if (cached && now - cached.timestamp < cached.ttl) {
+        if (now - cached.timestamp > 4_000 && !this.inflight.has(url)) {
+          this.request<T>(endpoint, { ...options, bypassCache: true })
+            .then((fresh) => {
+              this.cache.set(url, { data: fresh, timestamp: Date.now(), ttl });
+            })
+            .catch(() => {});
+        }
+        return cached.data as T;
+      }
+
+      const pending = this.inflight.get(url);
+      if (pending) {
+        return pending as Promise<T>;
       }
     }
 
@@ -280,6 +352,10 @@ class ApiClient {
         }
       }
       throw new Error(errorMessage);
+    }
+
+    if (method === 'GET' && !bypassCache) {
+      this.cache.set(url, { data, timestamp: Date.now(), ttl });
     }
 
     return data as T;

@@ -765,43 +765,43 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: '1.5rem',
+          marginBottom: '1.25rem',
           flexWrap: 'wrap',
           gap: '1rem',
         }}
       >
         <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-            Staff & Roles Management
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+            Staff Attendance & Wages
           </h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-            Manage staff profiles, tenure wage slabs (₹400/₹500/₹600), ID proofs, daily attendance roll-calls, and payouts.
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '3px', margin: 0 }}>
+            Daily roll-call, wages, advance tracking, and staff management.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
             className="btn btn-secondary"
             onClick={() => handleOpenShopCollection()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, borderColor: '#059669', color: '#059669' }}
-            title="Record money taken or collected from a customer shop by a staff or share member"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.82rem' }}
+            title="Record cash collected from a shop by a staff member"
           >
-            <Store size={16} color="#059669" />
-            Take / Collect from Shop
+            <Store size={15} style={{ color: '#b91c1c' }} />
+            Take from Shop
           </button>
           <button
             className="btn btn-secondary"
             onClick={() => handleOpenPayoutModal()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.82rem' }}
           >
-            <Wallet size={16} color="#059669" />
+            <Wallet size={15} style={{ color: '#dc2626' }} />
             Give Payout / Advance
           </button>
           <button
             className="btn btn-primary"
             onClick={handleOpenCreateStaff}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.82rem' }}
           >
-            <UserPlus size={16} />
+            <UserPlus size={15} />
             Add Staff Member
           </button>
         </div>
@@ -812,24 +812,25 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
         style={{
           display: 'flex',
           gap: '0.5rem',
-          borderBottom: '1px solid var(--border-color)',
-          marginBottom: '1.5rem',
+          borderBottom: '1px solid var(--border)',
+          marginBottom: '1.25rem',
         }}
       >
         <button
           onClick={() => handleTabChange('staff')}
           style={{
-            padding: '0.75rem 1.25rem',
+            padding: '0.65rem 1.15rem',
             border: 'none',
             background: 'none',
-            fontWeight: 700,
-            fontSize: '0.9rem',
+            fontWeight: activeTab === 'staff' ? 800 : 600,
+            fontSize: '0.88rem',
             color: activeTab === 'staff' ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'staff' ? '3px solid var(--primary)' : '3px solid transparent',
+            borderBottom: activeTab === 'staff' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '0.4rem',
+            transition: 'all 0.15s ease',
           }}
         >
           <Users size={16} />
@@ -839,17 +840,18 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
         <button
           onClick={() => handleTabChange('attendance')}
           style={{
-            padding: '0.75rem 1.25rem',
+            padding: '0.65rem 1.15rem',
             border: 'none',
             background: 'none',
-            fontWeight: 700,
-            fontSize: '0.9rem',
+            fontWeight: activeTab === 'attendance' ? 800 : 600,
+            fontSize: '0.88rem',
             color: activeTab === 'attendance' ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'attendance' ? '3px solid var(--primary)' : '3px solid transparent',
+            borderBottom: activeTab === 'attendance' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '0.4rem',
+            transition: 'all 0.15s ease',
           }}
         >
           <Calendar size={16} />
@@ -859,17 +861,18 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
         <button
           onClick={() => handleTabChange('payouts')}
           style={{
-            padding: '0.75rem 1.25rem',
+            padding: '0.65rem 1.15rem',
             border: 'none',
             background: 'none',
-            fontWeight: 700,
-            fontSize: '0.9rem',
+            fontWeight: activeTab === 'payouts' ? 800 : 600,
+            fontSize: '0.88rem',
             color: activeTab === 'payouts' ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'payouts' ? '3px solid var(--primary)' : '3px solid transparent',
+            borderBottom: activeTab === 'payouts' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '0.4rem',
+            transition: 'all 0.15s ease',
           }}
         >
           <Wallet size={16} />
@@ -879,17 +882,18 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
         <button
           onClick={() => handleTabChange('accounts')}
           style={{
-            padding: '0.75rem 1.25rem',
+            padding: '0.65rem 1.15rem',
             border: 'none',
             background: 'none',
-            fontWeight: 700,
-            fontSize: '0.9rem',
+            fontWeight: activeTab === 'accounts' ? 800 : 600,
+            fontSize: '0.88rem',
             color: activeTab === 'accounts' ? 'var(--primary)' : 'var(--text-muted)',
-            borderBottom: activeTab === 'accounts' ? '3px solid var(--primary)' : '3px solid transparent',
+            borderBottom: activeTab === 'accounts' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '0.4rem',
+            transition: 'all 0.15s ease',
           }}
         >
           <Shield size={16} />
@@ -955,7 +959,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                           </div>
                           {st.has_login_account ? (
                             <span
-                              className="badge badge-success"
+                              className="badge badge-neutral"
                               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', marginTop: '2px', fontSize: '0.68rem', padding: '1px 6px' }}
                             >
                               <UserCheck size={11} />
@@ -969,34 +973,19 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                         </td>
                         <td>
                           <div style={{ marginBottom: '3px' }}>
-                            {st.role_type === 'STAFF' ? (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  padding: '1px 6px',
-                                  borderRadius: '4px',
-                                  backgroundColor: '#dbeafe',
-                                  color: '#1d4ed8',
-                                  fontWeight: 700,
-                                }}
-                              >
-                                Staff / Driver
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  padding: '1px 6px',
-                                  borderRadius: '4px',
-                                  backgroundColor: '#fef3c7',
-                                  color: '#92400e',
-                                  fontWeight: 700,
-                                  border: '1px solid #fde68a',
-                                }}
-                              >
-                                Share Member
-                              </span>
-                            )}
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                padding: '1px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                fontWeight: 700,
+                                border: '1px solid var(--border)',
+                              }}
+                            >
+                              {st.role_type === 'STAFF' ? 'Staff / Driver' : 'Share Member'}
+                            </span>
                           </div>
                           <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>{st.designation}</div>
                         </td>
@@ -1014,7 +1003,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                 style={{ padding: '3px 8px', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.74rem', fontWeight: 600 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <FileCheck size={13} color="#059669" />
+                                <FileCheck size={13} color="#b91c1c" />
                                 View Proof
                               </a>
                             ) : (
@@ -1044,15 +1033,15 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                 padding: '4px 8px',
                                 fontSize: '0.74rem',
                                 fontWeight: 700,
-                                color: '#059669',
-                                borderColor: '#a7f3d0',
-                                backgroundColor: '#ecfdf5',
+                                color: '#b91c1c',
+                                borderColor: '#fecaca',
+                                backgroundColor: '#fef2f2',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '4px',
                               }}
                             >
-                              <Store size={13} color="#059669" />
+                              <Store size={13} color="#b91c1c" />
                               Take from Shop
                             </button>
                             <button
@@ -1068,7 +1057,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                               onClick={() => handleOpenPayoutModal(st.id)}
                               className="btn btn-secondary btn-sm"
                               title="Give Payout / Advance"
-                              style={{ padding: '4px 8px', color: '#059669' }}
+                              style={{ padding: '4px 8px', color: '#b91c1c' }}
                             >
                               <Wallet size={14} />
                             </button>
@@ -1076,7 +1065,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                               onClick={() => handleOpenLedgerModal(st)}
                               className="btn btn-secondary btn-sm"
                               title="View Ledger & Attendance History"
-                              style={{ padding: '4px 8px', color: '#2563eb' }}
+                              style={{ padding: '4px 8px', color: '#b91c1c' }}
                             >
                               <FileText size={14} />
                             </button>
@@ -1113,28 +1102,30 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
           <div
             className="card"
             style={{
-              padding: '0.45rem 0.85rem',
+              padding: '0.6rem 1rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '0.6rem',
+              gap: '0.75rem',
               background: 'var(--bg-card)',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
             }}
           >
             {/* Title & Date Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div
                   style={{
-                    width: 32,
-                    height: 32,
+                    width: 34,
+                    height: 34,
                     borderRadius: 8,
-                    background: '#eff6ff',
+                    background: '#fef2f2',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#2563eb',
+                    color: '#dc2626',
                   }}
                 >
                   <Calendar size={18} />
@@ -1143,8 +1134,8 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                   <div style={{ fontWeight: 800, fontSize: '0.98rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>
                     Daily Attendance &amp; Wage Sheet
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    Wholesale Roll-Call, Slab Wages &amp; Daily Cash / GPay Payouts
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    Daily roll-call, wages, and instant cash / GPay payouts
                   </div>
                 </div>
               </div>
@@ -1156,7 +1147,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                   alignItems: 'center',
                   gap: '0.2rem',
                   background: 'var(--bg-hover, #f8fafc)',
-                  padding: '2px 5px',
+                  padding: '3px 6px',
                   borderRadius: '6px',
                   border: '1px solid var(--border)',
                 }}
@@ -1205,22 +1196,19 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
               </div>
             </div>
 
-            {/* Quick Actions & Save Button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+            {/* Actions & Save Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={() => handleOpenCreateForSection('MEMBER')}
                 style={{
-                  height: 28,
-                  fontSize: '0.74rem',
+                  height: 30,
+                  fontSize: '0.75rem',
                   fontWeight: 700,
-                  color: '#92400e',
-                  borderColor: '#fde68a',
-                  background: '#fffbeb',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.25rem',
+                  gap: '0.3rem',
                 }}
               >
                 <Plus size={13} />
@@ -1232,15 +1220,12 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 className="btn btn-secondary btn-sm"
                 onClick={() => handleOpenCreateForSection('DRIVER')}
                 style={{
-                  height: 28,
-                  fontSize: '0.74rem',
+                  height: 30,
+                  fontSize: '0.75rem',
                   fontWeight: 700,
-                  color: '#1e40af',
-                  borderColor: '#bfdbfe',
-                  background: '#eff6ff',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.25rem',
+                  gap: '0.3rem',
                 }}
               >
                 <Truck size={13} />
@@ -1253,8 +1238,8 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 onClick={handleSaveAttendance}
                 disabled={attendanceSaving}
                 style={{
-                  height: 28,
-                  padding: '0 0.85rem',
+                  height: 30,
+                  padding: '0 0.95rem',
                   fontWeight: 800,
                   fontSize: '0.78rem',
                   display: 'inline-flex',
@@ -1263,118 +1248,119 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 }}
               >
                 <Save size={14} />
-                <span>{attendanceSaving ? 'Saving Sheet...' : 'Save Attendance Sheet'}</span>
+                <span>{attendanceSaving ? 'Saving...' : 'Save Attendance Sheet'}</span>
               </button>
             </div>
           </div>
 
-          {/* 2. Top KPI Cards Grid (Matches Order Page aesthetic) */}
+          {/* 2. Modern Clean KPI Cards Grid */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(185px, 1fr))',
-              gap: '0.35rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+              gap: '0.5rem',
             }}
           >
             {/* Card 1: Attendance summary */}
-            <div className="card" style={{ padding: '0.3rem 0.7rem', borderLeft: '3.5px solid #2563eb' }}>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-                Attendance Roll-Call ({attendanceDate})
-              </span>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2563eb', marginTop: '0.05rem', lineHeight: 1.15 }}>
-                {attendanceStats.presentCount} / {attendanceStats.totalStaff}{' '}
-                <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>Present</span>
+            <div className="card" style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Roll-Call ({attendanceDate})
+                </span>
+                <UserCheck size={15} style={{ color: '#b91c1c' }} />
               </div>
-              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.05rem' }}>
-                <strong style={{ color: '#059669' }}>{attendanceStats.fullCount} Full</strong> •{' '}
-                <strong style={{ color: '#d97706' }}>{attendanceStats.halfCount} Half</strong> •{' '}
-                <strong style={{ color: '#dc2626' }}>{attendanceStats.leaveCount} Leave</strong>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                {attendanceStats.presentCount} / {attendanceStats.totalStaff}{' '}
+                <span style={{ fontSize: '0.76rem', color: '#b91c1c', fontWeight: 700 }}>Present</span>
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>{attendanceStats.fullCount} Full</span> •{' '}
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>{attendanceStats.halfCount} Half</span> •{' '}
+                <span style={{ color: '#dc2626', fontWeight: 700 }}>{attendanceStats.leaveCount} Leave</span>
               </div>
             </div>
 
             {/* Card 2: Share Members */}
-            <div className="card" style={{ padding: '0.3rem 0.7rem', borderLeft: '3.5px solid #d97706' }}>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-                👔 Share Members (Owners)
-              </span>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#b45309', marginTop: '0.05rem', lineHeight: 1.15 }}>
-                {attendanceStats.memberPresent} / {attendanceStats.memberTotal}{' '}
-                <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>Active</span>
+            <div className="card" style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Share Members
+                </span>
+                <Briefcase size={15} style={{ color: '#b91c1c' }} />
               </div>
-              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.05rem' }}>
-                Earned: <strong style={{ color: '#059669' }}>{formatCurrency(attendanceStats.memberEarned)}</strong>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                {attendanceStats.memberPresent} / {attendanceStats.memberTotal}{' '}
+                <span style={{ fontSize: '0.76rem', color: '#b91c1c', fontWeight: 700 }}>Active</span>
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Earned: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.memberEarned)}</strong>
               </div>
             </div>
 
             {/* Card 3: Staff Drivers */}
-            <div className="card" style={{ padding: '0.3rem 0.7rem', borderLeft: '3.5px solid #4f46e5' }}>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-                🚚 Staff Drivers
-              </span>
-              <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#4f46e5', marginTop: '0.05rem', lineHeight: 1.15 }}>
-                {attendanceStats.driverPresent} / {attendanceStats.driverTotal}{' '}
-                <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>Active</span>
+            <div className="card" style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Staff Drivers
+                </span>
+                <Truck size={15} style={{ color: '#b91c1c' }} />
               </div>
-              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.05rem' }}>
-                Earned: <strong style={{ color: '#059669' }}>{formatCurrency(attendanceStats.driverEarned)}</strong>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                {attendanceStats.driverPresent} / {attendanceStats.driverTotal}{' '}
+                <span style={{ fontSize: '0.76rem', color: '#b91c1c', fontWeight: 700 }}>Active</span>
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                Earned: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.driverEarned)}</strong>
               </div>
             </div>
 
             {/* Card 4: Daily Wages & Collections */}
-            <div className="card" style={{ padding: '0.3rem 0.7rem', borderLeft: '3.5px solid #10b981' }}>
-              <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-                Daily Wages &amp; Payouts
-              </span>
-              <div style={{ fontSize: '0.7rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column', gap: '0.05rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Wages Earned:</span>
-                  <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.totalEarned)}</strong>
+            <div className="card" style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Total Wages &amp; Due
+                </span>
+                <Wallet size={15} style={{ color: '#b91c1c' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                  {formatCurrency(attendanceStats.totalEarned)}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'var(--text-muted)' }}>
-                  <span>
-                    Cash: <strong style={{ color: '#16a34a', fontWeight: 600 }}>{formatCurrency(attendanceStats.totalCash)}</strong>
-                  </span>
-                  <span>
-                    GPay: <strong style={{ color: '#2563eb', fontWeight: 600 }}>{formatCurrency(attendanceStats.totalGPay)}</strong>
-                  </span>
-                  <span>
-                    Paid: <strong style={{ color: '#059669', fontWeight: 600 }}>{formatCurrency(attendanceStats.totalPaid)}</strong>
-                  </span>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#b91c1c' }}>
+                  {formatCurrency(attendanceStats.netBalance)} due
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span>Net Due:</span>
-                  <strong style={{ color: attendanceStats.netBalance > 0 ? '#dc2626' : '#16a34a' }}>
-                    {formatCurrency(attendanceStats.netBalance)}
-                  </strong>
-                </div>
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', gap: '0.4rem' }}>
+                <span>Paid: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.totalPaid)}</strong></span>
+                <span>(Cash: {formatCurrency(attendanceStats.totalCash)}, GPay: {formatCurrency(attendanceStats.totalGPay)})</span>
               </div>
             </div>
           </div>
 
-          {/* 3. Compact Filter Bar & Bulk Actions */}
+          {/* 3. Compact Clean Filter Bar & Actions */}
           <div
             style={{
               display: 'flex',
-              gap: '0.4rem',
+              gap: '0.5rem',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               background: 'var(--bg-card)',
-              padding: '0.35rem 0.65rem',
+              padding: '0.45rem 0.75rem',
               borderRadius: '8px',
               border: '1px solid var(--border)',
             }}
           >
             {/* Search Input */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flex: '1 1 200px', maxWidth: 300 }}>
-              <Search size={14} color="var(--text-muted)" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flex: '1 1 200px', maxWidth: 280 }}>
+              <Search size={14} style={{ color: 'var(--text-muted)' }} />
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search staff, driver, member..."
+                placeholder="Search staff or driver..."
                 value={attendanceSearch}
                 onChange={(e) => setAttendanceSearch(e.target.value)}
-                style={{ height: 26, fontSize: '0.78rem', width: '100%', padding: '0 0.5rem' }}
+                style={{ height: 28, fontSize: '0.78rem', width: '100%', padding: '0 0.5rem' }}
               />
               {attendanceSearch && (
                 <button
@@ -1388,12 +1374,12 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
             </div>
 
             {/* Section Filter Pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className={`btn btn-sm ${attendanceFilterRole === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setAttendanceFilterRole('ALL')}
-                style={{ height: 26, fontSize: '0.73rem', padding: '0 0.55rem', fontWeight: 700 }}
+                style={{ height: 28, fontSize: '0.75rem', padding: '0 0.65rem', fontWeight: 700 }}
               >
                 All Personnel ({attendanceStats.totalStaff})
               </button>
@@ -1401,27 +1387,27 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 type="button"
                 className={`btn btn-sm ${attendanceFilterRole === 'MEMBERS' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setAttendanceFilterRole('MEMBERS')}
-                style={{ height: 26, fontSize: '0.73rem', padding: '0 0.55rem', fontWeight: 700 }}
+                style={{ height: 28, fontSize: '0.75rem', padding: '0 0.65rem', fontWeight: 700 }}
               >
-                👔 Share Members ({attendanceStats.memberTotal})
+                Share Members ({attendanceStats.memberTotal})
               </button>
               <button
                 type="button"
                 className={`btn btn-sm ${attendanceFilterRole === 'DRIVERS' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setAttendanceFilterRole('DRIVERS')}
-                style={{ height: 26, fontSize: '0.73rem', padding: '0 0.55rem', fontWeight: 700 }}
+                style={{ height: 28, fontSize: '0.75rem', padding: '0 0.65rem', fontWeight: 700 }}
               >
-                🚚 Staff Drivers ({attendanceStats.driverTotal})
+                Staff Drivers ({attendanceStats.driverTotal})
               </button>
             </div>
 
             {/* Bulk Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleMarkAllFull}
-                style={{ height: 26, fontSize: '0.72rem', padding: '0 0.45rem', fontWeight: 700, color: '#059669', borderColor: '#a7f3d0' }}
+                style={{ height: 28, fontSize: '0.74rem', padding: '0 0.55rem', fontWeight: 700 }}
                 title="Mark all staff full day"
               >
                 <Check size={12} /> Mark All Present
@@ -1430,7 +1416,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleMarkAllLeave}
-                style={{ height: 26, fontSize: '0.72rem', padding: '0 0.45rem', fontWeight: 700, color: '#dc2626', borderColor: '#fecaca' }}
+                style={{ height: 28, fontSize: '0.74rem', padding: '0 0.55rem', fontWeight: 700, color: '#dc2626', borderColor: '#fecaca' }}
                 title="Mark all staff on leave"
               >
                 <X size={12} /> Mark All Leave
@@ -1439,7 +1425,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleAutoFillCash}
-                style={{ height: 26, fontSize: '0.72rem', padding: '0 0.45rem', fontWeight: 700, color: '#b45309', borderColor: '#fde68a' }}
+                style={{ height: 28, fontSize: '0.74rem', padding: '0 0.55rem', fontWeight: 700 }}
                 title="Fill Cash column with earned wage for quick daily payout"
               >
                 <DollarSign size={12} /> Pay to Cash
@@ -1448,7 +1434,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleClearPayouts}
-                style={{ height: 26, fontSize: '0.72rem', padding: '0 0.45rem' }}
+                style={{ height: 28, fontSize: '0.74rem', padding: '0 0.55rem' }}
                 title="Reset Cash and GPay amounts to 0"
               >
                 Clear Paid
@@ -1493,17 +1479,17 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
 
                 const secTitle =
                   secKey === 'MEMBERS'
-                    ? 'SECTION 1: 👔 SHARE MEMBERS (BUSINESS OWNERS / PARTNERS)'
-                    : 'SECTION 2: 🚚 STAFF DRIVERS';
+                    ? 'Share Members (Owners & Partners)'
+                    : 'Staff Drivers';
 
                 const secSubtitle =
                   secKey === 'MEMBERS'
-                    ? 'Eligible for Full Day (100%), Half Day (50%), or Leave (₹0)'
-                    : 'Eligible for Present (100% daily wage) or Leave (₹0)';
+                    ? 'Full Day, Half Day, or Leave'
+                    : 'Present or Leave';
 
-                const secBadgeBg = secKey === 'MEMBERS' ? '#fef3c7' : '#eff6ff';
-                const secBadgeText = secKey === 'MEMBERS' ? '#92400e' : '#1e40af';
-                const secBadgeBorder = secKey === 'MEMBERS' ? '#fde68a' : '#bfdbfe';
+                const secBadgeBg = 'var(--bg-main)';
+                const secBadgeText = 'var(--text-primary)';
+                const secBadgeBorder = 'var(--border)';
 
                 const secPresent = sectionItems.filter((i) => i.status === 'FULL' || i.status === 'HALF').length;
                 const secEarned = sectionItems.reduce((acc, i) => acc + (parseFloat(i.calculated_wage) || 0), 0);
@@ -1526,18 +1512,19 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                     {/* Section Header Banner */}
                     <div
                       style={{
-                        padding: '0.45rem 0.85rem',
-                        background: secBadgeBg,
-                        borderBottom: `1.5px solid ${secBadgeBorder}`,
+                        padding: '0.55rem 0.95rem',
+                        background: 'var(--bg-main)',
+                        borderBottom: '1px solid var(--border)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         flexWrap: 'wrap',
-                        gap: '0.4rem',
+                        gap: '0.5rem',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 800, fontSize: '0.85rem', color: secBadgeText, letterSpacing: '0.01em' }}>
+                        {secKey === 'MEMBERS' ? <Briefcase size={16} style={{ color: '#b91c1c' }} /> : <Truck size={16} style={{ color: '#b91c1c' }} />}
+                        <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                           {secTitle}
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({secSubtitle})</span>
@@ -1548,14 +1535,14 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                           style={{
                             fontSize: '0.74rem',
                             fontWeight: 700,
-                            padding: '1px 8px',
-                            borderRadius: '4px',
-                            background: '#fff',
-                            border: `1px solid ${secBadgeBorder}`,
-                            color: secBadgeText,
+                            padding: '2px 8px',
+                            borderRadius: '5px',
+                            background: 'var(--bg-card)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--text-secondary)',
                           }}
                         >
-                          {secPresent} / {sectionItems.length} Present • Earned: {formatCurrency(secEarned)}
+                          {secPresent} / {sectionItems.length} Present • Earned: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(secEarned)}</strong>
                         </span>
 
                         <button
@@ -1563,16 +1550,13 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                           className="btn btn-secondary btn-sm"
                           onClick={() => handleOpenCreateForSection(secKey === 'MEMBERS' ? 'MEMBER' : 'DRIVER')}
                           style={{
-                            height: 24,
-                            fontSize: '0.7rem',
+                            height: 26,
+                            fontSize: '0.72rem',
                             fontWeight: 700,
-                            padding: '0 0.5rem',
+                            padding: '0 0.55rem',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.2rem',
-                            background: '#fff',
-                            borderColor: secBadgeBorder,
-                            color: secBadgeText,
+                            gap: '0.25rem',
                           }}
                         >
                           <Plus size={12} />
@@ -1658,7 +1642,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                       </span>
                                     </div>
                                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '1px', display: 'flex', gap: '0.4rem' }}>
-                                      {item.phone_number && <span>📞 {item.phone_number}</span>}
+                                      {item.phone_number && <span>{item.phone_number}</span>}
                                       <span style={{ opacity: 0.85 }}>
                                         • {isDriverPersonnel(item) && item.tenure_slab_label?.includes('Member') ? 'Tenure Slab Rate' : item.tenure_slab_label}
                                       </span>
@@ -1694,9 +1678,9 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                               fontWeight: 800,
                                               fontSize: '0.72rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'FULL' ? '#059669' : 'transparent',
+                                              background: item.status === 'FULL' ? '#b91c1c' : 'transparent',
                                               color: item.status === 'FULL' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'FULL' ? '0 1px 3px rgba(5,150,105,0.3)' : 'none',
+                                              boxShadow: item.status === 'FULL' ? '0 1px 3px rgba(185,28,28,0.3)' : 'none',
                                               transition: 'all 0.12s ease',
                                             }}
                                             title="Full Day — 100% daily wage"
@@ -1713,9 +1697,9 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                               fontWeight: 800,
                                               fontSize: '0.72rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'HALF' ? '#d97706' : 'transparent',
+                                              background: item.status === 'HALF' ? '#7f1d1d' : 'transparent',
                                               color: item.status === 'HALF' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'HALF' ? '0 1px 3px rgba(217,119,6,0.3)' : 'none',
+                                              boxShadow: item.status === 'HALF' ? '0 1px 3px rgba(127,29,29,0.3)' : 'none',
                                               transition: 'all 0.12s ease',
                                             }}
                                             title="Half Day — 50% daily wage"
@@ -1732,9 +1716,9 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                               fontWeight: 800,
                                               fontSize: '0.72rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'LEAVE' ? '#dc2626' : 'transparent',
+                                              background: item.status === 'LEAVE' ? '#450a0a' : 'transparent',
                                               color: item.status === 'LEAVE' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'LEAVE' ? '0 1px 3px rgba(220,38,38,0.3)' : 'none',
+                                              boxShadow: item.status === 'LEAVE' ? '0 1px 3px rgba(69,10,10,0.3)' : 'none',
                                               transition: 'all 0.12s ease',
                                             }}
                                             title="Leave / Absent — ₹0 wage"
@@ -1754,9 +1738,9 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                               fontWeight: 800,
                                               fontSize: '0.72rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'FULL' ? '#059669' : 'transparent',
+                                              background: item.status === 'FULL' ? '#b91c1c' : 'transparent',
                                               color: item.status === 'FULL' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'FULL' ? '0 1px 3px rgba(5,150,105,0.3)' : 'none',
+                                              boxShadow: item.status === 'FULL' ? '0 1px 3px rgba(185,28,28,0.3)' : 'none',
                                               transition: 'all 0.12s ease',
                                             }}
                                             title="Present for duty — 100% daily wage"
@@ -1773,9 +1757,9 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                               fontWeight: 800,
                                               fontSize: '0.72rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'LEAVE' ? '#dc2626' : 'transparent',
+                                              background: item.status === 'LEAVE' ? '#450a0a' : 'transparent',
                                               color: item.status === 'LEAVE' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'LEAVE' ? '0 1px 3px rgba(220,38,38,0.3)' : 'none',
+                                              boxShadow: item.status === 'LEAVE' ? '0 1px 3px rgba(69,10,10,0.3)' : 'none',
                                               transition: 'all 0.12s ease',
                                             }}
                                             title="Leave / Absent — ₹0 wage"
@@ -1792,7 +1776,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                     <strong
                                       style={{
                                         fontSize: '0.86rem',
-                                        color: item.status === 'LEAVE' ? 'var(--text-muted)' : '#059669',
+                                        color: item.status === 'LEAVE' ? 'var(--text-muted)' : '#b91c1c',
                                       }}
                                     >
                                       {formatCurrency(earned)}
@@ -1811,7 +1795,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                         padding: '1px 4px',
                                       }}
                                     >
-                                      <span style={{ fontSize: '0.68rem', color: '#16a34a', fontWeight: 700, marginRight: '2px' }}>₹</span>
+                                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, marginRight: '2px' }}>₹</span>
                                       <input
                                         type="number"
                                         min="0"
@@ -1850,7 +1834,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                         padding: '1px 4px',
                                       }}
                                     >
-                                      <span style={{ fontSize: '0.68rem', color: '#2563eb', fontWeight: 700, marginRight: '2px' }}>₹</span>
+                                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, marginRight: '2px' }}>₹</span>
                                       <input
                                         type="number"
                                         min="0"
@@ -1878,7 +1862,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                   </td>
 
                                   {/* Total Paid Today */}
-                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 700, color: rowPaid > 0 ? '#059669' : 'var(--text-muted)' }}>
+                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 700, color: rowPaid > 0 ? '#b91c1c' : 'var(--text-muted)' }}>
                                     {formatCurrency(rowPaid)}
                                   </td>
 
@@ -1889,11 +1873,11 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                         {formatCurrency(rowDue)} due
                                       </span>
                                     ) : rowDue === 0 && earned > 0 ? (
-                                      <span style={{ color: '#059669', fontWeight: 700, fontSize: '0.74rem' }}>
-                                        Settled ✓
+                                      <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.74rem' }}>
+                                        Settled
                                       </span>
                                     ) : rowDue < 0 ? (
-                                      <span style={{ color: '#2563eb', fontWeight: 700, fontSize: '0.74rem' }}>
+                                      <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.74rem' }}>
                                         +{formatCurrency(Math.abs(rowDue))} adv
                                       </span>
                                     ) : (
@@ -1934,7 +1918,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                           const original = staffList.find((s) => s.id === item.staff_id);
                                           if (original) handleOpenLedgerModal(original);
                                         }}
-                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', color: '#2563eb' }}
+                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', color: '#b91c1c' }}
                                         title="View ledger / wage statements"
                                       >
                                         <FileText size={14} />
@@ -1978,127 +1962,91 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                             </tr>
                           )}
                         </tbody>
-                        {/* Section Subtotal Footer */}
-                        {sectionItems.length > 0 && (
-                          <tfoot>
-                            <tr
-                              style={{
-                                background: 'var(--bg-hover, #f8fafc)',
-                                borderTop: '2px solid var(--border)',
-                                fontWeight: 800,
-                                fontSize: '0.74rem',
-                              }}
-                            >
-                              <td colSpan={2} style={{ padding: '0.35rem 0.6rem', color: secBadgeText }}>
-                                Section Total: {sectionItems.length} people ({secPresent} present)
-                              </td>
-                              <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right' }}>—</td>
-                              <td style={{ padding: '0.35rem 0.6rem', textAlign: 'center' }}>
-                                {secPresent} Active
-                              </td>
-                              <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', color: '#059669' }}>
-                                {formatCurrency(secEarned)}
-                              </td>
-                              <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', color: '#16a34a' }}>
-                                {formatCurrency(secCash)}
-                              </td>
-                              <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', color: '#2563eb' }}>
-                                {formatCurrency(secGPay)}
-                              </td>
-                              <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', color: '#059669' }}>
-                                {formatCurrency(secPaid)}
-                              </td>
-                              <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', color: secDue > 0 ? '#dc2626' : '#16a34a' }}>
-                                {formatCurrency(secDue)}
-                              </td>
-                              <td colSpan={2}></td>
-                            </tr>
-                          </tfoot>
-                        )}
                       </table>
                     </div>
                   </div>
                 );
               })}
 
-              {/* 5. Sticky Grand Totals Footer Row (Entire Sheet Summary) */}
+              {/* 5. Clean Sheet Summary Footer */}
               <div
+                className="card"
                 style={{
-                  background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                  color: '#fff',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px',
-                  padding: '0.65rem 1rem',
+                  padding: '0.75rem 1.15rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   flexWrap: 'wrap',
                   gap: '0.75rem',
-                  boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+                  boxShadow: 'var(--shadow-sm)',
                   marginTop: '0.25rem',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <span
                     style={{
-                      background: 'rgba(255,255,255,0.15)',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
+                      background: 'var(--bg-hover, #f1f5f9)',
+                      color: 'var(--text-primary)',
+                      padding: '3px 8px',
+                      borderRadius: '5px',
                       fontSize: '0.75rem',
                       fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
+                      letterSpacing: '0.02em',
                     }}
                   >
-                    Σ Sheet Totals
+                    Sheet Summary
                   </span>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                    {attendanceStats.totalStaff} Personnel •{' '}
-                    <strong style={{ color: '#4ade80' }}>{attendanceStats.presentCount} Present</strong> (
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <strong>{attendanceStats.totalStaff}</strong> Personnel •{' '}
+                    <strong style={{ color: 'var(--text-primary)' }}>{attendanceStats.presentCount} Present</strong> (
                     {attendanceStats.fullCount} Full, {attendanceStats.halfCount} Half,{' '}
-                    <strong style={{ color: '#f87171' }}>{attendanceStats.leaveCount} Leave</strong>)
+                    <strong style={{ color: '#dc2626' }}>{attendanceStats.leaveCount} Leave</strong>)
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
                       Earned Wages
                     </span>
-                    <strong style={{ color: '#6ee7b7', fontSize: '0.95rem' }}>{formatCurrency(attendanceStats.totalEarned)}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.98rem' }}>{formatCurrency(attendanceStats.totalEarned)}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
                       Cash Given
                     </span>
-                    <strong style={{ color: '#86efac', fontSize: '0.95rem' }}>{formatCurrency(attendanceStats.totalCash)}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.98rem' }}>{formatCurrency(attendanceStats.totalCash)}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
                       GPay Given
                     </span>
-                    <strong style={{ color: '#93c5fd', fontSize: '0.95rem' }}>{formatCurrency(attendanceStats.totalGPay)}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.98rem' }}>{formatCurrency(attendanceStats.totalGPay)}</strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
                       Total Paid
                     </span>
-                    <strong style={{ color: '#4ade80', fontSize: '0.95rem' }}>{formatCurrency(attendanceStats.totalPaid)}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.98rem' }}>{formatCurrency(attendanceStats.totalPaid)}</strong>
                   </div>
                   <div
                     style={{
-                      background: 'rgba(255,255,255,0.08)',
-                      padding: '3px 8px',
+                      background: '#fef2f2',
+                      padding: '4px 10px',
                       borderRadius: '6px',
-                      border: '1px solid rgba(255,255,255,0.12)',
+                      border: '1px solid #fecaca',
                     }}
                   >
-                    <span style={{ fontSize: '0.68rem', color: '#fca5a5', display: 'block', textTransform: 'uppercase' }}>
-                      Net Outstanding Due
+                    <span style={{ fontSize: '0.66rem', color: '#991b1b', display: 'block', fontWeight: 800, textTransform: 'uppercase' }}>
+                      Net Due Today
                     </span>
                     <strong
                       style={{
-                        color: attendanceStats.netBalance > 0 ? '#f87171' : '#4ade80',
-                        fontSize: '1rem',
+                        color: '#dc2626',
+                        fontSize: '1.05rem',
                         fontWeight: 900,
                       }}
                     >

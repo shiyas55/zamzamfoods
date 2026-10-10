@@ -4,7 +4,7 @@ import { orderService } from '../services/orderService';
 import { productService } from '../services/productService';
 import { routeService } from '../services/routeService';
 import { formatCurrency } from '../utils/formatters';
-import { X, Save, AlertCircle, ShoppingCart, UserCheck, Plus, Trash2, Unlock } from 'lucide-react';
+import { X, Save, AlertCircle, ShoppingCart, UserCheck, Plus, Trash2, Unlock, RefreshCw } from 'lucide-react';
 import { OrderActivityTimeline } from './OrderActivityTimeline';
 import { apiClient } from '../services/apiClient';
 
@@ -25,10 +25,11 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, 
   const [items, setItems] = useState<Array<{ product_id: string; quantity: number; unit_price: string }>>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>(order.driver || '');
   const [notes, setNotes] = useState<string>(order.notes || '');
+  const [discount, setDiscount] = useState<string>(order.shop_expense ? String(order.shop_expense) : '0.00');
   const [reopenReason, setReopenReason] = useState('');
   const [isReopening, setIsReopening] = useState(false);
 
-  const isIrreversible = ['LOCKED', 'BILLING', 'DELIVERY_CREATED', 'COMPLETED', 'CANCELLED'].includes(order.status);
+  const isIrreversible = order.status === 'CANCELLED';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,9 +46,9 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, 
         if (order.items && order.items.length > 0) {
           setItems(
             order.items.map((it) => ({
-              product_id: it.product,
+              product_id: (typeof it.product === 'object' && it.product !== null ? (it.product as any).id : it.product) || (it.product_details as any)?.id || '',
               quantity: it.quantity,
-              unit_price: it.unit_price,
+              unit_price: String(it.unit_price),
             }))
           );
         } else if (prodList.length > 0) {
@@ -97,17 +98,23 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, 
     setItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  const calculateTotal = (): number => {
+  const calculateSubtotal = (): number => {
     return items.reduce((acc, it) => {
       const price = parseFloat(it.unit_price) || 0;
       return acc + it.quantity * price;
     }, 0);
   };
 
+  const calculateTotal = (): number => {
+    const subtotal = calculateSubtotal();
+    const disc = parseFloat(discount) || 0;
+    return Math.max(0, subtotal - disc);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isIrreversible) {
-      setError(`Cannot edit order because it is already ${order.status}.`);
+      setError(`Cannot edit order because it has been cancelled.`);
       return;
     }
 
@@ -120,8 +127,14 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, 
       setSubmitting(true);
       setError(null);
       const updated = await orderService.updateOrder(order.id, {
-        items,
+        items: items.map((it) => ({
+          product_id: it.product_id,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+        })),
         driver_id: selectedDriverId || null,
+        shop_expense: parseFloat(discount) > 0 ? parseFloat(discount).toFixed(2) : '0.00',
+        shop_expense_notes: parseFloat(discount) > 0 ? 'Discount / Deduction' : '',
         notes,
       });
       onSuccess(updated);
@@ -176,7 +189,7 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, 
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <AlertCircle size={18} />
-              <span style={{ fontWeight: 600 }}>This order is LOCKED (Status: {order.status}) and cannot be edited.</span>
+              <span style={{ fontWeight: 600 }}>This order has been CANCELLED and cannot be modified.</span>
             </div>
             
             {order.status !== 'DELIVERY_CREATED' && order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
@@ -346,6 +359,29 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, 
               />
             </div>
 
+            {/* Discount / Deduction */}
+            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Discount / Shop Expense (₹)</span>
+                {parseFloat(discount) > 0 && (
+                  <span style={{ fontSize: '0.75rem', color: '#dc2626', fontWeight: 700 }}>
+                    - {formatCurrency(parseFloat(discount))} deducted
+                  </span>
+                )}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="form-input"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                disabled={isIrreversible}
+                placeholder="0.00"
+                style={{ fontSize: '0.9rem', fontWeight: 600 }}
+              />
+            </div>
+
             {/* Total and Actions */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.25rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem' }}>
               <div>
@@ -364,8 +400,8 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({ order, onClose, 
                 Cancel
               </button>
               <button type="submit" className="btn btn-primary" disabled={submitting || isIrreversible || items.length === 0}>
-                <Save size={16} />
-                <span>{submitting ? 'Saving Changes...' : 'Save Order Changes'}</span>
+                <RefreshCw size={15} />
+                <span>{submitting ? 'Updating Order...' : 'Re-submit / Save Order'}</span>
               </button>
             </div>
             

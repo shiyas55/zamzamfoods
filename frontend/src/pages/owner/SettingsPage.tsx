@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSettings } from '../../context/SettingsContext';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -34,19 +35,88 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  History,
+  Database,
+  Monitor,
+  Maximize,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { settingsService } from '../../services/settingsService';
-import { ZentrixSettingsSection, ZENTRIX_SUPPORT_CONFIG } from '../../components/ZentrixHelpDesk';
 
 const DatabaseStorageBackupSection = React.lazy(() =>
   import('../../components/DatabaseStorageBackupSection').then((m) => ({ default: m.DatabaseStorageBackupSection }))
 );
 
+const ActivityHistoryPage = React.lazy(() =>
+  import('./ActivityHistoryPage').then((m) => ({ default: m.ActivityHistoryPage }))
+);
+
 export const SettingsPage: React.FC = () => {
-  const { settings, loading, updateSettings, refreshSettings } = useSettings();
+  const { settings, loading, updateSettings, refreshSettings, zoomLevel, setZoomLevel } = useSettings();
   const { user } = useAuth();
 
   const isOwner = user?.role === 'OWNER';
+
+  // Screen and Window Dimensions state
+  const [windowDimensions, setWindowDimensions] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1440,
+    height: typeof window !== 'undefined' ? window.innerHeight : 900,
+    screenWidth: typeof window !== 'undefined' && window.screen ? window.screen.width : 1440,
+    screenHeight: typeof window !== 'undefined' && window.screen ? window.screen.height : 900,
+    pixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        screenWidth: window.screen.width,
+        screenHeight: window.screen.height,
+        pixelRatio: window.devicePixelRatio || 1,
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleApplyScreenSize = async (targetWidth: number, targetHeight: number) => {
+    try {
+      const { getCurrentWindow, LogicalSize } = await import('@tauri-apps/api/window');
+      const win = getCurrentWindow();
+      await win.setSize(new LogicalSize(targetWidth, targetHeight));
+      await win.center();
+    } catch {
+      // In web browser, log target size
+    }
+  };
+
+  const handleToggleFullscreen = async () => {
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      const win = getCurrentWindow();
+      const isFull = await win.isFullscreen();
+      await win.setFullscreen(!isFull);
+    } catch {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  // Tabs navigation state
+  const [searchParams, setSearchParams] = useSearchParams();
+  const validTabs = ['general', 'database', 'activity', 'support'] as const;
+  type SettingsTab = typeof validTabs[number];
+  const tabParam = searchParams.get('tab') as SettingsTab;
+  const activeTab: SettingsTab = validTabs.includes(tabParam) ? tabParam : 'general';
+
+  const handleTabChange = (tab: SettingsTab) => {
+    setSearchParams(tab === 'general' ? {} : { tab });
+  };
 
   // Form state
   const [isWhatsappEnabled, setIsWhatsappEnabled] = useState(true);
@@ -683,14 +753,94 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Settings Navigation Tabs */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '0.5rem',
+          borderBottom: '1px solid var(--border)',
+          marginBottom: '2rem',
+          overflowX: 'auto',
+          paddingBottom: '2px',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => handleTabChange('general')}
+          style={{
+            padding: '0.75rem 1.25rem',
+            border: 'none',
+            background: 'none',
+            fontWeight: 700,
+            fontSize: '0.92rem',
+            color: activeTab === 'general' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: activeTab === 'general' ? '3px solid var(--primary)' : '3px solid transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <SettingsIcon size={16} />
+          Business & Features
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('database')}
+          style={{
+            padding: '0.75rem 1.25rem',
+            border: 'none',
+            background: 'none',
+            fontWeight: 700,
+            fontSize: '0.92rem',
+            color: activeTab === 'database' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: activeTab === 'database' ? '3px solid var(--primary)' : '3px solid transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Database size={16} />
+          Database & Storage
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('activity')}
+          style={{
+            padding: '0.75rem 1.25rem',
+            border: 'none',
+            background: 'none',
+            fontWeight: 700,
+            fontSize: '0.92rem',
+            color: activeTab === 'activity' ? 'var(--primary)' : 'var(--text-muted)',
+            borderBottom: activeTab === 'activity' ? '3px solid var(--primary)' : '3px solid transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <History size={16} />
+          Activity History
+        </button>
+      </div>
+
       {loading && !settings ? (
         <div style={{ padding: '4rem 1rem', textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '0 auto 1.25rem' }} />
           <p style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Loading system settings...</p>
         </div>
       ) : (
-        <form onSubmit={handleSave}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <>
+          {activeTab === 'general' && (
+            <form onSubmit={handleSave}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
             {/* SECTION 1: MASTER CONTROLS & TOGGLES */}
             <div style={{
@@ -1521,6 +1671,352 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
 
+            {/* SECTION: SCREEN DISPLAY, ZOOM LEVEL & RESOLUTION */}
+            <div style={{
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              boxShadow: 'var(--shadow-sm)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <Monitor size={18} />
+                  </div>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      Screen Display, Zoom &amp; Resolution
+                    </h2>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{
+                    background: '#eff6ff',
+                    color: '#1d4ed8',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '6px',
+                    padding: '0.2rem 0.6rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                  }}>
+                    Active Zoom: {zoomLevel}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel(100)}
+                    style={{
+                      background: 'none',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      padding: '0.2rem 0.55rem',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                    }}
+                    title="Reset zoom to default 100%"
+                  >
+                    Reset (100%)
+                  </button>
+                </div>
+              </div>
+              <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.86rem', color: 'var(--text-secondary)' }}>
+                Scale the user interface and adapt the application to your monitor size, laptop display, or projector.
+              </p>
+
+              {/* Live Display & Screen Metrics Cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                gap: '0.75rem',
+                marginBottom: '1.25rem',
+              }}>
+                {/* Window Dimensions */}
+                <div style={{
+                  background: 'var(--bg-main)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>
+                    Current Window Size
+                  </span>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                    {windowDimensions.width} × {windowDimensions.height} <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>px</span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 600, marginTop: '0.1rem' }}>
+                    ● Active Viewport
+                  </div>
+                </div>
+
+                {/* Monitor Screen Resolution */}
+                <div style={{
+                  background: 'var(--bg-main)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>
+                    Monitor Display
+                  </span>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                    {windowDimensions.screenWidth} × {windowDimensions.screenHeight} <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>px</span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                    Native Hardware Screen
+                  </div>
+                </div>
+
+                {/* Pixel Density & Retina */}
+                <div style={{
+                  background: 'var(--bg-main)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>
+                    Display Pixel Density
+                  </span>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '0.15rem' }}>
+                    {windowDimensions.pixelRatio}x <span style={{ fontSize: '0.75rem', fontWeight: 700, color: windowDimensions.pixelRatio > 1 ? '#7c3aed' : 'var(--text-muted)' }}>
+                      {windowDimensions.pixelRatio > 1 ? 'Retina / HiDPI' : 'Standard DPI'}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                    Hardware Scale Factor
+                  </div>
+                </div>
+
+                {/* Active Zoom Scale */}
+                <div style={{
+                  background: 'var(--bg-main)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block' }}>
+                    Current Zoom Scale
+                  </span>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#2563eb', marginTop: '0.15rem' }}>
+                    {zoomLevel}%
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                    {zoomLevel < 100 ? 'Compact View' : zoomLevel > 100 ? 'Enlarged View' : 'Default Standard'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Zoom Controls & Slider */}
+              <div style={{
+                background: 'var(--bg-main)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1.25rem',
+                marginBottom: '1.25rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                      Interface Zoom Level ({zoomLevel}%)
+                    </label>
+                    <span style={{ display: 'block', fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                      Adjusts text size, table row density, and button proportions across the entire software immediately.
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(Math.max(50, zoomLevel - 5))}
+                      className="btn btn-secondary btn-sm"
+                      style={{ height: '30px', padding: '0 0.65rem', fontWeight: 800, fontSize: '0.8rem' }}
+                      title="Zoom out by 5%"
+                    >
+                      <ZoomOut size={13} style={{ marginRight: '3px' }} /> - 5%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setZoomLevel(Math.min(200, zoomLevel + 5))}
+                      className="btn btn-secondary btn-sm"
+                      style={{ height: '30px', padding: '0 0.65rem', fontWeight: 800, fontSize: '0.8rem' }}
+                      title="Zoom in by 5%"
+                    >
+                      <ZoomIn size={13} style={{ marginRight: '3px' }} /> + 5%
+                    </button>
+                  </div>
+                </div>
+
+                {/* Slider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>70%</span>
+                  <input
+                    type="range"
+                    min={70}
+                    max={150}
+                    step={5}
+                    value={zoomLevel}
+                    onChange={(e) => setZoomLevel(Number(e.target.value))}
+                    style={{
+                      flex: 1,
+                      accentColor: '#b91c1c',
+                      cursor: 'pointer',
+                      height: '6px',
+                    }}
+                  />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>150%</span>
+                </div>
+
+                {/* Quick Presets Buttons */}
+                <div>
+                  <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: '0.45rem', textTransform: 'uppercase' }}>
+                    Quick Scaling Presets
+                  </span>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {[
+                      { label: '75% Compact', val: 75, desc: 'Maximum screen space (fit 25+ order rows)' },
+                      { label: '80% Small Laptop', val: 80, desc: 'Ideal for 13" MacBook / small laptops' },
+                      { label: '85% Balanced', val: 85, desc: 'Recommended for 1440x900 resolution' },
+                      { label: '90% Clean Density', val: 90, desc: 'Sharp text with high data density' },
+                      { label: '100% Standard (1:1)', val: 100, desc: 'Default system scale' },
+                      { label: '110% Comfortable', val: 110, desc: 'Easier reading on high-res monitors' },
+                      { label: '120% Large Display', val: 120, desc: 'Large font and button sizes' },
+                    ].map((preset) => {
+                      const isActive = zoomLevel === preset.val;
+                      return (
+                        <button
+                          key={preset.val}
+                          type="button"
+                          onClick={() => setZoomLevel(preset.val)}
+                          style={{
+                            padding: '0.45rem 0.75rem',
+                            borderRadius: '8px',
+                            border: isActive ? '2px solid #b91c1c' : '1px solid var(--border)',
+                            background: isActive ? '#fef2f2' : 'var(--bg-card)',
+                            color: isActive ? '#991b1b' : 'var(--text-primary)',
+                            fontWeight: isActive ? 800 : 600,
+                            fontSize: '0.78rem',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '2px',
+                            transition: 'all 0.15s ease',
+                          }}
+                          title={preset.desc}
+                        >
+                          <span>{preset.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Screen Size & Window Presets */}
+              <div style={{
+                background: 'var(--bg-main)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '1.25rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <label style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                      Screen &amp; Window Size Presets
+                    </label>
+                    <span style={{ display: 'block', fontSize: '0.76rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
+                      Select standard screen size dimensions for multi-monitor setups or toggle fullscreen mode.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleFullscreen}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      height: '32px',
+                      padding: '0 0.75rem',
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                    }}
+                  >
+                    <Maximize size={14} />
+                    <span>Toggle Fullscreen</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.65rem' }}>
+                  {[
+                    { name: 'MacBook Standard', w: 1440, h: 900, rec: '85% – 100% Zoom', icon: '💻' },
+                    { name: 'Full HD Desktop', w: 1920, h: 1080, rec: '100% – 110% Zoom', icon: '🖥️' },
+                    { name: 'Compact Laptop', w: 1280, h: 800, rec: '75% – 85% Zoom', icon: '💻' },
+                    { name: 'Wide Workstation', w: 1600, h: 1000, rec: '90% – 100% Zoom', icon: '🖥️' },
+                  ].map((res) => {
+                    const isCurrent = Math.abs(windowDimensions.width - res.w) < 40 && Math.abs(windowDimensions.height - res.h) < 40;
+                    return (
+                      <div
+                        key={res.name}
+                        style={{
+                          padding: '0.75rem 0.85rem',
+                          borderRadius: '8px',
+                          border: isCurrent ? '2px solid #2563eb' : '1px solid var(--border)',
+                          background: isCurrent ? '#eff6ff' : 'var(--bg-card)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.25rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontWeight: 800, fontSize: '0.82rem', color: isCurrent ? '#1d4ed8' : 'var(--text-primary)' }}>
+                            {res.icon} {res.name}
+                          </span>
+                          {isCurrent && (
+                            <span style={{ fontSize: '0.62rem', fontWeight: 800, background: '#dbeafe', color: '#1e40af', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
+                          {res.w} × {res.h} px
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          Recommended: {res.rec}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyScreenSize(res.w, res.h)}
+                          style={{
+                            marginTop: '0.35rem',
+                            padding: '0.3rem 0.55rem',
+                            borderRadius: '5px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-card)',
+                            color: 'var(--text-primary)',
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Resize Window ({res.w}×{res.h})
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             {/* SECTION 2: BUSINESS PROFILE & GST INFORMATION */}
             <div style={{
               backgroundColor: 'var(--bg-card)',
@@ -1674,7 +2170,7 @@ export const SettingsPage: React.FC = () => {
                   />
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
                     <Info size={13} />
-                    Used for generating UPI QR codes for driver collections and customer invoices.
+                    Used for generating UPI QR codes for customer invoices and payments.
                   </span>
                 </div>
 
@@ -1723,15 +2219,6 @@ export const SettingsPage: React.FC = () => {
 
               </div>
             </div>
-
-            {/* SECTION: DATABASE STORAGE LEVEL & BACKUP DISASTER RECOVERY */}
-            <React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}><div className="spinner" /></div>}>
-              <DatabaseStorageBackupSection />
-            </React.Suspense>
-
-
-            {/* SECTION 3: ZENTRIX 24x7 HELP DESK & SOFTWARE SUPPORT */}
-            <ZentrixSettingsSection />
 
             {/* STICKY BOTTOM ACTION BAR */}
             {isOwner && (
@@ -1805,6 +2292,22 @@ export const SettingsPage: React.FC = () => {
           </div>
         </form>
       )}
+
+      {/* TAB 2: DATABASE STORAGE LEVEL & BACKUP DISASTER RECOVERY */}
+      {activeTab === 'database' && (
+        <React.Suspense fallback={<div style={{ padding: '3rem', textAlign: 'center' }}><div className="spinner" /></div>}>
+          <DatabaseStorageBackupSection />
+        </React.Suspense>
+      )}
+
+      {/* TAB 3: SYSTEM ACTIVITY HISTORY & AUDIT LOG */}
+      {activeTab === 'activity' && (
+        <React.Suspense fallback={<div style={{ padding: '3rem', textAlign: 'center' }}><div className="spinner" /></div>}>
+          <ActivityHistoryPage />
+        </React.Suspense>
+      )}
+    </>
+  )}
 
       {/* WhatsApp Upgrade Plan & License Key Modal */}
       {isUpgradeModalOpen && (
@@ -1918,9 +2421,9 @@ export const SettingsPage: React.FC = () => {
               >
                 <div style={{ flex: '1 1 230px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                    <Headphones size={16} color="#059669" />
+                    <Headphones size={16} color="#dc2626" />
                     <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                      Get Official Plan Key • Zentrix Support
+                      Get Official Plan Key • System Support
                     </span>
                     <span
                       style={{
@@ -1928,26 +2431,26 @@ export const SettingsPage: React.FC = () => {
                         fontWeight: 800,
                         padding: '0.1rem 0.4rem',
                         borderRadius: '4px',
-                        backgroundColor: '#dcfce7',
-                        color: '#15803d',
-                        border: '1px solid #86efac',
+                        backgroundColor: '#fee2e2',
+                        color: '#b91c1c',
+                        border: '1px solid #fca5a5',
                       }}
                     >
-                      24x7 Active
+                      Official Support
                     </span>
                   </div>
                   <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                    To obtain official keys, extend validity, or renew business licenses, contact <strong>Zentrix Help Desk</strong> at <strong style={{ color: '#059669', fontFamily: 'monospace' }}>7012587705</strong>.
+                    To obtain official keys, extend validity, or renew business licenses, contact <strong>System Support</strong> at <strong style={{ color: '#dc2626', fontFamily: 'monospace' }}>7012587705</strong>.
                   </p>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
                   <a
-                    href="https://wa.me/917012587705?text=Hello%20Zentrix%2C%20I%20want%20to%20get%20an%20upgrade%20key%20for%20WhatsApp%20Messaging"
+                    href="https://wa.me/917012587705?text=Hello%20Support%2C%20I%20want%20to%20get%20an%20upgrade%20key%20for%20WhatsApp%20Messaging"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
-                      backgroundColor: '#059669',
+                      backgroundColor: '#dc2626',
                       color: '#ffffff',
                       textDecoration: 'none',
                       borderRadius: '6px',
@@ -2061,13 +2564,13 @@ export const SettingsPage: React.FC = () => {
                   }}
                 >
                   <span>
-                    🔑 Keys are issued & verified by <strong>Zentrix Help Desk</strong>.
+                    🔑 Keys are issued & verified by <strong>Official System Support</strong>.
                   </span>
                   <a
-                    href="https://wa.me/917012587705?text=Hello%20Zentrix%2C%20I%20need%20to%20verify%20my%20WhatsApp%20plan%20key"
+                    href="https://wa.me/917012587705?text=Hello%20Support%2C%20I%20need%20to%20verify%20my%20WhatsApp%20plan%20key"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: '#059669', fontWeight: 700, textDecoration: 'none' }}
+                    style={{ color: '#dc2626', fontWeight: 700, textDecoration: 'none' }}
                   >
                     WhatsApp: 7012587705 →
                   </a>
@@ -2119,7 +2622,7 @@ export const SettingsPage: React.FC = () => {
                   )}
                 </div>
                 <small style={{ color: 'var(--text-secondary)', fontSize: '0.74rem', marginTop: '0.35rem', display: 'block' }}>
-                  Accepted format: Official Zentrix upgrade key or custom key from Help Desk (7012587705).
+                  Accepted format: Official upgrade key or custom key from Support (7012587705).
                 </small>
               </div>
 

@@ -23,7 +23,6 @@ export const CustomerShopsPage: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
 
@@ -330,54 +329,6 @@ export const CustomerShopsPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Customer Self-Order Upgrade Announcement Banner */}
-      <div
-        className="card"
-        style={{
-          padding: '0.85rem 1.25rem',
-          marginBottom: '1.25rem',
-          background: '#f8fafc',
-          border: '1px solid #cbd5e1',
-          borderRadius: 'var(--radius-md)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              background: '#10b981',
-              color: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Smartphone size={18} />
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)' }}>
-                Customer Self-Order Upgrade Active
-              </span>
-              <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
-                1-Click Confirmation • No OTP
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-              Every customer shop has a dedicated mobile order link. Shops can order anytime with customer-specific pricing. Use the <strong>Self-Order</strong> buttons below to open or copy each shop's link.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Filter Bar */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
@@ -423,7 +374,7 @@ export const CustomerShopsPage: React.FC = () => {
                 <th style={{ minWidth: '160px' }}>Address</th>
                 <th style={{ minWidth: '120px', textAlign: 'right' }}>Current Balance</th>
                 <th style={{ minWidth: '110px' }}>Status</th>
-                <th style={{ minWidth: '290px', textAlign: 'right' }}>Actions</th>
+                <th style={{ minWidth: '200px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -521,7 +472,7 @@ export const CustomerShopsPage: React.FC = () => {
                     </td>
 
                     {/* 7. Actions (Responsive & zoom-proof with nowrap) */}
-                    <td style={{ minWidth: '290px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td style={{ minWidth: '200px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <div
                         style={{
                           display: 'inline-flex',
@@ -538,7 +489,7 @@ export const CustomerShopsPage: React.FC = () => {
                           className="btn btn-secondary btn-sm"
                           onClick={() => handleOpenEditModal(c)}
                           title="Edit Customer Shop Details"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#0284c7', height: '28px', padding: '0 0.45rem' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '28px', padding: '0 0.45rem' }}
                         >
                           <Edit2 size={12} />
                           <span>Edit</span>
@@ -577,39 +528,10 @@ export const CustomerShopsPage: React.FC = () => {
                             navigate(`${basePath}/customers/${c.id}?tab=documents`);
                           }}
                           title="View & Upload Shop Documents"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#7c3aed', height: '28px', padding: '0 0.45rem' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', height: '28px', padding: '0 0.45rem' }}
                         >
                           <FolderArchive size={12} />
                           <span>Docs{c.documents_count ? ` (${c.documents_count})` : ''}</span>
-                        </button>
-
-                        {/* Open Self-Order Portal */}
-                        <a
-                          href={`/customer/${c.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-secondary btn-sm"
-                          title="Open Customer Self-Order Portal in new tab"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#10b981', height: '28px', padding: '0 0.45rem', textDecoration: 'none' }}
-                        >
-                          <ExternalLink size={12} />
-                          <span>Order</span>
-                        </a>
-
-                        {/* Self-Order Link Copy */}
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => {
-                            const url = `${window.location.origin}/customer/${c.id}`;
-                            navigator.clipboard.writeText(url);
-                            setCopiedId(c.id);
-                            setTimeout(() => setCopiedId(null), 2000);
-                          }}
-                          title="Copy Customer Self-Order Link to share with shop"
-                          style={{ display: 'inline-flex', alignItems: 'center', height: '28px', padding: '0 0.45rem' }}
-                        >
-                          {copiedId === c.id ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
                         </button>
 
                         {/* Delete Button */}

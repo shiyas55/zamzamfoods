@@ -3,6 +3,7 @@ import { orderService } from '../../services/orderService';
 import { routeService } from '../../services/routeService';
 import { Order, Route } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import { apiClient } from '../../services/apiClient';
 import {
   Search,
   Eye,
@@ -379,7 +380,7 @@ export const OrdersPage: React.FC = () => {
           onChange={(e) => setSelectedSource(e.target.value)}
         >
           <option value="">All Sources</option>
-          <option value="CUSTOMER_LINK">📱 Customer Self-Order</option>
+          <option value="CUSTOMER_LINK">Customer Self-Order</option>
           <option value="MANAGER">Manager Sheet Entry</option>
           <option value="OWNER">Owner Entry</option>
         </select>
@@ -388,7 +389,10 @@ export const OrdersPage: React.FC = () => {
         <button
           type="button"
           className="btn btn-secondary btn-sm"
-          onClick={fetchOrders}
+          onClick={() => {
+            apiClient.clearCache('order');
+            fetchOrders();
+          }}
           disabled={loading}
           style={{ height: '34px', padding: '0 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
           title="Refresh orders from database"

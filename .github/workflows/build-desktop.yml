@@ -71,11 +71,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Zamzam-Foods-Windows-Installer
-          path: frontend/src-tauri/target/release/bundle/nsis/*.exe
+          path: frontend/src-tauri/target/**/bundle/nsis/*.exe
 
       - name: Upload macOS .DMG artifact
         if: matrix.platform == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: Zamzam-Foods-macOS-Installer
-          path: frontend/src-tauri/target/release/bundle/dmg/*.dmg
+          path: frontend/src-tauri/target/**/bundle/dmg/*.dmg

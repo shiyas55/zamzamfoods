@@ -4,17 +4,15 @@ import {
   OutstandingCreditReport, 
   OutstandingShopReport,
   CollectionReportResponse,
-  DriverCollectionReportResponse,
   DailyFinancialSummaryResponse 
 } from '../../services/reportService';
 import { routeService } from '../../services/routeService';
 import { customerService } from '../../services/customerService';
-import { Route, Driver, Customer, DatePreset, CollectionItem, DriverCollectionRow } from '../../types';
+import { Route, Driver, Customer, DatePreset, CollectionItem } from '../../types';
 import { formatCurrency, formatDateTime } from '../../utils/formatters';
 import { 
   Receipt, 
   Users, 
-  Truck, 
   DollarSign, 
   Calendar, 
   Filter, 
@@ -29,7 +27,7 @@ import {
 import { openWhatsApp, generatePaymentReceiptMessage, generateBalanceReminderMessage } from '../../utils/whatsappUtils';
 import { useSettings } from '../../context/SettingsContext';
 
-type ReportTab = 'COLLECTIONS' | 'OUTSTANDING' | 'DRIVER_COLLECTIONS' | 'FINANCIAL_SUMMARY';
+type ReportTab = 'COLLECTIONS' | 'OUTSTANDING' | 'FINANCIAL_SUMMARY';
 
 export const ReportsPage: React.FC = () => {
   const { isWhatsAppEnabled } = useSettings();
@@ -54,7 +52,6 @@ export const ReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [collectionReport, setCollectionReport] = useState<CollectionReportResponse | null>(null);
   const [outstandingReport, setOutstandingReport] = useState<OutstandingCreditReport | null>(null);
-  const [driverReport, setDriverReport] = useState<DriverCollectionReportResponse | null>(null);
   const [financialSummary, setFinancialSummary] = useState<DailyFinancialSummaryResponse | null>(null);
 
   // Load master dropdown options once
@@ -97,13 +94,6 @@ export const ReportsPage: React.FC = () => {
           search: searchQuery || undefined,
         });
         setOutstandingReport(res);
-      } else if (activeTab === 'DRIVER_COLLECTIONS') {
-        const res = await reportService.getDriverCollectionReport({
-          date_preset: datePreset,
-          route: selectedRoute || undefined,
-          driver: selectedDriver || undefined,
-        });
-        setDriverReport(res);
       } else if (activeTab === 'FINANCIAL_SUMMARY') {
         const res = await reportService.getDailyFinancialSummary({
           date_preset: datePreset,
@@ -161,15 +151,6 @@ export const ReportsPage: React.FC = () => {
         >
           <Users size={16} />
           <span>Outstanding Customers</span>
-        </button>
-
-        <button
-          className={`btn ${activeTab === 'DRIVER_COLLECTIONS' ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ borderRadius: 'var(--radius-md) var(--radius-md) 0 0', borderBottom: 'none' }}
-          onClick={() => setActiveTab('DRIVER_COLLECTIONS')}
-        >
-          <Truck size={16} />
-          <span>Driver Collections</span>
         </button>
 
         <button
@@ -621,140 +602,7 @@ export const ReportsPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: DRIVER COLLECTION REPORT */}
-      {activeTab === 'DRIVER_COLLECTIONS' && (
-        <div>
-          {/* Filters Bar */}
-          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <select
-              className="form-select"
-              style={{ width: '160px' }}
-              value={datePreset}
-              onChange={(e) => setDatePreset(e.target.value as DatePreset)}
-            >
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="this_week">This Week</option>
-              <option value="this_month">This Month</option>
-            </select>
-
-            <select
-              className="form-select"
-              style={{ width: '180px' }}
-              value={selectedRoute}
-              onChange={(e) => setSelectedRoute(e.target.value)}
-            >
-              <option value="">All Routes</option>
-              {routes.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              className="form-select"
-              style={{ width: '180px' }}
-              value={selectedDriver}
-              onChange={(e) => setSelectedDriver(e.target.value)}
-            >
-              <option value="">All Drivers</option>
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.driver_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Grand Totals */}
-          {driverReport && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
-              <div style={{ background: 'white', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Driver Collections</span>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, color: '#059669', marginTop: '0.25rem' }}>
-                  {formatCurrency(driverReport.grand_totals.total_collected)}
-                </p>
-              </div>
-
-              <div style={{ background: 'white', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Driver Expenses</span>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, color: '#dc2626', marginTop: '0.25rem' }}>
-                  {formatCurrency(driverReport.grand_totals.total_expenses)}
-                </p>
-              </div>
-
-              <div style={{ background: 'white', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Net Handover Expected</span>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.25rem' }}>
-                  {formatCurrency(driverReport.grand_totals.net_collection)}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Table */}
-          <div className="table-container">
-            {loading ? (
-              <div style={{ padding: '3rem', textAlign: 'center' }}>
-                <div className="spinner" style={{ margin: '0 auto' }} />
-              </div>
-            ) : (
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Driver</th>
-                    <th>Route</th>
-                    <th>Delivered Stops</th>
-                    <th>Cash Coll.</th>
-                    <th>UPI Coll.</th>
-                    <th>Order Coll.</th>
-                    <th>Credit Coll.</th>
-                    <th>Total Coll.</th>
-                    <th>Expenses</th>
-                    <th>Net Handover</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {driverReport && driverReport.drivers.length > 0 ? (
-                    driverReport.drivers.map((d: DriverCollectionRow) => (
-                      <tr key={d.driver_id}>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{d.driver_name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            {d.vehicle_number || d.phone_number}
-                          </div>
-                        </td>
-                        <td>
-                          <span className="badge badge-neutral">{d.route_name}</span>
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{d.orders_delivered}</td>
-                        <td style={{ color: '#059669', fontWeight: 600 }}>{formatCurrency(d.cash_collected)}</td>
-                        <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{formatCurrency(d.upi_collected)}</td>
-                        <td>{formatCurrency(d.order_payment_collected)}</td>
-                        <td>{formatCurrency(d.previous_credit_collected)}</td>
-                        <td style={{ fontWeight: 700, color: '#059669' }}>{formatCurrency(d.total_collected)}</td>
-                        <td style={{ color: '#dc2626' }}>{formatCurrency(d.expenses)}</td>
-                        <td style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
-                          {formatCurrency(d.net_collection)}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={10} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                        No driver collection figures for the selected period.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: DAILY FINANCIAL SUMMARY */}
+      {/* TAB 3: DAILY FINANCIAL SUMMARY */}
       {activeTab === 'FINANCIAL_SUMMARY' && (
         <div>
           {/* Date Selector */}

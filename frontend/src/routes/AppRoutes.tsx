@@ -1,13 +1,10 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useSettings } from '../context/SettingsContext';
 import { ProtectedRoute } from './ProtectedRoute';
 
 // Layouts
 import { OwnerLayout } from '../layouts/OwnerLayout';
-import { ManagerLayout } from '../layouts/ManagerLayout';
-import { DriverLayout } from '../layouts/DriverLayout';
 
 // Auth Pages (Lazy)
 const LoginPage = React.lazy(() => import('../pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -26,25 +23,14 @@ const PaymentsPage = React.lazy(() => import('../pages/owner/PaymentsPage').then
 const CreditLedgerPage = React.lazy(() => import('../pages/owner/CreditLedgerPage').then(m => ({ default: m.CreditLedgerPage })));
 const ReportsPage = React.lazy(() => import('../pages/owner/ReportsPage').then(m => ({ default: m.ReportsPage })));
 const StaffUsersPage = React.lazy(() => import('../pages/owner/StaffUsersPage').then(m => ({ default: m.StaffUsersPage })));
-const DriverPerformancePage = React.lazy(() => import('../pages/owner/DriverPerformancePage').then(m => ({ default: m.DriverPerformancePage })));
-const ActivityHistoryPage = React.lazy(() => import('../pages/owner/ActivityHistoryPage').then(m => ({ default: m.ActivityHistoryPage })));
 const SettingsPage = React.lazy(() => import('../pages/owner/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ShopDocumentsPage = React.lazy(() => import('../pages/owner/ShopDocumentsPage').then(m => ({ default: m.ShopDocumentsPage })));
 
-// Manager Pages (Lazy)
-const ManagerDashboard = React.lazy(() => import('../pages/manager/ManagerDashboard').then(m => ({ default: m.ManagerDashboard })));
+// Order Entry & Daily Operations (Lazy)
 const CreateOrderPage = React.lazy(() => import('../pages/manager/CreateOrderPage').then(m => ({ default: m.CreateOrderPage })));
-const DailyClosingPage = React.lazy(() => import('../pages/manager/DailyClosingPage').then(m => ({ default: m.DailyClosingPage })));
 
 // Customer Pages (Lazy)
 const CustomerOrderPage = React.lazy(() => import('../pages/customer/CustomerOrderPage').then(m => ({ default: m.CustomerOrderPage })));
-
-// Driver Pages (Lazy)
-const DriverDashboard = React.lazy(() => import('../pages/driver/DriverDashboard').then(m => ({ default: m.DriverDashboard })));
-const DriverCollectPaymentPage = React.lazy(() => import('../pages/driver/DriverCollectPaymentPage').then(m => ({ default: m.DriverCollectPaymentPage })));
-const DriverExpensesPage = React.lazy(() => import('../pages/driver/DriverExpensesPage').then(m => ({ default: m.DriverExpensesPage })));
-const DriverSummaryPage = React.lazy(() => import('../pages/driver/DriverSummaryPage').then(m => ({ default: m.DriverSummaryPage })));
-const DriverProfilePage = React.lazy(() => import('../pages/driver/DriverProfilePage').then(m => ({ default: m.DriverProfilePage })));
 
 const PageLoadingFallback: React.FC = () => (
   <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
@@ -54,7 +40,6 @@ const PageLoadingFallback: React.FC = () => (
 
 export const AppRoutes: React.FC = () => {
   const { user, isAuthenticated, isLoading, status } = useAuth();
-  const { isDriverModuleEnabled } = useSettings();
 
   if (isLoading || status === 'INITIALIZING') {
     return (
@@ -64,14 +49,9 @@ export const AppRoutes: React.FC = () => {
     );
   }
 
-  // Root redirect helper
+  // Root redirect helper - exclusively OWNER destination
   const getHomeRedirect = () => {
     if (status === 'UNAUTHENTICATED' || !isAuthenticated || !user) return <Navigate to="/login" replace />;
-    if (user.role === 'DRIVER') {
-      if (!isDriverModuleEnabled) return <Navigate to="/login?error=driver_disabled" replace />;
-      return <Navigate to="/driver" replace />;
-    }
-    if (user.role === 'MANAGER') return <Navigate to="/manager" replace />;
     return <Navigate to="/owner" replace />;
   };
 
@@ -93,7 +73,7 @@ export const AppRoutes: React.FC = () => {
           }
         >
           <Route index element={<OwnerDashboard />} />
-          <Route path="driver-performance" element={<DriverPerformancePage />} />
+          <Route path="driver-performance" element={<Navigate to="/owner" replace />} />
           <Route path="customers" element={<CustomerShopsPage />} />
           <Route path="customers/:id" element={<CustomerDetailPage />} />
           <Route path="shop-documents" element={<ShopDocumentsPage />} />
@@ -101,68 +81,28 @@ export const AppRoutes: React.FC = () => {
           <Route path="routes" element={<RoutesPage />} />
           <Route path="drivers" element={<DriversPage />} />
           <Route path="create-order" element={<CreateOrderPage />} />
+          <Route path="fast-order" element={<Navigate to="/owner/create-order" replace />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="deliveries" element={<DeliveriesPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="credit" element={<CreditLedgerPage />} />
           <Route path="reports" element={<ReportsPage />} />
-          <Route path="daily-closing" element={<DailyClosingPage />} />
-          <Route path="activity-history" element={<ActivityHistoryPage />} />
+          <Route path="daily-closing" element={<Navigate to="/owner/create-order" replace />} />
+          <Route path="activity-history" element={<Navigate to="/owner/settings?tab=activity" replace />} />
           <Route path="attendance" element={<StaffUsersPage defaultTab="attendance" />} />
-          <Route path="users" element={<StaffUsersPage />} />
+          <Route path="users" element={<Navigate to="/owner" replace />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 
-        {/* 2. MANAGER INTERFACE */}
-        <Route
-          path="/manager"
-          element={
-            <ProtectedRoute allowedRoles={['MANAGER', 'OWNER']}>
-              <ManagerLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<ManagerDashboard />} />
-          <Route path="driver-performance" element={<DriverPerformancePage />} />
-          <Route path="create-order" element={<CreateOrderPage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="customers" element={<CustomerShopsPage />} />
-          <Route path="customers/:id" element={<CustomerDetailPage />} />
-          <Route path="shop-documents" element={<ShopDocumentsPage />} />
-          <Route path="deliveries" element={<DeliveriesPage />} />
-          <Route path="expenses" element={<ExpensesPage />} />
-          <Route path="payments" element={<PaymentsPage />} />
-          <Route path="credit" element={<CreditLedgerPage />} />
-          <Route path="drivers" element={<DriversPage />} />
-          <Route path="daily-closing" element={<DailyClosingPage />} />
-          <Route path="attendance" element={<StaffUsersPage defaultTab="attendance" />} />
-          <Route path="users" element={<StaffUsersPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-        </Route>
-
-        {/* 3. DRIVER MOBILE INTERFACE (PWA) */}
-        <Route
-          path="/driver"
-          element={
-            isDriverModuleEnabled ? (
-              <ProtectedRoute allowedRoles={['DRIVER']}>
-                <DriverLayout />
-              </ProtectedRoute>
-            ) : (
-              <Navigate to="/login?error=driver_disabled" replace />
-            )
-          }
-        >
-          <Route index element={<DriverDashboard />} />
-          <Route path="collect" element={<DriverCollectPaymentPage />} />
-          <Route path="expenses" element={<DriverExpensesPage />} />
-          <Route path="summary" element={<DriverSummaryPage />} />
-          <Route path="profile" element={<DriverProfilePage />} />
-        </Route>
+        {/* Legacy Manager & Driver route redirects to Owner interface */}
+        <Route path="/manager/*" element={<Navigate to="/owner" replace />} />
+        <Route path="/manager" element={<Navigate to="/owner" replace />} />
+        <Route path="/driver/*" element={<Navigate to="/owner" replace />} />
+        <Route path="/driver" element={<Navigate to="/owner" replace />} />
 
         {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/owner" replace />} />
       </Routes>
     </React.Suspense>
   );

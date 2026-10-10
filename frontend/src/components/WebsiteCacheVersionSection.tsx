@@ -386,7 +386,7 @@ export const WebsiteCacheVersionSection: React.FC = () => {
               </div>
             </div>
             <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.5rem' }}>
-              Railway Cloud + Supabase PostgreSQL
+              Local PostgreSQL Engine
             </div>
           </div>
 

@@ -27,10 +27,13 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": [
+      "dmg",
+      "nsis"
+    ],
     "copyright": "Copyright © 2026 Zamzam Foods",
     "shortDescription": "Zamzam Foods — Enterprise Distribution Management",
-    "longDescription": "Zamzam Foods wholesale distribution, delivery route dispatch, billing, driver collections, and automatic local database backups.",
+    "longDescription": "Zamzam Foods wholesale distribution, delivery route dispatch, billing, and automatic local database backups.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -45,20 +48,13 @@
       "nsis": {
         "headerImage": "icons/128x128.png",
         "installerIcon": "icons/icon.ico",
-        "installMode": "currentUser"
+        "installMode": "both"
       }
     },
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.15",
       "dmg": {}
-    },
-
-    "linux": {
-      "deb": {
-        "depends": []
-      },
-      "appimage": {}
     }
   }
 }

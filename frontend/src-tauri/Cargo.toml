@@ -28,7 +28,11 @@ tauri-plugin-opener = "2"
 chrono = { version = "0.4", features = ["serde"] }
 sha2 = "0.10"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
-tokio = { version = "1", features = ["rt", "macros"] }
+tokio = { version = "1", features = ["rt", "macros", "sync"] }
 dirs = "6.0"
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4"] }
+postgres-types = { version = "0.2", features = ["with-uuid-1"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+rust_decimal = { version = "1.36", features = ["db-tokio-postgres", "serde-float"] }
 
 

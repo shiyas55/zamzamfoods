@@ -7,6 +7,8 @@ interface SettingsContextType {
   error: string | null;
   refreshSettings: () => Promise<void>;
   updateSettings: (payload: Partial<SystemSettings>) => Promise<SystemSettings>;
+  zoomLevel: number;
+  setZoomLevel: (zoom: number) => void;
   isWhatsAppEnabled: boolean;
   isWhatsAppLocked: boolean;
   whatsappPlanName: string;
@@ -54,6 +56,36 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
   const [loading, setLoading] = useState(!settings);
   const [error, setError] = useState<string | null>(null);
+
+  // App Zoom & Scale State (persisted to localStorage)
+  const [zoomLevel, setZoomLevelState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('zamzam_app_zoom');
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 50 && parsed <= 200) return parsed;
+      }
+    } catch {}
+    return 100;
+  });
+
+  const setZoomLevel = useCallback((zoom: number) => {
+    const clamped = Math.min(Math.max(Math.round(zoom), 50), 200);
+    setZoomLevelState(clamped);
+    try {
+      localStorage.setItem('zamzam_app_zoom', String(clamped));
+    } catch {}
+    (document.documentElement.style as any).zoom = `${clamped}%`;
+    document.documentElement.style.setProperty('--app-zoom', `${clamped}%`);
+    document.documentElement.style.setProperty('--app-zoom-factor', String(clamped / 100));
+  }, []);
+
+  // Apply zoom to document on load and state change
+  useEffect(() => {
+    (document.documentElement.style as any).zoom = `${zoomLevel}%`;
+    document.documentElement.style.setProperty('--app-zoom', `${zoomLevel}%`);
+    document.documentElement.style.setProperty('--app-zoom-factor', String(zoomLevel / 100));
+  }, [zoomLevel]);
 
   const refreshSettings = useCallback(async () => {
     try {
@@ -110,6 +142,8 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         error,
         refreshSettings,
         updateSettings,
+        zoomLevel,
+        setZoomLevel,
         isWhatsAppEnabled,
         isWhatsAppLocked,
         whatsappPlanName,

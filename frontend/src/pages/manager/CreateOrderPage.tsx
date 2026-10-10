@@ -7,7 +7,7 @@ import { routeService } from '../../services/routeService';
 import { paymentService } from '../../services/paymentService';
 import { reportService } from '../../services/reportService';
 import { creditService } from '../../services/creditService';
-import { Customer, Product, Route, Driver, Order } from '../../types';
+import { Customer, Product, Route, Driver, Order, Payment } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 import {
   Plus,
@@ -566,7 +566,13 @@ export const CreateOrderPage: React.FC = () => {
       currentCustomers: Customer[],
       currentDrivers: Driver[],
       isBackground = false,
-      isDateChange = false
+      isDateChange = false,
+      prefetchedData?: {
+        existingOrders: Order[];
+        payments: Payment[];
+        closingRes: any;
+        historicalBalances: Record<string, string>;
+      }
     ) => {
       if (currentCustomers.length === 0) {
         setRows([]);
@@ -579,12 +585,19 @@ export const CreateOrderPage: React.FC = () => {
       setError(null);
 
       try {
-        const [existingOrders, payments, closingRes, historicalBalances] = await Promise.all([
-          orderService.getOrders({ date: targetDate }),
-          paymentService.getPayments({ date: targetDate }),
-          reportService.getDailyClosing(targetDate).catch(() => null),
-          customerService.getBalancesForDate(targetDate).catch(() => ({} as Record<string, string>)),
-        ]);
+        const [existingOrders, payments, closingRes, historicalBalances] = prefetchedData
+          ? [
+              prefetchedData.existingOrders,
+              prefetchedData.payments,
+              prefetchedData.closingRes,
+              prefetchedData.historicalBalances,
+            ]
+          : await Promise.all([
+              orderService.getOrders({ date: targetDate }),
+              paymentService.getPayments({ date: targetDate }),
+              reportService.getDailyClosing(targetDate).catch(() => null),
+              customerService.getBalancesForDate(targetDate).catch(() => ({} as Record<string, string>)),
+            ]);
 
         if (closingRes) {
           const isOpened = Boolean(closingRes.is_opened);
@@ -743,14 +756,15 @@ export const CreateOrderPage: React.FC = () => {
             const editingMap = new Map<string, OrderRow>();
             prevRows.forEach((r) => {
               const hasUserInput = Boolean(
+                r.status === 'IDLE' ||
+                r.status === 'SAVING' ||
+                r.status === 'ERROR' ||
                 (r.kubbusQty && r.kubbusQty !== '0') ||
                 (r.romaliQty && r.romaliQty !== '0') ||
                 (r.cashAmount && r.cashAmount !== '0') ||
                 (r.gpayAmount && r.gpayAmount !== '0') ||
                 (r.discountAmount && r.discountAmount !== '0') ||
                 (r.productQuantities && Object.values(r.productQuantities).some((v) => v && v !== '0')) ||
-                r.status === 'SAVING' ||
-                r.status === 'ERROR' ||
                 (r.customerId && Boolean(draftOrderStorage.getDraft(targetDate, r.customerId)))
               );
               if (hasUserInput && r.customerId) {
@@ -796,11 +810,24 @@ export const CreateOrderPage: React.FC = () => {
     const fetchInitialData = async () => {
       try {
         setLoading(true);
-        const [custList, prodList, routeList, driverList] = await Promise.all([
+        const [
+          custList,
+          prodList,
+          routeList,
+          driverList,
+          existingOrders,
+          payments,
+          closingRes,
+          historicalBalances,
+        ] = await Promise.all([
           customerService.getCustomers(),
           productService.getProducts(),
           routeService.getRoutes(),
           routeService.getDrivers(),
+          orderService.getOrders({ date: orderDate }),
+          paymentService.getPayments({ date: orderDate }),
+          reportService.getDailyClosing(orderDate).catch(() => null),
+          customerService.getBalancesForDate(orderDate).catch(() => ({} as Record<string, string>)),
         ]);
         const sortedProducts = [...prodList].sort((a, b) => {
           const orderA = a.order_number ?? 999;
@@ -851,8 +878,13 @@ export const CreateOrderPage: React.FC = () => {
         // Purge any stale Chrome localStorage order drafts, cached dates, or pricing caches
         draftOrderStorage.clearAllChromeStorage();
 
-        // Load existing orders from database for today's date
-        await loadOrdersForDate(orderDate, custList, driverList);
+        // Load existing orders from database for today's date using prefetched data (0 sequential wait!)
+        await loadOrdersForDate(orderDate, custList, driverList, false, false, {
+          existingOrders,
+          payments,
+          closingRes,
+          historicalBalances,
+        });
       } catch (err: unknown) {
         console.error(err);
         setError('Failed to load customers and product catalog.');
@@ -1615,7 +1647,7 @@ export const CreateOrderPage: React.FC = () => {
       setError('Please select a customer shop for this row before saving.');
       return;
     }
-    if (!fin.hasOrder && fin.cash <= 0 && fin.gpay <= 0) {
+    if (!fin.hasOrder && fin.cash <= 0 && fin.gpay <= 0 && !row.orderId) {
       setError(`Please enter quantities or payment for ${row.customerName || 'the shop'} before saving.`);
       return;
     }
@@ -1662,11 +1694,59 @@ export const CreateOrderPage: React.FC = () => {
         }
       });
 
+      // If an existing order has all quantities cleared or made zero:
+      if (row.orderId && items.length === 0) {
+        try {
+          await orderService.deleteOrder(row.orderId);
+        } catch (delErr) {
+          console.warn('Failed to delete zeroed order:', delErr);
+        }
+
+        if (row.customerId) {
+          await paymentService.syncDailyPayment({
+            customer_id: row.customerId,
+            date: orderDate,
+            cash_amount: fin.cash > 0 ? fin.cash.toFixed(2) : '0.00',
+            gpay_amount: fin.gpay > 0 ? fin.gpay.toFixed(2) : '0.00',
+            order_id: undefined,
+          });
+        }
+
+        setRows((prev) =>
+          prev.map((r) =>
+            r.rowId === rowId
+              ? {
+                  ...r,
+                  status: 'SAVED',
+                  orderId: undefined,
+                  orderNumber: undefined,
+                  kubbusQty: '',
+                  romaliQty: '',
+                  productQuantities: {},
+                }
+              : r
+          )
+        );
+
+        if (row.customerId) {
+          draftOrderStorage.clearDraft(orderDate, row.customerId);
+          try {
+            const updatedCust = await customerService.getCustomer(row.customerId);
+            setCustomers((prev) => prev.map((c) => (c.id === updatedCust.id ? updatedCust : c)));
+          } catch {}
+        }
+
+        setSuccessBanner(`Order for ${row.customerName} cleared and removed from database.`);
+        setTimeout(() => setSuccessBanner(null), 3500);
+        return;
+      }
+
       let order: Order | undefined;
 
       if (items.length > 0) {
         if (row.orderId) {
           order = await orderService.updateOrder(row.orderId, {
+            order_number: row.orderNumber?.trim() || undefined,
             items,
             driver_id: assignedDriverId,
             shop_expense: fin.discount > 0 ? fin.discount.toFixed(2) : '0.00',
@@ -2032,13 +2112,26 @@ export const CreateOrderPage: React.FC = () => {
   const shouldShowDownside = routeFilter !== 'ALL' || isFilterActive || showDownsideSummary;
   const activeStats = isFilterActive ? filteredStats : sheetStats;
 
-  // Count unsubmitted / modified orders ready to submit
+  // Helper to check if a row has pending changes ready for submission or re-submission
+  const isRowPendingSubmit = useCallback((r: OrderRow): boolean => {
+    if (r.status !== 'IDLE' && r.status !== 'SAVING') return false;
+    const fin = getRowFinancials(r);
+    // Has entered quantities or payments
+    if (fin.hasOrder || fin.cash > 0 || fin.gpay > 0 || fin.discount > 0) return true;
+    // An existing order was modified (even if quantities are 0 / cleared)
+    if (Boolean(r.orderId)) return true;
+    return false;
+  }, [products, pricingCache, defaultKubbusPrice, defaultRomaliPrice, getProductPriceForCustomer]);
+
+  // Count unsubmitted / modified orders ready to submit or re-submit
   const pendingOrdersCount = useMemo(() => {
-    return rows.filter((r) => {
-      const fin = getRowFinancials(r);
-      return (fin.hasOrder || fin.cash > 0 || fin.gpay > 0 || fin.discount > 0) && (r.status === 'IDLE' || r.status === 'SAVING');
-    }).length;
-  }, [rows, products, pricingCache, defaultKubbusPrice, defaultRomaliPrice, getProductPriceForCustomer]);
+    return rows.filter(isRowPendingSubmit).length;
+  }, [rows, isRowPendingSubmit]);
+
+  // Count existing orders that are being re-submitted
+  const resubmitOrdersCount = useMemo(() => {
+    return rows.filter((r) => Boolean(r.orderId) && isRowPendingSubmit(r)).length;
+  }, [rows, isRowPendingSubmit]);
 
   // Count removed shops that could be restored
   const removedCount = useMemo(() => {
@@ -2344,7 +2437,7 @@ export const CreateOrderPage: React.FC = () => {
           errorMessage: undefined,
         }))
       );
-      setSuccessBanner(null);
+      setSuccessBanner('All quantities cleared. Click Submit / Re-submit Orders to save changes to the database.');
       setError(null);
     }
   };
@@ -2534,10 +2627,10 @@ export const CreateOrderPage: React.FC = () => {
   const handleSubmitAllOrders = async () => {
     const ordersToSubmit = rows
       .map((r) => ({ row: r, fin: getRowFinancials(r) }))
-      .filter((item) => (item.fin.hasOrder || item.fin.cash > 0 || item.fin.gpay > 0) && (item.row.status === 'IDLE' || item.row.status === 'SAVING'));
+      .filter((item) => (item.fin.hasOrder || item.fin.cash > 0 || item.fin.gpay > 0 || item.fin.discount > 0 || Boolean(item.row.orderId)) && (item.row.status === 'IDLE' || item.row.status === 'SAVING'));
 
     if (ordersToSubmit.length === 0) {
-      setError('No new or modified orders to submit. Type quantities in a shop row first.');
+      setError('No new or modified orders to submit. Type or adjust quantities first.');
       return;
     }
 
@@ -2606,12 +2699,59 @@ export const CreateOrderPage: React.FC = () => {
           }
         });
 
+        // If an existing order has all quantities cleared or made zero:
+        if (row.orderId && items.length === 0) {
+          try {
+            await orderService.deleteOrder(row.orderId);
+          } catch (delErr) {
+            console.warn('Could not delete zeroed order:', delErr);
+          }
+
+          if (row.customerId) {
+            await paymentService.syncDailyPayment({
+              customer_id: row.customerId,
+              date: orderDate,
+              cash_amount: fin.cash > 0 ? fin.cash.toFixed(2) : '0.00',
+              gpay_amount: fin.gpay > 0 ? fin.gpay.toFixed(2) : '0.00',
+              order_id: undefined,
+            });
+          }
+
+          setRows((prev) =>
+            prev.map((r) =>
+              r.rowId === row.rowId
+                ? {
+                    ...r,
+                    status: 'SAVED',
+                    orderId: undefined,
+                    orderNumber: undefined,
+                    kubbusQty: '',
+                    romaliQty: '',
+                    productQuantities: {},
+                  }
+                : r
+            )
+          );
+
+          if (row.customerId) {
+            draftOrderStorage.clearDraft(orderDate, row.customerId);
+            try {
+              const updatedCust = await customerService.getCustomer(row.customerId);
+              setCustomers((prev) => prev.map((c) => (c.id === updatedCust.id ? updatedCust : c)));
+            } catch {}
+          }
+
+          successCount++;
+          continue;
+        }
+
         let order: Order | undefined;
 
         // Create or update order in database if line items exist
         if (items.length > 0) {
           if (row.orderId) {
             order = await orderService.updateOrder(row.orderId, {
+              order_number: row.orderNumber?.trim() || undefined,
               items,
               driver_id: assignedDriverId,
               shop_expense: fin.discount > 0 ? fin.discount.toFixed(2) : '0.00',
@@ -2895,6 +3035,9 @@ export const CreateOrderPage: React.FC = () => {
       style={{
         display: 'flex',
         flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        height: '100%',
       }}
     >
       {/* 1. Page Header (Ultra-compact single-line) */}
@@ -2989,30 +3132,6 @@ export const CreateOrderPage: React.FC = () => {
             <span>New Shop</span>
           </button>
 
-          {!dayStatus?.is_opened && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => setIsOpenDayModalOpen(true)}
-              style={{
-                height: '28px',
-                padding: '0 0.55rem',
-                fontWeight: 700,
-                fontSize: '0.76rem',
-                color: '#b45309',
-                borderColor: '#fcd34d',
-                background: '#fffbeb',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-              }}
-              title="Record opening cash float for business day"
-            >
-              <Sunrise size={13} />
-              <span>Open Day</span>
-            </button>
-          )}
-
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -3020,12 +3139,14 @@ export const CreateOrderPage: React.FC = () => {
             onClick={handleSubmitAllOrders}
             style={{ height: '28px', padding: '0 0.75rem', fontWeight: 800, fontSize: '0.78rem' }}
           >
-            <Save size={13} />
+            {resubmitOrdersCount > 0 ? <RefreshCw size={13} /> : <Save size={13} />}
             <span>
               {isSubmittingAll
                 ? `Submitting (${submitProgress?.current}/${submitProgress?.total})...`
                 : pendingOrdersCount > 0
-                ? `Submit Orders (${pendingOrdersCount}) • ${formatCurrency(sheetStats.totalBill)}`
+                ? resubmitOrdersCount === pendingOrdersCount
+                  ? `Re-submit Orders (${pendingOrdersCount}) • ${formatCurrency(sheetStats.totalBill)}`
+                  : `Submit / Re-submit Orders (${pendingOrdersCount}) • ${formatCurrency(sheetStats.totalBill)}`
                 : 'All Orders Saved'}
             </span>
           </button>
@@ -3047,36 +3168,44 @@ export const CreateOrderPage: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Dynamic Product KPI Cards Grid */}
+      {/* 2. Compact Operational KPI Bar (Single slim row to preserve 100vh viewport) */}
       <div
-        className="billing-stat-grid"
+        className="billing-stat-strip"
         style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(auto-fit, minmax(155px, 1fr))`,
-          gap: '0.3rem',
-          marginBottom: '0.2rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          padding: '0.2rem 0.5rem',
+          background: 'var(--bg-card)',
+          borderRadius: '6px',
+          border: '1px solid var(--border)',
+          marginBottom: '0.25rem',
           flexShrink: 0,
-          width: '100%',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
+          fontSize: '0.72rem',
+          scrollbarWidth: 'none',
         }}
       >
-        {/* Card 1: Orders summary */}
-        <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #dc2626' }}>
-          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-            Dispatch Orders ({isFilterActive ? 'Filtered' : orderDate})
-          </span>
-          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#dc2626', marginTop: '0.02rem', lineHeight: 1.15 }}>
-            {activeStats.validShopsCount} Shops
-          </div>
-          <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>
-            {formatCurrency(activeStats.totalBill)} total bill
-          </div>
+        {/* Dispatch Orders Pill */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.12rem 0.45rem', background: '#fee2e2', borderRadius: '4px', color: '#991b1b', fontWeight: 800 }}>
+          <span>📦 Orders:</span>
+          <span style={{ color: '#dc2626' }}>{activeStats.validShopsCount} Shops</span>
+          <span style={{ fontSize: '0.67rem', opacity: 0.9, fontWeight: 700 }}>({formatCurrency(activeStats.totalBill)})</span>
         </div>
 
-        {/* Dynamic Cards for EACH product (1, 2, 3, or more products) */}
+        {/* Dynamic Product Totals Pills */}
         {products.length > 0 ? (
           products.map((p, idx) => {
-            const colors = ['#f59e0b', '#0284c7', '#7c3aed', '#059669', '#ea580c', '#e11d48'];
-            const cardColor = colors[idx % colors.length];
+            const colors = [
+              { bg: '#fef3c7', text: '#b45309', border: '#fde68a' },
+              { bg: '#e0f2fe', text: '#0369a1', border: '#bae6fd' },
+              { bg: '#f3e8ff', text: '#7e22ce', border: '#e9d5ff' },
+              { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' },
+              { bg: '#ffedd5', text: '#c2410c', border: '#fed7aa' },
+              { bg: '#ffe4e6', text: '#be123c', border: '#fecdd3' },
+            ];
+            const c = colors[idx % colors.length];
             const qty =
               activeStats.productTotals[p.id] ||
               (kubbusProduct && p.id === kubbusProduct.id
@@ -3084,80 +3213,60 @@ export const CreateOrderPage: React.FC = () => {
                 : romaliProduct && p.id === romaliProduct.id
                 ? activeStats.totalRomali
                 : 0);
-
             return (
-              <div key={p.id} className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: `3.5px solid ${cardColor}` }}>
-                <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-                  Total {p.name}
-                </span>
-                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: cardColor, marginTop: '0.02rem', lineHeight: 1.15 }}>
-                  {qty} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
-                </div>
-                <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>
-                  {p.packet_size ? `${p.packet_size} • ` : ''}₹{parseFloat(p.unit_price).toFixed(2)}/ps
-                </div>
+              <div
+                key={p.id}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                  padding: '0.12rem 0.4rem',
+                  background: c.bg,
+                  color: c.text,
+                  border: `1px solid ${c.border}`,
+                  borderRadius: '4px',
+                  fontWeight: 700,
+                }}
+                title={`${p.name} (₹${parseFloat(p.unit_price).toFixed(2)}/ps)`}
+              >
+                <span>{p.name}:</span>
+                <strong>{qty}</strong>
+                <span style={{ fontSize: '0.64rem', opacity: 0.8 }}>ps</span>
               </div>
             );
           })
         ) : (
           <>
-            <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #f59e0b' }}>
-              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-                Total Kubbus
-              </span>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#b45309', marginTop: '0.02rem', lineHeight: 1.15 }}>
-                {activeStats.totalKubbus} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
-              </div>
-              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>Single pieces (ps)</div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.12rem 0.4rem', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '4px', fontWeight: 700 }}>
+              <span>Kubbus:</span> <strong>{activeStats.totalKubbus}</strong> <span style={{ fontSize: '0.64rem' }}>ps</span>
             </div>
-            <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #dc2626' }}>
-              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-                Total Romali
-              </span>
-              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#dc2626', marginTop: '0.02rem', lineHeight: 1.15 }}>
-                {activeStats.totalRomali} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
-              </div>
-              <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>Wholesale pieces</div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.12rem 0.4rem', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: '4px', fontWeight: 700 }}>
+              <span>Romali:</span> <strong>{activeStats.totalRomali}</strong> <span style={{ fontSize: '0.64rem' }}>ps</span>
             </div>
           </>
         )}
 
-        {/* If 3 or more products, also show Total Pieces summary card */}
-        {products.length >= 3 && (
-          <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #6366f1' }}>
-            <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-              Total All Pieces
-            </span>
-            <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#4f46e5', marginTop: '0.02rem', lineHeight: 1.15 }}>
-              {activeStats.totalPieces} <span style={{ fontSize: '0.74rem', fontWeight: 600 }}>ps</span>
-            </div>
-            <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.02rem' }}>
-              Across {products.length} products
-            </div>
-          </div>
-        )}
+        {/* Total Pieces */}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.12rem 0.4rem', background: '#e0e7ff', color: '#3730a3', borderRadius: '4px', fontWeight: 800 }}>
+          <span>Total:</span>
+          <strong>{activeStats.totalPieces}</strong>
+          <span style={{ fontSize: '0.64rem' }}>ps</span>
+        </div>
 
-        {/* Card 4: Green border stripe */}
-        <div className="card" style={{ padding: '0.25rem 0.65rem', borderLeft: '3.5px solid #10b981' }}>
-          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.03em' }}>
-            Collections &amp; Balance
-          </span>
-          <div style={{ fontSize: '0.7rem', marginTop: '0.05rem', display: 'flex', flexDirection: 'column', gap: '0.05rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Collected:</span>
-              <strong style={{ color: '#10b981' }}>{formatCurrency(activeStats.totalCash + activeStats.totalGPay)}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'var(--text-muted)', paddingLeft: '0.15rem' }}>
-              <span>Cash: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(activeStats.totalCash)}</strong></span>
-              <span>GPay: <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{formatCurrency(activeStats.totalGPay)}</strong></span>
-              {isOrderDiscountEnabled && activeStats.totalDiscount > 0 && (
-                <span>Disc: <strong style={{ color: '#b45309', fontWeight: 600 }}>{formatCurrency(activeStats.totalDiscount)}</strong></span>
-              )}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Balance Due:</span>
-              <strong style={{ color: '#dc2626' }}>{formatCurrency(activeStats.totalDue)}</strong>
-            </div>
+        <div style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+          {/* Collections Pill */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.12rem 0.45rem', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', color: '#065f46', fontWeight: 700 }}>
+            <span>Collected:</span>
+            <strong style={{ color: '#059669' }}>{formatCurrency(activeStats.totalCash + activeStats.totalGPay)}</strong>
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+              (Cash: {formatCurrency(activeStats.totalCash)} • GPay: {formatCurrency(activeStats.totalGPay)})
+            </span>
+          </div>
+
+          {/* Balance Due Pill */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', padding: '0.12rem 0.45rem', background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '4px', color: '#991b1b', fontWeight: 800 }}>
+            <span>Due:</span>
+            <span style={{ color: '#dc2626' }}>{formatCurrency(activeStats.totalDue)}</span>
           </div>
         </div>
       </div>
@@ -3167,21 +3276,23 @@ export const CreateOrderPage: React.FC = () => {
         className="billing-filter-bar"
         style={{
           display: 'flex',
-          gap: '0.35rem',
+          gap: '0.25rem',
           alignItems: 'center',
-          flexWrap: 'wrap',
-          marginBottom: '0.35rem',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          marginBottom: '0.22rem',
           flexShrink: 0,
           background: 'var(--bg-card)',
-          padding: '0.35rem 0.55rem',
-          borderRadius: '8px',
+          padding: '0.2rem 0.45rem',
+          borderRadius: '6px',
           border: '1px solid var(--border)',
         }}
       >
         {/* Route Select */}
         <select
           className="form-select"
-          style={{ width: '130px', minWidth: '115px', flex: '0 0 auto', height: '28px', padding: '0 0.35rem', fontSize: '0.74rem' }}
+          style={{ width: '122px', minWidth: '105px', flex: '0 0 auto', height: '26px', padding: '0 0.3rem', fontSize: '0.72rem' }}
           value={routeFilter}
           onChange={(e) => setRouteFilter(e.target.value)}
         >
@@ -3206,14 +3317,14 @@ export const CreateOrderPage: React.FC = () => {
         <UniversalDatePicker
           value={orderDate}
           onChange={(newDate) => handleDateChange(newDate)}
-          style={{ width: '118px', height: '28px' }}
+          style={{ width: '110px', height: '26px' }}
           title="Dispatch Date (DD/MM/YYYY) — Changing this re-queries the database for that date"
         />
 
         {/* Order Sorting Dropdown - Small, side-by-side with Route and Date */}
         <select
           className="form-select"
-          style={{ width: '130px', minWidth: '115px', flex: '0 0 auto', height: '28px', padding: '0 0.35rem', fontSize: '0.74rem' }}
+          style={{ width: '118px', minWidth: '100px', flex: '0 0 auto', height: '26px', padding: '0 0.3rem', fontSize: '0.72rem' }}
           value={orderSort}
           onClick={() => {
             if (orderSort === 'CUSTOM' && !isCustomEditing) {
@@ -3252,18 +3363,18 @@ export const CreateOrderPage: React.FC = () => {
           </option>
         </select>
         {orderSort === 'CUSTOM' && isCustomEditing && (
-          <div style={{ display: 'inline-flex', gap: '0.25rem', alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ display: 'inline-flex', gap: '0.2rem', alignItems: 'center', flexShrink: 0 }}>
             <button
               type="button"
               onClick={handleSaveCustomOrder}
               style={{
-                height: '28px',
-                padding: '0 0.5rem',
+                height: '26px',
+                padding: '0 0.45rem',
                 background: saveCustomOrderSuccess ? '#16a34a' : '#15803d',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 'var(--radius)',
-                fontSize: '0.74rem',
+                fontSize: '0.72rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -3274,20 +3385,20 @@ export const CreateOrderPage: React.FC = () => {
               }}
               title="Save custom order and hide all edit & remove options"
             >
-              <Save size={12} />
+              <Save size={11} />
               <span>{saveCustomOrderSuccess ? '✓ Saved' : '💾 Save'}</span>
             </button>
             <button
               type="button"
               onClick={handleResetToOldest}
               style={{
-                height: '28px',
-                padding: '0 0.35rem',
+                height: '26px',
+                padding: '0 0.3rem',
                 background: '#f8fafc',
                 color: '#475569',
                 border: '1px solid #cbd5e1',
                 borderRadius: 'var(--radius)',
-                fontSize: '0.74rem',
+                fontSize: '0.72rem',
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -3307,13 +3418,13 @@ export const CreateOrderPage: React.FC = () => {
           type="button"
           onClick={() => setShowOrdersOnly((prev) => !prev)}
           style={{
-            height: '28px',
-            padding: '0 0.5rem',
+            height: '26px',
+            padding: '0 0.45rem',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.25rem',
+            gap: '0.2rem',
             fontWeight: 700,
-            fontSize: '0.74rem',
+            fontSize: '0.72rem',
             borderRadius: 'var(--radius)',
             cursor: 'pointer',
             whiteSpace: 'nowrap',
@@ -3343,21 +3454,21 @@ export const CreateOrderPage: React.FC = () => {
             }
           }}
           disabled={ordersLoading || isSyncing}
-          style={{ height: '28px', padding: '0 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600, fontSize: '0.74rem', flex: '0 0 auto' }}
+          style={{ height: '26px', padding: '0 0.45rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', fontWeight: 600, fontSize: '0.72rem', flex: '0 0 auto' }}
           title={`Click to refresh orders. Last refreshed: ${lastUpdatedTime}`}
         >
-          <RefreshCw size={12} className={ordersLoading || isSyncing ? 'spinner' : ''} />
+          <RefreshCw size={11} className={ordersLoading || isSyncing ? 'spinner' : ''} />
           <span>Refresh</span>
-          <span style={{ fontSize: '0.68rem', opacity: 0.7, fontWeight: 'normal' }}>({lastUpdatedTime})</span>
+          <span style={{ fontSize: '0.66rem', opacity: 0.7, fontWeight: 'normal' }}>({lastUpdatedTime})</span>
         </button>
 
-        {/* User-Controlled Auto-Sync Toggle (Defaults to OFF to prevent table reloading while typing) */}
+        {/* User-Controlled Auto-Sync Toggle */}
         <label
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.3rem',
-            fontSize: '0.74rem',
+            gap: '0.25rem',
+            fontSize: '0.72rem',
             cursor: 'pointer',
             userSelect: 'none',
             color: autoSyncEnabled ? '#065f46' : '#64748b',
@@ -3365,8 +3476,8 @@ export const CreateOrderPage: React.FC = () => {
             background: autoSyncEnabled ? '#ecfdf5' : '#f8fafc',
             border: autoSyncEnabled ? '1px solid #a7f3d0' : '1px solid #e2e8f0',
             borderRadius: '4px',
-            padding: '0 0.45rem',
-            height: '28px',
+            padding: '0 0.35rem',
+            height: '26px',
             flex: '0 0 auto',
           }}
           title="Auto-Sync is disabled by default to keep the order entry table completely stable without auto-reloading. Check to enable background sync every 60s."
@@ -3375,14 +3486,14 @@ export const CreateOrderPage: React.FC = () => {
             type="checkbox"
             checked={autoSyncEnabled}
             onChange={(e) => setAutoSyncEnabled(e.target.checked)}
-            style={{ cursor: 'pointer', accentColor: '#059669', width: '12px', height: '12px' }}
+            style={{ cursor: 'pointer', accentColor: '#059669', width: '11px', height: '11px' }}
           />
           <span>Auto-Sync</span>
           {autoSyncEnabled && (
             <span
               style={{
-                width: 6,
-                height: 6,
+                width: 5,
+                height: 5,
                 borderRadius: '50%',
                 backgroundColor: isSyncing ? '#059669' : '#10b981',
                 display: 'inline-block',
@@ -3403,11 +3514,11 @@ export const CreateOrderPage: React.FC = () => {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '0.25rem',
-            height: '28px',
-            padding: '0 0.45rem',
+            gap: '0.2rem',
+            height: '26px',
+            padding: '0 0.4rem',
             borderRadius: 'var(--radius)',
-            fontSize: '0.74rem',
+            fontSize: '0.72rem',
             fontWeight: 800,
             cursor: selfOrdersCount > 0 || sourceFilter === 'CUSTOMER_LINK' ? 'pointer' : 'default',
             background: sourceFilter === 'CUSTOMER_LINK' ? '#059669' : selfOrdersCount > 0 ? '#ecfdf5' : '#f8fafc',
@@ -3420,55 +3531,22 @@ export const CreateOrderPage: React.FC = () => {
           }}
           title={selfOrdersCount > 0 ? "Click to filter table to Customer Self-Orders placed online" : "No self-orders placed online yet for this date"}
         >
-          <Smartphone size={12} color={sourceFilter === 'CUSTOMER_LINK' ? '#ffffff' : selfOrdersCount > 0 ? '#059669' : '#94a3b8'} />
+          <Smartphone size={11} color={sourceFilter === 'CUSTOMER_LINK' ? '#ffffff' : selfOrdersCount > 0 ? '#059669' : '#94a3b8'} />
           <span>{selfOrdersCount} Self-Order{selfOrdersCount === 1 ? '' : 's'}</span>
           {sourceFilter === 'CUSTOMER_LINK' ? (
-            <X size={12} />
+            <X size={11} />
           ) : selfOrdersCount > 0 ? (
-            <span style={{ fontSize: '0.66rem', opacity: 0.85, background: '#10b981', color: '#fff', padding: '0.05rem 0.25rem', borderRadius: '3px' }}>Filter</span>
+            <span style={{ fontSize: '0.64rem', opacity: 0.85, background: '#10b981', color: '#fff', padding: '0.04rem 0.22rem', borderRadius: '3px' }}>Filter</span>
           ) : null}
         </button>
 
-        {/* Day Status Indicator */}
-        {dayStatus && (
-          <button
-            type="button"
-            onClick={() => navigate('/manager/daily-closing')}
-            title="Click to view Daily Closing & Cash Drawer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              padding: '0 0.45rem',
-              height: '28px',
-              borderRadius: 'var(--radius)',
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              flex: '0 0 auto',
-              background: dayStatus.is_closed ? '#fef2f2' : dayStatus.is_opened ? '#f0fdf4' : '#fffbeb',
-              color: dayStatus.is_closed ? '#b91c1c' : dayStatus.is_opened ? '#166534' : '#b45309',
-              border: `1px solid ${dayStatus.is_closed ? '#fca5a5' : dayStatus.is_opened ? '#86efac' : '#fcd34d'}`,
-            }}
-          >
-            {dayStatus.is_closed ? (
-              <span>🔒 Day Closed</span>
-            ) : dayStatus.is_opened ? (
-              <span>☀️ Day Open (₹{dayStatus.opening_cash || '0'})</span>
-            ) : (
-              <span>⚠️ Day Not Opened</span>
-            )}
-          </button>
-        )}
-
         {/* Customer/Shop Search Input with Connected WhatsApp Dropdown List & Auto-Selection */}
-        <div ref={searchContainerRef} style={{ position: 'relative', flex: '1 1 180px', minWidth: '160px' }}>
+        <div ref={searchContainerRef} style={{ position: 'relative', flex: '1 1 180px', minWidth: '150px' }}>
           <Search
-            size={13}
+            size={12}
             style={{
               position: 'absolute',
-              left: '8px',
+              left: '7px',
               top: '50%',
               transform: 'translateY(-50%)',
               color: 'var(--text-muted)',
@@ -3480,7 +3558,7 @@ export const CreateOrderPage: React.FC = () => {
             ref={searchInputRef}
             type="text"
             className="form-input"
-            style={{ paddingLeft: '26px', height: '28px', paddingRight: '24px', fontSize: '0.78rem', width: '100%' }}
+            style={{ paddingLeft: '24px', height: '26px', paddingRight: '22px', fontSize: '0.76rem', width: '100%' }}
             placeholder="Search customer (Enter to select, ↑/↓ to navigate)..."
             value={searchQuery}
             onChange={(e) => {
@@ -3762,7 +3840,7 @@ export const CreateOrderPage: React.FC = () => {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={handleClearAllFilters}
-            style={{ height: '28px', padding: '0 0.55rem', fontSize: '0.76rem' }}
+            style={{ height: '26px', padding: '0 0.45rem', fontSize: '0.72rem' }}
           >
             Clear Filters
           </button>
@@ -3775,55 +3853,23 @@ export const CreateOrderPage: React.FC = () => {
             className="billing-whatsapp-mobile-trigger btn btn-sm"
             onClick={() => setMobileWhatsAppOpen(true)}
             style={{
-              height: '28px',
-              padding: '0 0.55rem',
+              height: '26px',
+              padding: '0 0.45rem',
               background: '#ecfdf5',
               border: '1.5px solid #10b981',
               color: '#047857',
               fontWeight: 700,
-              fontSize: '0.78rem',
+              fontSize: '0.72rem',
               borderRadius: 'var(--radius)',
               cursor: 'pointer',
             }}
             title="Open WhatsApp Customer Chat"
           >
-            <MessageCircle size={13} color="#059669" />
+            <MessageCircle size={12} color="#059669" />
             <span>WhatsApp{activeCustomer ? ` (${activeCustomer.name.slice(0, 10)})` : ''}</span>
           </button>
         )}
       </div>
-
-      {dayStatus?.is_closed && (
-        <div
-          style={{
-            padding: '0.2rem 0.65rem',
-            background: '#fef2f2',
-            border: '1px solid #fca5a5',
-            borderRadius: 'var(--radius)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '0.25rem',
-            flexShrink: 0,
-            gap: '0.5rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#991b1b' }}>
-            <Lock size={13} color="#dc2626" />
-            <span style={{ fontSize: '0.78rem', fontWeight: 700 }}>
-              Business Day ({orderDate}) is CLOSED (Records locked)
-            </span>
-          </div>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => navigate('/manager/daily-closing')}
-            style={{ height: '24px', padding: '0 0.55rem', fontSize: '0.74rem', whiteSpace: 'nowrap' }}
-          >
-            View Daily Closing
-          </button>
-        </div>
-      )}
 
       {/* ── TOP WORKSPACE TOOLBAR ── */}
       {isWhatsAppEnabled && (
@@ -4534,11 +4580,6 @@ export const CreateOrderPage: React.FC = () => {
                                   <Store size={9} style={{ color: '#64748b' }} />Shop Added: {new Date(row.customerCreatedAt).toLocaleDateString([], { day: '2-digit', month: 'short' })}
                                 </span>
                               )}
-                              {row.customerId && isSelfOrderEnabled && (
-                                <a href={`/customer/${row.customerId}`} target="_blank" rel="noopener noreferrer" title="Self-Order link" onClick={(e) => e.stopPropagation()} style={{ fontSize: '0.59rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '1px', textDecoration: 'none', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '0.03rem 0.22rem', borderRadius: '3px', color: '#059669', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                  <ExternalLink size={9} /><span>Self-Order</span>
-                                </a>
-                              )}
                               {row.orderSource === 'CUSTOMER_LINK' && (
                                 <span style={{ fontSize: '0.6rem', background: '#dcfce7', color: '#15803d', border: '1px solid #86efac', borderRadius: '3px', padding: '0.03rem 0.25rem', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
                                   <Smartphone size={9} />
@@ -5186,6 +5227,25 @@ export const CreateOrderPage: React.FC = () => {
                           <span className="badge badge-danger" style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }} title={row.errorMessage}>
                             Error
                           </span>
+                        ) : row.orderId && row.status === 'IDLE' ? (
+                          <span
+                            className="badge"
+                            style={{
+                              fontSize: '0.68rem',
+                              padding: '0.15rem 0.4rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              fontWeight: 700,
+                            }}
+                            title="Order modified - click Re-submit to save changes to database"
+                          >
+                            <RefreshCw size={10} />
+                            <span>Modified</span>
+                          </span>
                         ) : isRowActive ? (
                           <span className="badge badge-warning" style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }}>Ready</span>
                         ) : (
@@ -5195,30 +5255,56 @@ export const CreateOrderPage: React.FC = () => {
 
                       {/* Action: Save Single Row & Remove Row Buttons */}
                       <td style={{ textAlign: 'center', padding: '0.35rem 0.25rem', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSaveSingleRow(row.rowId);
-                            }}
-                            title={`Save order for ${row.customerName || 'shop'} to database`}
-                            disabled={row.status === 'SAVING'}
-                            style={{
-                              background: row.status === 'SAVED' ? '#dcfce7' : isRowActive ? '#ecfdf5' : 'none',
-                              border: row.status === 'SAVED' ? '1px solid #86efac' : isRowActive ? '1px solid #10b981' : 'none',
-                              cursor: 'pointer',
-                              padding: '4px 6px',
-                              borderRadius: '4px',
-                              color: row.status === 'SAVED' ? '#15803d' : isRowActive ? '#059669' : 'var(--text-muted)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            <Save size={14} />
-                          </button>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          {row.orderId && row.status === 'IDLE' ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSaveSingleRow(row.rowId);
+                              }}
+                              title={`Re-submit order changes for ${row.customerName || 'shop'} to database`}
+                              disabled={isSubmittingAll}
+                              style={{
+                                cursor: 'pointer',
+                                padding: '3px 8px',
+                                borderRadius: '5px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                background: '#dc2626',
+                                color: '#ffffff',
+                                border: 'none',
+                                fontWeight: 700,
+                                fontSize: '0.7rem',
+                                boxShadow: '0 1px 2px rgba(220, 38, 38, 0.25)',
+                              }}
+                            >
+                              <RefreshCw size={11} />
+                              <span>Re-submit</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSaveSingleRow(row.rowId);
+                              }}
+                              title={`Save order for ${row.customerName || 'shop'} to database`}
+                              disabled={row.status === 'SAVING'}
+                              className="action-pill-edit"
+                              style={{
+                                cursor: 'pointer',
+                                padding: '3px 6px',
+                                borderRadius: '6px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Save size={13} />
+                            </button>
+                          )}
 
                           {row.orderId && (
                             <button
@@ -5229,19 +5315,19 @@ export const CreateOrderPage: React.FC = () => {
                               }}
                               title={`Print bill / slip for Order #${row.orderNumber || ''}`}
                               style={{
-                                background: '#fef2f2',
-                                border: '1px solid #fecaca',
+                                background: '#eff6ff',
+                                border: '1px solid #bfdbfe',
                                 cursor: 'pointer',
-                                padding: '4px 6px',
-                                borderRadius: '4px',
-                                color: '#b91c1c',
+                                padding: '3px 6px',
+                                borderRadius: '6px',
+                                color: '#1d4ed8',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 transition: 'all 0.15s ease',
                               }}
                             >
-                              <Printer size={14} />
+                              <Printer size={13} />
                             </button>
                           )}
 
@@ -5253,28 +5339,17 @@ export const CreateOrderPage: React.FC = () => {
                                 handleRemoveRow(row.rowId);
                               }}
                               title={`Remove ${row.customerName || 'row'} from list`}
+                              className="action-pill-delete"
                               style={{
-                                background: 'none',
-                                border: 'none',
                                 cursor: 'pointer',
-                                padding: '4px',
-                                borderRadius: '4px',
-                                color: 'var(--text-muted)',
+                                padding: '3px 6px',
+                                borderRadius: '6px',
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                transition: 'all 0.15s ease',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.color = '#dc2626';
-                                e.currentTarget.style.backgroundColor = 'var(--danger-bg)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.color = 'var(--text-muted)';
-                                e.currentTarget.style.backgroundColor = 'transparent';
                               }}
                             >
-                              <Trash2 size={15} />
+                              <Trash2 size={13} />
                             </button>
                           )}
                         </div>
@@ -5729,14 +5804,14 @@ export const CreateOrderPage: React.FC = () => {
         {/* Bottom Controls Bar (Permanently docked inside table container) */}
         <div
           style={{
-            padding: '0.45rem 1rem',
+            padding: '0.22rem 0.65rem',
             background: 'var(--bg-card)',
             borderTop: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexShrink: 0,
-            gap: '0.75rem',
+            gap: '0.5rem',
             flexWrap: 'wrap',
           }}
         >
@@ -5745,10 +5820,33 @@ export const CreateOrderPage: React.FC = () => {
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleAddCustomRow}
-              style={{ height: '28px', padding: '0 0.55rem', fontSize: '0.75rem' }}
+              style={{ height: '26px', padding: '0 0.55rem', fontSize: '0.72rem', borderRadius: '6px', fontWeight: 700 }}
             >
-              <Plus size={13} />
-              <span>+ Custom Row</span>
+              <Plus size={12} />
+              <span>+ Add Row</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsAutoEntryModalOpen(true)}
+              style={{
+                height: '26px',
+                padding: '0 0.6rem',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                background: '#059669',
+                color: '#ffffff',
+                border: '1px solid #047857',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                cursor: 'pointer',
+              }}
+              title="Auto-fill previous orders or bulk preset quantities"
+            >
+              <Zap size={11} color="#ffffff" />
+              <span>Auto Entry</span>
             </button>
 
             {routeFilter === 'ALL' && !isFilterActive && (
@@ -5757,17 +5855,18 @@ export const CreateOrderPage: React.FC = () => {
                 className="btn btn-secondary btn-sm"
                 onClick={() => setShowDownsideSummary((prev) => !prev)}
                 style={{
-                  height: '28px',
-                  padding: '0 0.55rem',
-                  fontSize: '0.75rem',
-                  color: shouldShowDownside ? 'var(--primary)' : 'var(--text-secondary)',
-                  borderColor: shouldShowDownside ? 'var(--primary)' : undefined,
-                  background: shouldShowDownside ? '#eff6ff' : undefined,
+                  height: '26px',
+                  padding: '0 0.5rem',
+                  fontSize: '0.72rem',
+                  borderRadius: '6px',
+                  color: shouldShowDownside ? '#059669' : 'var(--text-secondary)',
+                  borderColor: shouldShowDownside ? '#059669' : undefined,
+                  background: shouldShowDownside ? '#ecfdf5' : undefined,
                 }}
                 title="Toggle bottom product totals and collections summary"
               >
-                <BarChart2 size={12} />
-                <span>{shouldShowDownside ? 'Hide Bottom Summary' : 'Bottom Summary'}</span>
+                <BarChart2 size={11} />
+                <span>{shouldShowDownside ? 'Hide Summary' : 'Bottom Summary'}</span>
               </button>
             )}
 
@@ -5776,49 +5875,73 @@ export const CreateOrderPage: React.FC = () => {
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleRestoreAllShops}
-                style={{ height: '28px', padding: '0 0.55rem', fontSize: '0.75rem', color: 'var(--primary)' }}
+                style={{ height: '26px', padding: '0 0.5rem', fontSize: '0.72rem', borderRadius: '6px', color: '#059669', borderColor: '#a7f3d0' }}
                 title="Restore all removed shops back to the spreadsheet"
               >
-                <RefreshCw size={12} />
-                <span>Restore Removed ({removedCount})</span>
+                <RefreshCw size={11} />
+                <span>Restore ({removedCount})</span>
               </button>
             )}
 
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => setIsAutoEntryModalOpen(true)}
+              onClick={handleResetInputs}
               style={{
-                height: '28px',
-                padding: '0 0.6rem',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                background: '#fef3c7',
-                color: '#b45309',
-                borderColor: '#fde68a',
+                height: '26px',
+                padding: '0 0.5rem',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                color: '#dc2626',
+                background: '#fee2e2',
+                border: '1px solid #fecaca',
+                borderRadius: '6px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.3rem',
+                cursor: 'pointer',
               }}
-              title="Auto-fill previous orders or bulk preset quantities"
+              title="Reset all entered numbers"
             >
-              <Zap size={12} color="#d97706" />
-              <span>⚡ Auto Entry</span>
+              <RotateCcw size={11} />
+              <span>Clear Quantities</span>
             </button>
 
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={handleResetInputs}
-              style={{ height: '28px', padding: '0 0.55rem', fontSize: '0.75rem' }}
-              title="Reset all entered numbers"
+              onClick={handleSubmitAllOrders}
+              disabled={isSubmittingAll || pendingOrdersCount === 0}
+              style={{
+                height: '26px',
+                padding: '0 0.65rem',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: '#ffffff',
+                background: pendingOrdersCount > 0 ? '#dc2626' : '#94a3b8',
+                border: 'none',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                cursor: pendingOrdersCount > 0 ? 'pointer' : 'not-allowed',
+                opacity: pendingOrdersCount > 0 ? 1 : 0.6,
+                boxShadow: pendingOrdersCount > 0 ? '0 1px 3px rgba(220, 38, 38, 0.3)' : 'none',
+              }}
+              title={pendingOrdersCount > 0 ? 'Save / Re-submit all pending changes to database' : 'All orders saved'}
             >
-              <RotateCcw size={12} />
-              <span>Clear Quantities</span>
+              {resubmitOrdersCount > 0 ? <RefreshCw size={11} /> : <Save size={11} />}
+              <span>
+                {isSubmittingAll
+                  ? `Submitting (${submitProgress?.current}/${submitProgress?.total})...`
+                  : pendingOrdersCount > 0
+                  ? resubmitOrdersCount > 0
+                    ? `Re-submit Orders (${pendingOrdersCount})`
+                    : `Submit Orders (${pendingOrdersCount})`
+                  : 'All Orders Saved'}
+              </span>
             </button>
           </div>
 
-          <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <span>
               <kbd style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
                 Enter

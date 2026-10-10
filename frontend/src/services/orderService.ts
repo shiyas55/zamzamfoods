@@ -17,6 +17,9 @@ export interface CreateOrderPayload {
 }
 
 export interface UpdateOrderPayload {
+  customer_id?: string;
+  order_date?: string;
+  order_number?: string;
   items?: Array<{
     product_id: string;
     quantity: number;

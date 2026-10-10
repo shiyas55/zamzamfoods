@@ -37,14 +37,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect to the appropriate home interface based on role
-    if (user.role === 'DRIVER') {
-      return <Navigate to="/driver" replace />;
-    } else if (user.role === 'MANAGER') {
-      return <Navigate to="/manager" replace />;
-    } else {
-      return <Navigate to="/owner" replace />;
-    }
+    return <Navigate to="/owner" replace />;
   }
 
   return <>{children}</>;
