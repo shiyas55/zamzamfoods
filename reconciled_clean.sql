@@ -4,11 +4,12 @@
 -- ==============================================================================
 
 -- STEP 1: WIPE ALL TRANSACTIONS & REVERT BALANCES TO 0.00
-DELETE FROM "orders_orderitem";
-DELETE FROM "orders_order";
-DELETE FROM "payments_payment";
+DELETE FROM "orders_orderactivitylog";
 DELETE FROM "credits_credittransaction";
 DELETE FROM "deliveries_delivery";
+DELETE FROM "orders_orderitem";
+DELETE FROM "payments_payment";
+DELETE FROM "orders_order";
 UPDATE "customers_customer" SET "current_balance" = 0.00;
 
 -- STEP 2: ROUTES

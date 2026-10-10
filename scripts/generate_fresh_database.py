@@ -96,11 +96,12 @@ def main():
 
     # Step 1: Wipe transactions and reset balances
     sql_lines.append("-- STEP 1: WIPE ALL TRANSACTIONS & REVERT BALANCES TO 0.00")
-    sql_lines.append('DELETE FROM "orders_orderitem";')
-    sql_lines.append('DELETE FROM "orders_order";')
-    sql_lines.append('DELETE FROM "payments_payment";')
+    sql_lines.append('DELETE FROM "orders_orderactivitylog";')
     sql_lines.append('DELETE FROM "credits_credittransaction";')
     sql_lines.append('DELETE FROM "deliveries_delivery";')
+    sql_lines.append('DELETE FROM "orders_orderitem";')
+    sql_lines.append('DELETE FROM "payments_payment";')
+    sql_lines.append('DELETE FROM "orders_order";')
     sql_lines.append('UPDATE "customers_customer" SET "current_balance" = 0.00;\n')
 
     # Step 2: Routes

@@ -1073,17 +1073,6 @@ class DatabaseRestoreView(APIView):
                                 short_stmt = stmt[:300] + ("..." if len(stmt) > 300 else "")
                                 raise Exception(f"{str(stmt_err)} | Statement: {short_stmt}")
 
-                        # Resync PostgreSQL sequences after bulk insert
-                        if connection.vendor == "postgresql":
-                            from django.apps import apps
-                            for model in apps.get_models():
-                                try:
-                                    table = model._meta.db_table
-                                    cursor.execute(
-                                        f"SELECT setval(pg_get_serial_sequence('\"{table}\"', 'id'), coalesce(max(id), 1), max(id) IS NOT null) FROM \"{table}\";"
-                                    )
-                                except Exception:
-                                    pass
             except Exception as e:
                 return Response({"error": f"SQL restoration failed: {str(e)}"}, status=400)
             finally:
@@ -1092,6 +1081,22 @@ class DatabaseRestoreView(APIView):
                         connection.cursor().execute("PRAGMA foreign_keys = ON;")
                     except Exception:
                         pass
+
+            # Resync PostgreSQL sequences safely outside the transaction for tables with auto-increment integer IDs
+            if connection.vendor == "postgresql":
+                from django.apps import apps
+                with connection.cursor() as cursor:
+                    for model in apps.get_models():
+                        try:
+                            pk_field = model._meta.pk
+                            if pk_field and pk_field.get_internal_type() in ["AutoField", "BigAutoField", "SmallAutoField"]:
+                                table = model._meta.db_table
+                                col = pk_field.column
+                                cursor.execute(
+                                    f"SELECT setval(pg_get_serial_sequence('\"{table}\"', '{col}'), coalesce(max(\"{col}\"), 1), max(\"{col}\") IS NOT null) FROM \"{table}\";"
+                                )
+                        except Exception:
+                            pass
 
 
             from apps.common.audit import log_activity
