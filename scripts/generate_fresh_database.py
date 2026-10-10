@@ -35,6 +35,7 @@ def main():
 
     # 3. Customers (reset current_balance = 0.00)
     clean_customers = []
+    seen_price_pairs = set()
     clean_prices = []
     for c in records.get("customers", []):
         if c.get("model") == "customers.customer":
@@ -43,7 +44,11 @@ def main():
             item["fields"]["current_balance"] = "0.00"
             clean_customers.append(item)
         elif c.get("model") == "customers.customerproductprice":
-            clean_prices.append(c)
+            f = c.get("fields", {})
+            pair = (f.get("customer"), f.get("product"))
+            if pair not in seen_price_pairs:
+                seen_price_pairs.add(pair)
+                clean_prices.append(c)
 
     # 4. Accounts
     clean_accounts = records.get("accounts", [])
@@ -141,7 +146,8 @@ VALUES ('{cid}', '{name}', '{owner_name}', '{phone}', '{alt_phone}', '{addr}', '
 ON CONFLICT ("id") DO UPDATE SET "current_balance" = 0.00, "route_id" = EXCLUDED."route_id", "is_active" = TRUE;""")
 
     # Step 5: Custom Wholesale Prices
-    sql_lines.append("\n-- STEP 5: CUSTOMER CUSTOM PRICES")
+    sql_lines.append('\n-- STEP 5: CUSTOMER CUSTOM PRICES')
+    sql_lines.append('DELETE FROM "customers_customerproductprice";')
     for cp in clean_prices:
         f = cp["fields"]
         cpid = cp["pk"]
@@ -151,7 +157,7 @@ ON CONFLICT ("id") DO UPDATE SET "current_balance" = 0.00, "route_id" = EXCLUDED
         eff_from = f.get("effective_from", "2026-10-01")
         sql_lines.append(f"""INSERT INTO "customers_customerproductprice" ("id", "customer_id", "product_id", "price", "effective_from", "is_active", "created_at", "updated_at")
 VALUES ('{cpid}', '{cust_id}', '{prod_id}', {price}, '{eff_from}', TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-ON CONFLICT ("id") DO NOTHING;""")
+ON CONFLICT DO NOTHING;""")
 
     # Final balance check
     sql_lines.append("\n-- STEP 6: VERIFY ALL BALANCES ARE ZERO")

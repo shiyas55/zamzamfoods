@@ -8,7 +8,7 @@
     "database_engine": "postgresql",
     "total_customers": 128,
     "total_products": 5,
-    "total_custom_prices": 273,
+    "total_custom_prices": 268,
     "total_orders": 0,
     "total_previous_dues": "0.00"
   },
@@ -3019,22 +3019,6 @@
       },
       {
         "model": "customers.customerproductprice",
-        "pk": "157b2552-5acb-4998-a7e5-1dcbc5d84893",
-        "fields": {
-          "created_at": "2026-10-05 11:24:08.066000+00:00",
-          "updated_at": "2026-10-05 11:24:08.066000+00:00",
-          "customer": "e48ccb86-5329-408d-8b48-5d45399b47ca",
-          "product": "8bf97a76-6248-4bc4-876f-6012c0850668",
-          "price": "37.00",
-          "effective_from": "2026-10-05",
-          "effective_to": null,
-          "is_active": false,
-          "created_by": 1,
-          "updated_by": 1
-        }
-      },
-      {
-        "model": "customers.customerproductprice",
         "pk": "77c8f80f-4853-491a-b9b9-4de689d83aa2",
         "fields": {
           "created_at": "2026-10-06 19:56:41.437311+00:00",
@@ -3083,22 +3067,6 @@
       },
       {
         "model": "customers.customerproductprice",
-        "pk": "30703153-4e60-4203-b7f1-b124412a626e",
-        "fields": {
-          "created_at": "2026-10-06 19:56:41.450004+00:00",
-          "updated_at": "2026-10-06 19:56:41.450017+00:00",
-          "customer": "e48ccb86-5329-408d-8b48-5d45399b47ca",
-          "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "price": "4.50",
-          "effective_from": "2026-10-07",
-          "effective_to": null,
-          "is_active": true,
-          "created_by": 1,
-          "updated_by": 1
-        }
-      },
-      {
-        "model": "customers.customerproductprice",
         "pk": "1714ebcf-4db3-4bac-b141-09ecfb0d9897",
         "fields": {
           "created_at": "2026-10-06 19:56:41.457509+00:00",
@@ -3109,22 +3077,6 @@
           "effective_from": "2026-10-07",
           "effective_to": null,
           "is_active": true,
-          "created_by": 1,
-          "updated_by": 1
-        }
-      },
-      {
-        "model": "customers.customerproductprice",
-        "pk": "cd4b40de-f8c8-4d29-ae95-ec50fbf3ce7b",
-        "fields": {
-          "created_at": "2026-10-05 11:24:08.102000+00:00",
-          "updated_at": "2026-10-05 11:24:08.102000+00:00",
-          "customer": "e48ccb86-5329-408d-8b48-5d45399b47ca",
-          "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "price": "9.00",
-          "effective_from": "2026-10-05",
-          "effective_to": null,
-          "is_active": false,
           "created_by": 1,
           "updated_by": 1
         }
@@ -6091,22 +6043,6 @@
       },
       {
         "model": "customers.customerproductprice",
-        "pk": "cd668798-8f67-4c68-9981-2bb6ab1ed682",
-        "fields": {
-          "created_at": "2026-10-02 06:17:13.908000+00:00",
-          "updated_at": "2026-10-02 06:17:13.908000+00:00",
-          "customer": "0d653df0-863e-4afe-a906-5ccbf494679b",
-          "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "price": "5.50",
-          "effective_from": "2026-10-02",
-          "effective_to": null,
-          "is_active": false,
-          "created_by": 1,
-          "updated_by": 1
-        }
-      },
-      {
-        "model": "customers.customerproductprice",
         "pk": "9781f6f3-d8d9-4c34-97a8-0b36cf00d91e",
         "fields": {
           "created_at": "2026-10-02 06:17:13.912000+00:00",
@@ -6117,22 +6053,6 @@
           "effective_from": "2026-10-02",
           "effective_to": null,
           "is_active": false,
-          "created_by": 1,
-          "updated_by": 1
-        }
-      },
-      {
-        "model": "customers.customerproductprice",
-        "pk": "fe7f869d-670a-41a6-b8c9-edff6d7c3ed0",
-        "fields": {
-          "created_at": "2026-10-06 19:42:52.864679+00:00",
-          "updated_at": "2026-10-06 19:42:52.864686+00:00",
-          "customer": "0d653df0-863e-4afe-a906-5ccbf494679b",
-          "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "price": "9.00",
-          "effective_from": "2026-10-07",
-          "effective_to": null,
-          "is_active": true,
           "created_by": 1,
           "updated_by": 1
         }

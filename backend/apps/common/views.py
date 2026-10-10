@@ -1028,10 +1028,13 @@ class DatabaseRestoreView(APIView):
                                 skipped_count += 1
                                 continue
 
+                            sid = transaction.savepoint()
                             try:
                                 cursor.execute(stmt)
+                                transaction.savepoint_commit(sid)
                                 executed_count += 1
                             except Exception as stmt_err:
+                                transaction.savepoint_rollback(sid)
                                 err_lower = str(stmt_err).lower()
                                 # Auto-repair single-quoted JSON dict syntax if PostgreSQL rejected it
                                 if "invalid input syntax for type json" in err_lower:
@@ -1043,9 +1046,14 @@ class DatabaseRestoreView(APIView):
                                             stmt,
                                             flags=re.DOTALL
                                         )
-                                        cursor.execute(repaired)
-                                        executed_count += 1
-                                        continue
+                                        sub_sid = transaction.savepoint()
+                                        try:
+                                            cursor.execute(repaired)
+                                            transaction.savepoint_commit(sub_sid)
+                                            executed_count += 1
+                                            continue
+                                        except Exception:
+                                            transaction.savepoint_rollback(sub_sid)
                                     except Exception:
                                         pass
 
