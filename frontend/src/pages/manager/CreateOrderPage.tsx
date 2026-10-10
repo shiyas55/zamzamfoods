@@ -5680,7 +5680,7 @@ export const CreateOrderPage: React.FC = () => {
                     }}
                     title="Total Opening / Previous Due across visible shops"
                   >
-                    <span>📋 Prev. Due:</span>
+                    <span>Prev. Due:</span>
                     <strong style={{ fontSize: '0.82rem' }}>{formatCurrency(filteredStats.totalPrevDue)}</strong>
                   </span>
                 )}
@@ -5700,7 +5700,7 @@ export const CreateOrderPage: React.FC = () => {
                     gap: '0.25rem',
                   }}
                 >
-                  <span>💵 Cash:</span>
+                  <span>Cash:</span>
                   <strong style={{ fontSize: '0.82rem' }}>{formatCurrency(filteredStats.totalCash)}</strong>
                 </span>
 
@@ -5719,7 +5719,7 @@ export const CreateOrderPage: React.FC = () => {
                     gap: '0.25rem',
                   }}
                 >
-                  <span>📱 GPay:</span>
+                  <span>GPay:</span>
                   <strong style={{ fontSize: '0.82rem' }}>{formatCurrency(filteredStats.totalGPay)}</strong>
                 </span>
 
@@ -5740,7 +5740,7 @@ export const CreateOrderPage: React.FC = () => {
                     }}
                     title="Total Discount / Deductions"
                   >
-                    <span>🏷️ Disc:</span>
+                    <span>Disc:</span>
                     <strong style={{ fontSize: '0.82rem' }}>{formatCurrency(filteredStats.totalDiscount)}</strong>
                   </span>
                 )}
