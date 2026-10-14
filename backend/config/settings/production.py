@@ -17,6 +17,7 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 _default_hosts = [
+    ".koyeb.app",
     "zamzamfood.up.railway.app",
     "zamzamfoods.up.railway.app",
     "localhost",
@@ -95,6 +96,7 @@ for d in _default_origins:
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = _cors_list
 CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.koyeb\.app$",
     r"^https://.*\.vercel\.app$",
     r"^https://.*\.up\.railway\.app$",
     r"^https://.*\.railway\.app$",
