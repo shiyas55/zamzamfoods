@@ -242,12 +242,18 @@ class CreateOrderSerializer(serializers.Serializer):
                 raise serializers.ValidationError({"detail": f"Online customer self-ordering is currently turned off by the shop administration. Please contact {sys_settings.phone_number} directly."})
             return attrs
 
-        from apps.reports.models import DailyClosing
-        closing = DailyClosing.objects.filter(date=order_date).first()
-        if closing and closing.is_closed:
-            raise serializers.ValidationError({"detail": f"Business day {order_date} is closed. Data entry is not allowed."})
-        if closing and not closing.is_opened:
-            raise serializers.ValidationError({"detail": f"Business day {order_date} has not been opened yet. You must open the day before entering orders."})
+        request = self.context.get("request")
+        user = getattr(request, "user", None) if request else None
+        is_authorized = not user or user.is_superuser or getattr(user, "role", "") in ["OWNER", "MANAGER"]
+
+        # Only restrict customer links and non-manager staff from creating orders on closed or unopened days
+        if not is_authorized:
+            from apps.reports.models import DailyClosing
+            closing = DailyClosing.objects.filter(date=order_date).first()
+            if closing and closing.is_closed:
+                raise serializers.ValidationError({"detail": f"Business day {order_date} is closed. Data entry is not allowed."})
+            if closing and not closing.is_opened:
+                raise serializers.ValidationError({"detail": f"Business day {order_date} has not been opened yet. You must open the day before entering orders."})
         return attrs
 
     def create(self, validated_data):
@@ -312,13 +318,13 @@ class UpdateOrderSerializer(serializers.Serializer):
         instance = self.instance
         request = self.context.get("request")
         user = getattr(request, "user", None) if request else None
-        is_owner = user and (user.is_superuser or getattr(user, "role", "") == "OWNER")
+        is_authorized = not user or user.is_superuser or getattr(user, "role", "") in ["OWNER", "MANAGER"]
 
         if instance:
             if instance.status == "CANCELLED":
                 raise serializers.ValidationError({"detail": f"Cannot edit order #{instance.order_number} because it has been Cancelled."})
 
-            if not is_owner:
+            if not is_authorized:
                 if instance.status in ["DELIVERED", "COMPLETED"]:
                     raise serializers.ValidationError({"detail": f"Cannot edit order #{instance.order_number} because it is already {instance.get_status_display()}."})
                 if hasattr(instance, "delivery") and instance.delivery and instance.delivery.status == "DELIVERED":

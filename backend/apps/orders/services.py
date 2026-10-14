@@ -240,7 +240,7 @@ def update_order_service(
 
         from apps.deliveries.models import Delivery
 
-        is_owner = user and (user.is_superuser or getattr(user, "role", "") == "OWNER")
+        is_owner = not user or user.is_superuser or getattr(user, "role", "") in ["OWNER", "MANAGER"]
 
         if order.status == Order.Status.CANCELLED:
             raise ValueError(f"Cannot edit order #{order.order_number} because its status is Cancelled.")
