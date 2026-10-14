@@ -270,15 +270,19 @@ def update_order_service(
 
         if driver_id is not None:
             if driver_id:
-                driver = Driver.objects.get(id=driver_id)
-                order.driver = driver
-                order.save(update_fields=["driver", "updated_at"])
+                driver = Driver.objects.filter(id=driver_id).first()
+                if not driver:
+                    # Check if driver_id was passed as user_id
+                    driver = Driver.objects.filter(user_id=driver_id).first()
+                if driver:
+                    order.driver = driver
+                    order.save(update_fields=["driver", "updated_at"])
+                    if hasattr(order, "delivery") and order.delivery:
+                        order.delivery.driver = driver
+                        order.delivery.save(update_fields=["driver", "updated_at"])
             else:
                 order.driver = None
                 order.save(update_fields=["driver", "updated_at"])
-                if hasattr(order, "delivery") and order.delivery:
-                    order.delivery.driver = None
-                    order.delivery.save(update_fields=["driver", "updated_at"])
 
         from apps.deliveries.services import ensure_order_delivery
         if order.driver or (order.route and order.route.drivers.filter(is_active=True).exists()):
@@ -381,8 +385,11 @@ def update_order_service(
                 record_credit_sale_service(order=order, recorded_by=user)
 
         # Audit log
-        user_name = user.get_full_name() or user.username if user else "System"
-        user_role = user.role if user else "SYSTEM"
+        user_name = "System"
+        user_role = "SYSTEM"
+        if user and getattr(user, "is_authenticated", False):
+            user_name = user.get_full_name() or user.username or "Staff"
+            user_role = getattr(user, "role", "MANAGER")
         OrderActivityLog.objects.create(
             order=order,
             action="Order Edited & Locked",

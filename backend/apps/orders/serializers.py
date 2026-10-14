@@ -324,6 +324,10 @@ class UpdateOrderSerializer(serializers.Serializer):
                 notes=notes,
                 user=user,
             )
+        except serializers.ValidationError:
+            raise
         except ValueError as e:
             raise serializers.ValidationError({"detail": str(e)})
+        except Exception as e:
+            raise serializers.ValidationError({"detail": f"Failed to update order: {str(e)}"})
 

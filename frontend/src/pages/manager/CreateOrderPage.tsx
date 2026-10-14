@@ -1748,7 +1748,7 @@ export const CreateOrderPage: React.FC = () => {
           order = await orderService.updateOrder(row.orderId, {
             order_number: row.orderNumber?.trim() || undefined,
             items,
-            driver_id: assignedDriverId,
+            driver_id: assignedDriverId || undefined,
             shop_expense: fin.discount > 0 ? fin.discount.toFixed(2) : '0.00',
             shop_expense_notes: fin.discount > 0 ? 'Discount / Deduction' : '',
             notes: 'Fast wholesale daily entry (updated)',
@@ -1756,7 +1756,7 @@ export const CreateOrderPage: React.FC = () => {
         } else {
           order = await orderService.createOrder({
             customer_id: row.customerId,
-            driver_id: assignedDriverId,
+            driver_id: assignedDriverId || undefined,
             order_date: orderDate,
             order_number: row.orderNumber?.trim() || undefined,
             items,
@@ -1813,6 +1813,7 @@ export const CreateOrderPage: React.FC = () => {
       setTimeout(() => setSuccessBanner(null), 3500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Order creation failed';
+      setError(`Failed to save order for ${row.customerName || 'shop'}: ${msg}`);
       setRows((prev) =>
         prev.map((r) =>
           r.rowId === rowId
@@ -2753,7 +2754,7 @@ export const CreateOrderPage: React.FC = () => {
             order = await orderService.updateOrder(row.orderId, {
               order_number: row.orderNumber?.trim() || undefined,
               items,
-              driver_id: assignedDriverId,
+              driver_id: assignedDriverId || undefined,
               shop_expense: fin.discount > 0 ? fin.discount.toFixed(2) : '0.00',
               shop_expense_notes: fin.discount > 0 ? 'Discount / Deduction' : '',
               notes: 'Fast wholesale daily entry (updated)',
@@ -2761,7 +2762,7 @@ export const CreateOrderPage: React.FC = () => {
           } else {
             order = await orderService.createOrder({
               customer_id: row.customerId,
-              driver_id: assignedDriverId,
+              driver_id: assignedDriverId || undefined,
               order_date: orderDate,
               order_number: row.orderNumber?.trim() || undefined,
               items,
@@ -2811,6 +2812,9 @@ export const CreateOrderPage: React.FC = () => {
         successCount++;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Order creation failed';
+        if (!error) {
+          setError(`Failed to save ${row.customerName || 'order'}: ${msg}`);
+        }
         setRows((prev) =>
           prev.map((r) =>
             r.rowId === row.rowId
@@ -5224,9 +5228,27 @@ export const CreateOrderPage: React.FC = () => {
                         ) : row.status === 'SAVING' ? (
                           <div className="spinner" style={{ width: 13, height: 13, margin: '0 auto' }} />
                         ) : row.status === 'ERROR' ? (
-                          <span className="badge badge-danger" style={{ fontSize: '0.68rem', padding: '0.15rem 0.4rem' }} title={row.errorMessage}>
-                            Error
-                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alert(`⚠️ Server Error for ${row.customerName || 'Order'}:\n\n${row.errorMessage || 'Unknown error occurred while contacting the server.'}`);
+                            }}
+                            className="badge badge-danger"
+                            style={{
+                              fontSize: '0.68rem',
+                              padding: '0.15rem 0.4rem',
+                              cursor: 'pointer',
+                              border: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                            }}
+                            title={row.errorMessage ? `Error: ${row.errorMessage}\n(Click to view details)` : 'Click to view server error details'}
+                          >
+                            <AlertCircle size={10} />
+                            <span>Error</span>
+                          </button>
                         ) : row.orderId && row.status === 'IDLE' ? (
                           <span
                             className="badge"
