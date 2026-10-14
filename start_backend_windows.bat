@@ -11,20 +11,27 @@ echo.
 
 cd /d "%~dp0"
 
-:: Check if Python is installed
+:: Check if Python is installed (check python, then py launcher)
+set "PY_CMD=python"
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    color 0C
-    echo [ERROR] Python is not installed or not in PATH!
-    echo Please install Python 3.10+ from python.org and check "Add Python to PATH".
-    pause
-    exit /b 1
+    py -3 --version >nul 2>&1
+    if %errorlevel% equ 0 (
+        set "PY_CMD=py -3"
+    ) else (
+        color 0C
+        echo [ERROR] Python is not installed or not found in system PATH!
+        echo Please run "Step_1_Install_Python_3.12.exe" and ensure you check:
+        echo   "[x] Add python.exe to PATH"
+        pause
+        exit /b 1
+    )
 )
 
 :: Virtual environment check
 if not exist ".venv" (
     echo [1/3] Creating Python virtual environment...
-    python -m venv .venv
+    !PY_CMD! -m venv .venv
 )
 
 echo [2/3] Activating virtual environment...

@@ -23,29 +23,60 @@ echo             ZAMZAM FOODS — DESKTOP APPLICATION LAUNCHER
 echo ==============================================================================
 echo.
 
-:: Start backend service in minimized window if not already listening on port 8000
-powershell -NoProfile -Command "Test-NetConnection -ComputerName 127.0.0.1 -Port 8000 -InformationLevel Quiet" 2>nul | findstr "True" >nul 2>&1
+:: Clear any stale WebView2 locks and stuck processes
+taskkill /f /im "Zamzam Foods.exe" >nul 2>&1
+del /f /q "%LocalAppData%\com.zamzamfoods.desktop\EBWebView\Default\lockfile" >nul 2>&1
+del /f /q "%LocalAppData%\Programs\Zamzam Foods\EBWebView\Default\lockfile" >nul 2>&1
+del /f /q "%LocalAppData%\Zamzam Foods\EBWebView\Default\lockfile" >nul 2>&1
+
+:: Start backend service if not already listening on port 8000
+powershell -NoProfile -Command "$c = New-Object System.Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1', 8000); Write-Host 'OPEN'; $c.Close() } catch { Write-Host 'CLOSED' }" 2>nul | findstr "OPEN" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [1/2] Starting local engine connected to Aiven Cloud DB...
-    start /min "Zamzam Foods Backend Engine" cmd /c "%~dp0start_backend_windows.bat"
-    timeout /t 3 /nobreak >nul
+    echo [1/2] Starting local backend engine connected to Aiven Cloud DB...
+    start "Zamzam Foods Backend Engine" cmd /k "%~dp0start_backend_windows.bat"
+    
+    echo Connecting to Aiven PostgreSQL Database...
+    set /a attempts=0
+    :WAIT_LOOP
+    set /a attempts+=1
+    timeout /t 1 /nobreak >nul
+    powershell -NoProfile -Command "$c = New-Object System.Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1', 8000); Write-Host 'OPEN'; $c.Close() } catch { Write-Host 'CLOSED' }" 2>nul | findstr "OPEN" >nul 2>&1
+    if %errorlevel% equ 0 goto BACKEND_UP
+    if !attempts! geq 25 goto BACKEND_UP
+    goto WAIT_LOOP
 ) else (
-    echo [1/2] Local engine is already active on port 8000.
+    echo [1/2] Local backend engine is already running on port 8000.
+)
+:BACKEND_UP
+
+echo.
+echo [2/2] Opening Zamzam Foods Application...
+
+:: Check for Edge App Mode (100% crash-free native desktop window)
+set "APP_OPENED=0"
+if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
+    start "" "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
+    set "APP_OPENED=1"
+) else if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
+    start "" "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
+    set "APP_OPENED=1"
+) else if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
+    start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
+    set "APP_OPENED=1"
+) else if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" (
+    start "" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
+    set "APP_OPENED=1"
 )
 
-:: Launch the Desktop Application
-echo [2/2] Opening Zamzam Foods Application...
-if exist "%~dp0Zamzam Foods.exe" (
-    start "" "%~dp0Zamzam Foods.exe"
-) else if exist "%~dp0zamzam_foods_windows_complete_package\Zamzam Foods.exe" (
-    start "" "%~dp0zamzam_foods_windows_complete_package\Zamzam Foods.exe"
-) else if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
-    start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
-) else if exist "%~dp0frontend\src-tauri\target\release\Zamzam Foods.exe" (
-    start "" "%~dp0frontend\src-tauri\target\release\Zamzam Foods.exe"
-) else (
-    echo.
-    echo Backend is ready! Please run your Zamzam Foods desktop app or open http://localhost:5173
+:: If Edge/Chrome was not found, launch Zamzam Foods.exe or default browser
+if "!APP_OPENED!"=="0" (
+    if exist "%~dp0Zamzam Foods.exe" (
+        start "" "%~dp0Zamzam Foods.exe"
+    ) else if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
+        start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
+    ) else (
+        start http://127.0.0.1:8000/
+    )
 )
 
 timeout /t 2 /nobreak >nul
