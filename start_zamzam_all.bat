@@ -3,24 +3,48 @@ setlocal EnableDelayedExpansion
 title Launch Zamzam Foods
 color 0B
 
-echo Starting Zamzam Foods Local Engine...
 cd /d "%~dp0"
 
-:: Start backend in minimized window if not already running on port 8000
-powershell -Command "Test-NetConnection -ComputerName 127.0.0.1 -Port 8000 -InformationLevel Quiet" | findstr "True" >nul 2>&1
+:: Auto-Create Desktop Shortcut if not already present
+powershell -NoProfile -Command "
+$desktop = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'Zamzam Foods.lnk');
+if (-not (Test-Path $desktop)) {
+    $ws = New-Object -ComObject WScript.Shell;
+    $s = $ws.CreateShortcut($desktop);
+    $s.TargetPath = '%~dp0start_zamzam_all.bat';
+    $s.WorkingDirectory = '%~dp0';
+    $icon = '%~dp0frontend\src-tauri\icons\icon.ico';
+    if (Test-Path $icon) { $s.IconLocation = $icon; }
+    $s.Description = 'Zamzam Foods Wholesale & Distribution Management';
+    $s.Save();
+}
+" >nul 2>&1
+
+echo ==============================================================================
+echo             ZAMZAM FOODS — DESKTOP APPLICATION LAUNCHER
+echo ==============================================================================
+echo.
+
+:: Start backend service in minimized window if not already listening on port 8000
+powershell -NoProfile -Command "Test-NetConnection -ComputerName 127.0.0.1 -Port 8000 -InformationLevel Quiet" 2>nul | findstr "True" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Launching local backend service...
-    start /min "" cmd /c "%~dp0start_backend_windows.bat"
+    echo [1/2] Starting local engine connected to Aiven Cloud DB...
+    start /min "Zamzam Foods Backend Engine" cmd /c "%~dp0start_backend_windows.bat"
     timeout /t 3 /nobreak >nul
 ) else (
-    echo Local backend service already active on port 8000.
+    echo [1/2] Local engine is already active on port 8000.
 )
 
-:: Launch the Desktop App if exe exists
+:: Launch the Desktop Application
+echo [2/2] Opening Zamzam Foods Application...
 if exist "frontend\src-tauri\target\release\Zamzam Foods.exe" (
     start "" "frontend\src-tauri\target\release\Zamzam Foods.exe"
 ) else if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
     start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
 ) else (
-    echo Backend is ready! You can now launch your Zamzam Foods desktop app.
+    echo.
+    echo Backend is ready! Please run your Zamzam Foods desktop app or open http://localhost:5173
 )
+
+timeout /t 2 /nobreak >nul
+exit
