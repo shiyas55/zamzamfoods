@@ -25,13 +25,13 @@ const isTauriApp = (): boolean => {
 
 export const API_BASE_URL =
   (typeof window !== 'undefined' && localStorage.getItem('zamzam_api_url')) ||
-  import.meta.env.VITE_API_URL ||
   (typeof window !== 'undefined' && isTauriApp()
     ? 'http://127.0.0.1:8000/api/v1'
-    : typeof window !== 'undefined' &&
-      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? '/api/v1'
-    : 'https://zamzamfood.up.railway.app/api/v1');
+    : import.meta.env.VITE_API_URL ||
+      (typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? '/api/v1'
+          : 'https://zamzamfood.up.railway.app/api/v1'));
 
 /**
  * Fire-and-forget background ping to warm up sleeping Railway backend container on app launch.

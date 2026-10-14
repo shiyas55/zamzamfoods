@@ -67,18 +67,24 @@ class OrderViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        order = serializer.save()
-        output_serializer = OrderSerializer(order)
-        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            order = serializer.save()
+            output_serializer = OrderSerializer(order)
+            return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        order = serializer.save()
-        output_serializer = OrderSerializer(order)
-        return Response(output_serializer.data, status=status.HTTP_200_OK)
+        try:
+            order = serializer.save()
+            output_serializer = OrderSerializer(order)
+            return Response(output_serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()

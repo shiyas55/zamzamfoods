@@ -37,6 +37,8 @@ if %errorlevel% neq 0 (
 echo [2/2] Opening Zamzam Foods Application...
 if exist "%~dp0Zamzam Foods.exe" (
     start "" "%~dp0Zamzam Foods.exe"
+) else if exist "%~dp0zamzam_foods_windows_complete_package\Zamzam Foods.exe" (
+    start "" "%~dp0zamzam_foods_windows_complete_package\Zamzam Foods.exe"
 ) else if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
     start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
 ) else if exist "%~dp0frontend\src-tauri\target\release\Zamzam Foods.exe" (

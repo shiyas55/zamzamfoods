@@ -37,10 +37,14 @@ if exist "%~dp0manage.py" (
 ) else if exist "%~dp0backend\manage.py" (
     set "MANAGE_PY=%~dp0backend\manage.py"
     set "REQ_TXT=%~dp0backend\requirements.txt"
+) else if exist "%~dp0zamzam_foods_windows_complete_package\backend\manage.py" (
+    set "MANAGE_PY=%~dp0zamzam_foods_windows_complete_package\backend\manage.py"
+    set "REQ_TXT=%~dp0zamzam_foods_windows_complete_package\backend\requirements.txt"
 ) else (
     color 0C
     echo [ERROR] Could not find manage.py!
-    echo Please make sure this file is inside the Zamzam Foods folder next to the backend directory.
+    echo Current folder: %~dp0
+    echo Please make sure this script is placed in the folder containing backend.
     pause
     exit /b 1
 )

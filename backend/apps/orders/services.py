@@ -236,7 +236,7 @@ def update_order_service(
     Owners have full authority to correct bills and line items.
     """
     with transaction.atomic():
-        order = Order.objects.select_for_update().select_related("customer", "route", "driver").get(id=order_id)
+        order = Order.objects.select_for_update().select_related("customer", "route").get(id=order_id)
 
         from apps.deliveries.models import Delivery
 
