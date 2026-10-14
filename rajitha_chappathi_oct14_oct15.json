@@ -1,0 +1,113 @@
+{
+  "backup_info": {
+    "system": "Zamzam Foods Enterprise Distribution Management",
+    "version": "1.0.3",
+    "created_at": "2026-10-15T00:50:00+00:00",
+    "customer": "rajitha chappathi company",
+    "customer_id": "b6643869-e550-4846-8fdf-aa7fa817977e",
+    "description": "Oct 14 (Cash 50.00, Rate removed) and Oct 15 (Cash 1.00, Rate 1.00)"
+  },
+  "records": {
+    "customers": [
+      {
+        "model": "customers.customer",
+        "pk": "b6643869-e550-4846-8fdf-aa7fa817977e",
+        "fields": {
+          "created_at": "2026-10-02 12:57:44+00:00",
+          "updated_at": "2026-10-15 00:50:00+00:00",
+          "name": "rajitha chappathi company",
+          "owner_name": "Faris Zamzam",
+          "phone": "8089170587",
+          "alternative_phone": "",
+          "address": "kuttikattoor simla oppsit",
+          "landmark": "",
+          "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+          "credit_limit": "5000.00",
+          "current_balance": "-51.00",
+          "notes": "",
+          "is_active": true
+        }
+      }
+    ],
+    "payments": [
+      {
+        "model": "payments.payment",
+        "pk": "338aecae-cc58-48ff-9153-c23a1bf6fcca",
+        "fields": {
+          "created_at": "2026-10-14 12:00:00+00:00",
+          "updated_at": "2026-10-14 12:00:00+00:00",
+          "payment_number": "PAY-20261014-RAJITHA-50",
+          "customer": "b6643869-e550-4846-8fdf-aa7fa817977e",
+          "order": null,
+          "amount": "50.00",
+          "payment_method": "CASH",
+          "status": "COMPLETED",
+          "reference_number": "",
+          "collected_by": 1,
+          "staff_member": null,
+          "received_at": "2026-10-14 12:00:00+00:00",
+          "notes": "Oct 14 Cash collection for rajitha chappathi company",
+          "reversed_by": null,
+          "reversed_at": null,
+          "reversal_reason": ""
+        }
+      },
+      {
+        "model": "payments.payment",
+        "pk": "973b54b9-775f-4ef4-82cd-3a362b21d749",
+        "fields": {
+          "created_at": "2026-10-15 12:00:00+00:00",
+          "updated_at": "2026-10-15 12:00:00+00:00",
+          "payment_number": "PAY-20261015-RAJITHA-01",
+          "customer": "b6643869-e550-4846-8fdf-aa7fa817977e",
+          "order": null,
+          "amount": "1.00",
+          "payment_method": "CASH",
+          "status": "COMPLETED",
+          "reference_number": "",
+          "collected_by": 1,
+          "staff_member": null,
+          "received_at": "2026-10-15 12:00:00+00:00",
+          "notes": "Oct 15 Cash collection for rajitha chappathi company",
+          "reversed_by": null,
+          "reversed_at": null,
+          "reversal_reason": ""
+        }
+      }
+    ],
+    "credits": [
+      {
+        "model": "credits.credittransaction",
+        "pk": "3cba3f87-b99c-4c93-993e-8bc1543ff741",
+        "fields": {
+          "created_at": "2026-10-14 12:00:00+00:00",
+          "updated_at": "2026-10-14 12:00:00+00:00",
+          "customer": "b6643869-e550-4846-8fdf-aa7fa817977e",
+          "transaction_type": "CASH_PAYMENT",
+          "amount": "-50.00",
+          "balance_after": "-50.00",
+          "reference_order": null,
+          "reference_payment": null,
+          "notes": "Oct 14 Cash payment of ₹50.00 for rajitha chappathi company",
+          "recorded_by": 1
+        }
+      },
+      {
+        "model": "credits.credittransaction",
+        "pk": "12515b2a-2b0c-4557-8190-5d2b4c541e4f",
+        "fields": {
+          "created_at": "2026-10-15 12:00:00+00:00",
+          "updated_at": "2026-10-15 12:00:00+00:00",
+          "customer": "b6643869-e550-4846-8fdf-aa7fa817977e",
+          "transaction_type": "CASH_PAYMENT",
+          "amount": "-1.00",
+          "balance_after": "-51.00",
+          "reference_order": null,
+          "reference_payment": null,
+          "notes": "Oct 15 Cash payment of ₹1.00 for rajitha chappathi company",
+          "recorded_by": 1
+        }
+      }
+    ]
+  }
+}
