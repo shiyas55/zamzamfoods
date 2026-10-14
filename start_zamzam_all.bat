@@ -5,20 +5,17 @@ color 0B
 
 cd /d "%~dp0"
 
-:: Auto-Create Desktop Shortcut if not already present
+:: Auto-Create or Update Desktop Shortcut to current folder location
 powershell -NoProfile -Command "
 $desktop = [System.IO.Path]::Combine([Environment]::GetFolderPath('Desktop'), 'Zamzam Foods.lnk');
-if (-not (Test-Path $desktop)) {
-    $ws = New-Object -ComObject WScript.Shell;
-    $s = $ws.CreateShortcut($desktop);
-    $s.TargetPath = '%~dp0start_zamzam_all.bat';
-    $s.WorkingDirectory = '%~dp0';
-    $icon = '%~dp0frontend\src-tauri\icons\icon.ico';
-    if (-not (Test-Path $icon)) { $icon = '%~dp0Zamzam Foods.exe'; }
-    if (Test-Path $icon) { $s.IconLocation = $icon; }
-    $s.Description = 'Zamzam Foods Wholesale & Distribution Management';
-    $s.Save();
-}
+$ws = New-Object -ComObject WScript.Shell;
+$s = $ws.CreateShortcut($desktop);
+$s.TargetPath = '%~dp0start_zamzam_all.bat';
+$s.WorkingDirectory = '%~dp0';
+$icon = '%~dp0frontend\src-tauri\icons\icon.ico';
+if (Test-Path $icon) { $s.IconLocation = $icon; }
+$s.Description = 'Zamzam Foods Wholesale & Distribution Management';
+$s.Save();
 " >nul 2>&1
 
 echo ==============================================================================
@@ -42,11 +39,11 @@ if exist "%~dp0Zamzam Foods.exe" (
     start "" "%~dp0Zamzam Foods.exe"
 ) else if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
     start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
-) else if exist "frontend\src-tauri\target\release\Zamzam Foods.exe" (
-    start "" "frontend\src-tauri\target\release\Zamzam Foods.exe"
+) else if exist "%~dp0frontend\src-tauri\target\release\Zamzam Foods.exe" (
+    start "" "%~dp0frontend\src-tauri\target\release\Zamzam Foods.exe"
 ) else (
     echo.
-    echo Backend is ready! You can now launch Zamzam Foods.
+    echo Backend is ready! Please run your Zamzam Foods desktop app or open http://localhost:5173
 )
 
 timeout /t 2 /nobreak >nul
