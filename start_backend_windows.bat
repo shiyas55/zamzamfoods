@@ -16,25 +16,46 @@ python --version >nul 2>&1
 if %errorlevel% neq 0 (
     color 0C
     echo [ERROR] Python is not installed or not in PATH!
-    echo Please install Python 3.10+ from python.org and check "Add Python to PATH".
+    echo Please install Python 3.10+ and check "Add Python to PATH".
+    pause
+    exit /b 1
+)
+
+:: Locate manage.py and requirements.txt safely
+if exist "%~dp0manage.py" (
+    set "MANAGE_PY=%~dp0manage.py"
+    set "REQ_FILE=%~dp0requirements.txt"
+) else if exist "%~dp0backend\manage.py" (
+    set "MANAGE_PY=%~dp0backend\manage.py"
+    set "REQ_FILE=%~dp0backend\requirements.txt"
+) else if exist "%~dp0..\backend\manage.py" (
+    set "MANAGE_PY=%~dp0..\backend\manage.py"
+    set "REQ_FILE=%~dp0..\backend\requirements.txt"
+) else (
+    color 0C
+    echo [ERROR] Could not locate backend\manage.py!
+    echo Current folder: %cd%
     pause
     exit /b 1
 )
 
 :: Virtual environment check
-if not exist ".venv" (
+if not exist ".venv" if not exist "..\\.venv" (
     echo [1/3] Creating Python virtual environment...
     python -m venv .venv
 )
 
-echo [2/3] Activating virtual environment...
-call .venv\Scripts\activate.bat
+if exist ".venv\Scripts\activate.bat" (
+    call .venv\Scripts\activate.bat
+) else if exist "..\.venv\Scripts\activate.bat" (
+    call ..\.venv\Scripts\activate.bat
+)
 
 :: Install dependencies if django is missing
 python -c "import django" >nul 2>&1
 if %errorlevel% neq 0 (
     echo Installing backend dependencies...
-    pip install -r backend\requirements.txt
+    pip install -r "!REQ_FILE!"
 )
 
 :: Set Live Aiven Cloud Database URL
@@ -43,7 +64,7 @@ set "DJANGO_ENV=development"
 set "DJANGO_DEBUG=True"
 
 echo [3/3] Checking database schema on Aiven Cloud...
-python backend\manage.py migrate --noinput
+python "!MANAGE_PY!" migrate --noinput
 
 echo.
 echo ==============================================================================
@@ -54,5 +75,5 @@ echo ===========================================================================
 echo Keep this window open while using the Zamzam Foods Desktop application.
 echo.
 
-python backend\manage.py runserver 127.0.0.1:8000
+python "!MANAGE_PY!" runserver 127.0.0.1:8000
 pause

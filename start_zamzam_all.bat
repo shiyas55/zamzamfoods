@@ -14,6 +14,7 @@ if (-not (Test-Path $desktop)) {
     $s.TargetPath = '%~dp0start_zamzam_all.bat';
     $s.WorkingDirectory = '%~dp0';
     $icon = '%~dp0frontend\src-tauri\icons\icon.ico';
+    if (-not (Test-Path $icon)) { $icon = '%~dp0Zamzam Foods.exe'; }
     if (Test-Path $icon) { $s.IconLocation = $icon; }
     $s.Description = 'Zamzam Foods Wholesale & Distribution Management';
     $s.Save();
@@ -37,13 +38,15 @@ if %errorlevel% neq 0 (
 
 :: Launch the Desktop Application
 echo [2/2] Opening Zamzam Foods Application...
-if exist "frontend\src-tauri\target\release\Zamzam Foods.exe" (
-    start "" "frontend\src-tauri\target\release\Zamzam Foods.exe"
+if exist "%~dp0Zamzam Foods.exe" (
+    start "" "%~dp0Zamzam Foods.exe"
 ) else if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
     start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
+) else if exist "frontend\src-tauri\target\release\Zamzam Foods.exe" (
+    start "" "frontend\src-tauri\target\release\Zamzam Foods.exe"
 ) else (
     echo.
-    echo Backend is ready! Please run your Zamzam Foods desktop app or open http://localhost:5173
+    echo Backend is ready! You can now launch Zamzam Foods.
 )
 
 timeout /t 2 /nobreak >nul
