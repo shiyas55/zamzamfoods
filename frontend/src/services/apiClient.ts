@@ -24,27 +24,14 @@ const isTauriApp = (): boolean => {
 };
 
 export const getApiBaseUrl = (): string => {
-  if (typeof window === 'undefined') return 'http://127.0.0.1:8000/api/v1';
+  if (typeof window === 'undefined') return 'https://zamzamfood.up.railway.app/api/v1';
 
-  // 1. Explicit override in localStorage
+  // 1. Explicit override in localStorage (can set to http://127.0.0.1:8000/api/v1 if offline)
   const saved = localStorage.getItem('zamzam_api_url');
   if (saved && saved.trim()) return saved.trim();
 
-  // 2. Tauri desktop application (Windows .exe / macOS .dmg)
-  if (isTauriApp()) return 'http://127.0.0.1:8000/api/v1';
-
-  // 3. Running locally on PC (Edge app mode, Chrome, localhost:8000, or dev server)
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0') {
-    // If opened via http://127.0.0.1:8000/ or localhost:8000, use same-origin /api/v1
-    if (window.location.port === '8000' || !window.location.port) {
-      return '/api/v1';
-    }
-    return 'http://127.0.0.1:8000/api/v1';
-  }
-
-  // 4. Remote / cloud deployment fallback
-  return import.meta.env.VITE_API_URL || '/api/v1';
+  // 2. Primary cloud backend requested: zamzamfood.up.railway.app
+  return import.meta.env.VITE_API_URL || 'https://zamzamfood.up.railway.app/api/v1';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
