@@ -90,10 +90,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         user = request.user
         user_role = getattr(user, "role", "")
-        if not (user.is_superuser or user_role in ["OWNER", "MANAGER"]):
+        is_authorized = user and (user.is_superuser or user_role in ["OWNER", "MANAGER"])
+        if not is_authorized:
             raise PermissionDenied("You do not have permission to delete orders.")
-        if instance.status in [Order.Status.DELIVERED, Order.Status.COMPLETED]:
-            raise PermissionDenied(f"Cannot delete order because its status is {instance.get_status_display()}.")
         return super().destroy(request, *args, **kwargs)
 
     def perform_destroy(self, instance):
