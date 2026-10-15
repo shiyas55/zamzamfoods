@@ -15,6 +15,25 @@ export const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+
+  React.useEffect(() => {
+    let active = true;
+    const checkServer = async () => {
+      try {
+        const healthUrl = `${API_BASE_URL.replace(/\/api\/v1\/?$/, '')}/api/health/`;
+        const res = await fetch(healthUrl, {
+          method: 'GET',
+          signal: AbortSignal.timeout ? AbortSignal.timeout(2500) : undefined,
+        });
+        if (active) setServerStatus(res.ok ? 'online' : 'offline');
+      } catch {
+        if (active) setServerStatus('offline');
+      }
+    };
+    checkServer();
+    return () => { active = false; };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -276,7 +295,14 @@ export const LoginPage: React.FC = () => {
             color: '#475569'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
-              <Server size={14} style={{ color: '#0284c7', flexShrink: 0 }} />
+              <span style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: serverStatus === 'online' ? '#22c55e' : serverStatus === 'offline' ? '#ef4444' : '#f59e0b',
+                flexShrink: 0
+              }} />
               <span style={{ fontWeight: 600 }}>Backend:</span>
               <span style={{
                 color: API_BASE_URL.includes('railway') ? '#7c3aed' : '#16a34a',
@@ -286,6 +312,9 @@ export const LoginPage: React.FC = () => {
                 whiteSpace: 'nowrap'
               }}>
                 {API_BASE_URL.includes('railway') ? 'Railway Cloud' : 'Local Engine (127.0.0.1:8000)'}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: serverStatus === 'online' ? '#16a34a' : '#ef4444', fontWeight: 600 }}>
+                {serverStatus === 'online' ? '(Ready)' : serverStatus === 'offline' ? '(Offline)' : ''}
               </span>
             </div>
             <button
@@ -313,6 +342,38 @@ export const LoginPage: React.FC = () => {
               Switch
             </button>
           </div>
+
+          {serverStatus === 'offline' && !API_BASE_URL.includes('railway') && (
+            <div style={{
+              background: '#fef3c7',
+              border: '1px solid #fde68a',
+              borderRadius: '6px',
+              padding: '0.6rem 0.8rem',
+              marginBottom: '1.25rem',
+              color: '#92400e',
+              fontSize: '0.78rem',
+              lineHeight: 1.4,
+            }}>
+              <strong>⚠️ Local Backend Engine is not running.</strong><br />
+              Double-click <code>start_zamzam_all.bat</code> in your project folder to start the backend engine.
+            </div>
+          )}
+
+          {serverStatus === 'offline' && API_BASE_URL.includes('railway') && (
+            <div style={{
+              background: '#fee2e2',
+              border: '1px solid #fecaca',
+              borderRadius: '6px',
+              padding: '0.6rem 0.8rem',
+              marginBottom: '1.25rem',
+              color: '#991b1b',
+              fontSize: '0.78rem',
+              lineHeight: 1.4,
+            }}>
+              <strong>⚠️ Railway Cloud server is offline (502).</strong><br />
+              Click the <strong>Switch</strong> button above to connect to your Local Engine (127.0.0.1:8000).
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="animated-input-group">
