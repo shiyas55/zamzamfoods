@@ -67,7 +67,7 @@ export const AppRoutes: React.FC = () => {
         <Route
           path="/owner"
           element={
-            <ProtectedRoute allowedRoles={['OWNER']}>
+            <ProtectedRoute allowedRoles={['OWNER', 'MANAGER', 'DRIVER']}>
               <OwnerLayout />
             </ProtectedRoute>
           }

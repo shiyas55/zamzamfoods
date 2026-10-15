@@ -96,13 +96,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       localStorage.setItem('zamzam_system_settings', JSON.stringify(data));
     } catch (err: unknown) {
       console.warn('Failed to load settings from server, using defaults.', err);
-      if (!settings) {
-        setSettings(defaultSettings);
-      }
+      setSettings((prev) => prev || defaultSettings);
     } finally {
       setLoading(false);
     }
-  }, [settings]);
+  }, []);
 
   useEffect(() => {
     refreshSettings();
