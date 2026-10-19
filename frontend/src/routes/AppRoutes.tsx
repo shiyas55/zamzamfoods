@@ -41,7 +41,7 @@ const PageLoadingFallback: React.FC = () => (
 export const AppRoutes: React.FC = () => {
   const { user, isAuthenticated, isLoading, status } = useAuth();
 
-  if (isLoading || status === 'INITIALIZING') {
+  if (isLoading && status === 'INITIALIZING') {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center' }}>
         <div className="spinner" />

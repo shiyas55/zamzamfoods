@@ -16,7 +16,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
   const { isMaintenanceMode } = useSettings();
   const location = useLocation();
 
-  if (isLoading || status === 'INITIALIZING') {
+  if (isLoading && status === 'INITIALIZING') {
     return (
       <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
         <div style={{ textAlign: 'center' }}>

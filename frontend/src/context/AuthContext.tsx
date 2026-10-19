@@ -31,7 +31,7 @@ const getInitialSession = (): { user: User | null; status: AuthStatus; isLoading
   const refresh = localStorage.getItem('zamzam_refresh_token');
 
   if (storedUser && (token || refresh)) {
-    // Session available in cache: mark authenticated immediately to avoid redirect/flicker
+    // Session available in cache: mark authenticated immediately
     return {
       user: storedUser,
       status: 'AUTHENTICATED',
@@ -39,16 +39,7 @@ const getInitialSession = (): { user: User | null; status: AuthStatus; isLoading
     };
   }
 
-  if (token || refresh) {
-    // Tokens present but profile missing from cache: initialize while loading
-    return {
-      user: null,
-      status: 'INITIALIZING',
-      isLoading: true,
-    };
-  }
-
-  // Completely unauthenticated
+  // Never block initial UI render with a permanent spinner
   return {
     user: null,
     status: 'UNAUTHENTICATED',
@@ -64,7 +55,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   /**
    * Validate user session in the background.
-   * Never logs out due to transient network drops, 502/503/504 errors, or server cold starts.
    */
   const refreshUser = useCallback(async () => {
     const accessToken = localStorage.getItem('zamzam_access_token');
@@ -85,19 +75,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('zamzam_user', JSON.stringify(freshUser));
       setStatus('AUTHENTICATED');
     } catch (err: unknown) {
-      // Check if this was a definitive session rejection
-      const isSessionExpired = err instanceof Error && err.message.includes('Session expired');
-      const tokensCleared = !localStorage.getItem('zamzam_access_token') && !localStorage.getItem('zamzam_refresh_token');
-
-      if (isSessionExpired || tokensCleared) {
-        setUser(null);
-        localStorage.removeItem('zamzam_user');
-        setStatus('UNAUTHENTICATED');
-      } else if (storedUser) {
-        // Transient network error or 500 error:
-        // KEEP stored user active so the session is never lost on refresh!
+      // Clear invalid session on error so user can immediately sign in
+      if (storedUser && !(err instanceof Error && (err.message.includes('Session expired') || err.message.includes('401')))) {
         setUser(storedUser);
         setStatus('AUTHENTICATED');
+      } else {
+        setUser(null);
+        localStorage.removeItem('zamzam_user');
+        localStorage.removeItem('zamzam_access_token');
+        localStorage.removeItem('zamzam_refresh_token');
+        setStatus('UNAUTHENTICATED');
       }
     } finally {
       setIsLoading(false);
