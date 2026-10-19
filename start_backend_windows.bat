@@ -63,6 +63,15 @@ if %errorlevel% neq 0 (
     pip install -r "!REQ_TXT!"
 )
 
+:: Ensure SQLite database exists with 128 shops and 5 users
+if not exist "%~dp0backend\db.sqlite3" (
+    if exist "%~dp0backups\zamzam_clean_shops_and_users.sqlite3" (
+        echo [INFO] Initializing clean SQLite database with 128 shops and 5 users...
+        copy /y "%~dp0backups\zamzam_clean_shops_and_users.sqlite3" "%~dp0backend\db.sqlite3" >nul 2>&1
+        copy /y "%~dp0backups\zamzam_clean_shops_and_users.sqlite3" "%~dp0db.sqlite3" >nul 2>&1
+    )
+)
+
 :: Database configuration: Default to local fast SQLite with 128 shops and 5 users
 if "%DATABASE_URL%"=="" (
     set "DATABASE_URL=sqlite:///db.sqlite3"
@@ -72,6 +81,15 @@ set "DJANGO_DEBUG=True"
 
 echo [3/3] Checking database schema...
 python "!MANAGE_PY!" migrate --noinput
+
+:: Ensure shops are populated if database is empty
+python -c "import django; django.setup(); from apps.customers.models import Customer; exit(0 if Customer.objects.count() > 0 else 1)" >nul 2>&1
+if %errorlevel% neq 0 (
+    if exist "%~dp0backups\zamzam_shops_and_users_only.json" (
+        echo [INFO] Populating database with 128 shops and 5 users from clean backup...
+        python "!MANAGE_PY!" loaddata "%~dp0backups\zamzam_shops_and_users_only.json"
+    )
+)
 
 echo.
 echo ==============================================================================

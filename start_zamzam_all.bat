@@ -32,10 +32,10 @@ del /f /q "%LocalAppData%\Zamzam Foods\EBWebView\Default\lockfile" >nul 2>&1
 :: Start backend service if not already listening on port 8000
 powershell -NoProfile -Command "$c = New-Object System.Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1', 8000); Write-Host 'OPEN'; $c.Close() } catch { Write-Host 'CLOSED' }" 2>nul | findstr "OPEN" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [1/2] Starting local backend engine connected to Aiven Cloud DB...
+    echo [1/2] Starting local SQLite backend engine (100%% Local, 0ms latency)...
     start "Zamzam Foods Backend Engine" cmd /k "%~dp0start_backend_windows.bat"
     
-    echo Connecting to Aiven PostgreSQL Database...
+    echo Connecting to local SQLite Database...
     set /a attempts=0
     :WAIT_LOOP
     set /a attempts+=1
@@ -45,17 +45,29 @@ if %errorlevel% neq 0 (
     if !attempts! geq 25 goto BACKEND_UP
     goto WAIT_LOOP
 ) else (
-    echo [1/2] Local backend engine is already running on port 8000.
+    echo [1/2] Local SQLite backend engine is already running on port 8000.
 )
 :BACKEND_UP
 
 echo.
 echo [2/2] Opening Zamzam Foods Application...
 
-:: Open in Dedicated Desktop Window App Mode (Always running latest build with live status & backend)
 set "APP_OPENED=0"
 
-if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
+:: 1. Try native installed Desktop application first
+if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
+    echo Launching Native Desktop App...
+    start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
+    set "APP_OPENED=1"
+) else if exist "%ProgramFiles%\Zamzam Foods\Zamzam Foods.exe" (
+    echo Launching Native Desktop App...
+    start "" "%ProgramFiles%\Zamzam Foods\Zamzam Foods.exe"
+    set "APP_OPENED=1"
+) else if exist "%~dp0Zamzam Foods.exe" (
+    echo Launching Native Desktop App...
+    start "" "%~dp0Zamzam Foods.exe"
+    set "APP_OPENED=1"
+) else if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
     echo Launching Desktop Window: Microsoft Edge App Mode...
     start "" "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
     set "APP_OPENED=1"
@@ -66,10 +78,6 @@ if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
 ) else if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
     echo Launching Desktop Window: Google Chrome App Mode...
     start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
-    set "APP_OPENED=1"
-) else if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" (
-    echo Launching Desktop Window: Google Chrome App Mode...
-    start "" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
     set "APP_OPENED=1"
 ) else (
     echo Opening Default Browser...
