@@ -32,8 +32,8 @@ del /f /q "%LocalAppData%\Zamzam Foods\EBWebView\Default\lockfile" >nul 2>&1
 :: Start backend service if not already listening on port 8000
 powershell -NoProfile -Command "$c = New-Object System.Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1', 8000); Write-Host 'OPEN'; $c.Close() } catch { Write-Host 'CLOSED' }" 2>nul | findstr "OPEN" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [1/2] Starting local SQLite backend engine (100%% Local, 0ms latency)...
-    start "Zamzam Foods Backend Engine" cmd /k "%~dp0start_backend_windows.bat"
+    echo [1/2] Starting local SQLite backend engine silently in the background...
+    wscript.exe "%~dp0run_backend_hidden.vbs"
     
     echo Connecting to local SQLite Database...
     set /a attempts=0

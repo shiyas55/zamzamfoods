@@ -1,15 +1,22 @@
 @echo off
 setlocal EnableDelayedExpansion
-title Zamzam Foods — Local Backend Server (Aiven Cloud DB)
+title Zamzam Foods — Local Backend Server
 color 0A
+
+cd /d "%~dp0"
+
+:: Check if backend is already running on port 8000
+powershell -NoProfile -Command "$c = New-Object System.Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1', 8000); Write-Host 'OPEN'; $c.Close() } catch { Write-Host 'CLOSED' }" 2>nul | findstr "OPEN" >nul 2>&1
+if %errorlevel% equ 0 (
+    echo [INFO] Zamzam Backend is already active on http://127.0.0.1:8000
+    exit /b 0
+)
 
 echo ==============================================================================
 echo             ZAMZAM FOODS — LOCAL BACKEND SERVER (100%% FREE)
-echo               Connected to Online Aiven PostgreSQL Database
+echo                Running Fast Local SQLite Database Engine
 echo ==============================================================================
 echo.
-
-cd /d "%~dp0"
 
 :: Check if Python is installed (check python, then py launcher)
 set "PY_CMD=python"
@@ -23,7 +30,7 @@ if %errorlevel% neq 0 (
         echo [ERROR] Python is not installed or not found in system PATH!
         echo Please run "Step_1_Install_Python_3.12.exe" and ensure you check:
         echo   "[x] Add python.exe to PATH"
-        pause
+        if not "%~1"=="/silent" pause
         exit /b 1
     )
 )
@@ -52,7 +59,7 @@ if exist "%~dp0manage.py" (
     echo [ERROR] Could not find manage.py!
     echo Current folder: %~dp0
     echo Please make sure this script is placed in the folder containing backend.
-    pause
+    if not "%~1"=="/silent" pause
     exit /b 1
 )
 
@@ -76,7 +83,7 @@ if not exist "%~dp0backend\db.sqlite3" (
     )
 )
 
-:: Database configuration: Default to local fast SQLite with 128 shops and 5 users
+:: Database configuration: Default to local fast SQLite with all shops and users
 if "%DATABASE_URL%"=="" (
     set "DATABASE_URL=sqlite:///db.sqlite3"
 )
@@ -90,7 +97,7 @@ python "!MANAGE_PY!" migrate --noinput
 python -c "import django; django.setup(); from apps.customers.models import Customer; exit(0 if Customer.objects.count() > 0 else 1)" >nul 2>&1
 if %errorlevel% neq 0 (
     if exist "%~dp0backups\zamzam_shops_and_users_only.json" (
-        echo [INFO] Populating database with 128 shops and 5 users from clean backup...
+        echo [INFO] Populating database with shops and users from clean backup...
         python "!MANAGE_PY!" loaddata "%~dp0backups\zamzam_shops_and_users_only.json"
     )
 )
@@ -99,10 +106,13 @@ echo.
 echo ==============================================================================
 echo  BACKEND SERVER RUNNING AT: http://127.0.0.1:8000/api/v1/
 echo  DATABASE                 : Local SQLite (Fast, 100%% Free, No Connection Limit)
-echo  DATA LOADED              : 128 Shops + 5 Users (Clean Orders)
+echo  DATA READY               : All Shops, Users, Orders & Ledger Loaded
 echo ==============================================================================
-echo Keep this window open while using the Zamzam Foods Desktop application.
-echo.
-
-python "!MANAGE_PY!" runserver 127.0.0.1:8000
-pause
+if not "%~1"=="/silent" (
+    echo Keep this window open while using the Zamzam Foods Desktop application.
+    echo.
+    python "!MANAGE_PY!" runserver 127.0.0.1:8000
+    pause
+) else (
+    python "!MANAGE_PY!" runserver 127.0.0.1:8000 --noreload
+)

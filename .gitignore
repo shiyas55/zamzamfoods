@@ -70,3 +70,5 @@ frontend/src-tauri/target/
 *.msi
 *.app
 
+zamzam_foods_full_kit.zip
+zamzam_foods_full_kit/
