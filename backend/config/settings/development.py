@@ -17,40 +17,34 @@ ALLOWED_HOSTS = [
 ALLOWED_HOSTS += ["localhost", "127.0.0.1", "0.0.0.0", ".ts.net", "shiyass-macbook-air.tail4ef336.ts.net", "testserver"]
 
 # ─── Database ─────────────────────────────────────────────────────────────────
-# If DATABASE_URL is set and valid → Local PostgreSQL (postgresql://postgres:postgres@localhost:5432/zamzam_foods)
-# If missing or still a placeholder  → fall back to local SQLite (dev / testing fallback)
+# Database configuration: defaults to live Aiven Cloud PostgreSQL database
+AIVEN_DEFAULT_DATABASE_URL = "postgres://avnadmin:AVNS__5t4TpkXOy-BXhofK6i@pg-65e4170-zamzamfoods.h.aivencloud.com:18638/defaultdb?sslmode=require"
+
 DATABASE_URL_ENV = os.environ.get("DATABASE_URL", "").strip()
 
-_use_sqlite_fallback = not DATABASE_URL_ENV or any(
-    p in DATABASE_URL_ENV for p in ["[YOUR-PASSWORD]", "<your-", "<password>", "YOUR_PASSWORD"]
-)
+# Check .env in BASE_DIR if environment variable is not set
+if not DATABASE_URL_ENV:
+    env_file = BASE_DIR / ".env"
+    if env_file.exists():
+        with open(env_file, "r") as f:
+            for line in f:
+                if line.startswith("DATABASE_URL="):
+                    DATABASE_URL_ENV = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    break
 
-if _use_sqlite_fallback:
-    import warnings
-    warnings.warn(
-        "\n\n⚠️  DATABASE_URL not configured — using local SQLite fallback (db.sqlite3).\n"
-        "    To connect to Local PostgreSQL, update DATABASE_URL in backend/.env with:\n"
-        "    postgresql://postgres:postgres@localhost:5432/zamzam_foods\n",
-        UserWarning,
-        stacklevel=2,
+if not DATABASE_URL_ENV or any(p in DATABASE_URL_ENV for p in ["[YOUR-PASSWORD]", "<your-", "<password>", "YOUR_PASSWORD"]):
+    DATABASE_URL_ENV = AIVEN_DEFAULT_DATABASE_URL
+
+_is_internal = any(h in DATABASE_URL_ENV for h in ["railway.internal", "localhost", "127.0.0.1"])
+_ssl_require = not _is_internal
+DATABASES = {
+    "default": dj_database_url.parse(
+        DATABASE_URL_ENV,
+        conn_max_age=0,
+        conn_health_checks=True,
+        ssl_require=_ssl_require,
     )
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
-else:
-    _is_internal = any(h in DATABASE_URL_ENV for h in ["railway.internal", "localhost", "127.0.0.1"])
-    _ssl_require = not _is_internal
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL_ENV,
-            conn_max_age=0,
-            conn_health_checks=True,
-            ssl_require=_ssl_require,
-        )
-    }
+}
 
 # CORS settings for development (React dev server on port 5173 & Tailscale)
 CORS_ALLOW_ALL_ORIGINS = False
