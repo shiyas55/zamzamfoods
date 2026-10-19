@@ -57,9 +57,9 @@ from pathlib import Path
 from django.http import FileResponse, HttpResponse
 
 def serve_spa(request, path=""):
-    dist_dir = Path(settings.BASE_DIR) / "dist"
+    dist_dir = Path(settings.BASE_DIR).parent / "frontend" / "dist"
     if not dist_dir.exists():
-        dist_dir = Path(settings.BASE_DIR).parent / "frontend" / "dist"
+        dist_dir = Path(settings.BASE_DIR) / "dist"
     
     if path:
         target_file = (dist_dir / path).resolve()

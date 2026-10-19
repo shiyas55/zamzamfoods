@@ -23,36 +23,126 @@ const isTauriApp = (): boolean => {
   );
 };
 
-export const getApiBaseUrl = (): string => {
-  // 1. Explicit override in localStorage
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('zamzam_api_url');
-    if (saved && saved.trim()) return saved.trim();
-  }
-
-  // 2. Primary Railway Cloud backend (https://zamzamfood.up.railway.app/api/v1)
-  return import.meta.env.VITE_API_URL || 'https://zamzamfood.up.railway.app/api/v1';
-};
-
-export const setApiBaseUrl = (url: string): void => {
-  if (typeof window !== 'undefined') {
-    if (!url) {
-      localStorage.removeItem('zamzam_api_url');
-    } else {
-      localStorage.setItem('zamzam_api_url', url.trim());
-    }
-    window.location.reload();
-  }
-};
-
-export const API_BASE_URL = getApiBaseUrl();
+export const DEFAULT_RAILWAY_URL = 'https://zamzamfood.up.railway.app/api/v1';
+export const LOCAL_ENGINE_URL = 'http://127.0.0.1:8000/api/v1';
+export const DEFAULT_API_URL = DEFAULT_RAILWAY_URL;
 
 /**
- * Fire-and-forget background ping to warm up sleeping Railway backend container on app launch.
+ * Normalizes any user-entered backend URL:
+ * - Trims whitespace and trailing slashes
+ * - Adds http:// or https:// protocol if omitted
+ * - Automatically appends /api/v1 if not present
+ */
+export const normalizeApiUrl = (raw: string): string => {
+  if (!raw || !raw.trim()) {
+    return DEFAULT_RAILWAY_URL;
+  }
+  let clean = raw.trim().replace(/\/+$/, '');
+
+  // Add protocol if missing
+  if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
+    if (clean.startsWith('127.0.0.1') || clean.startsWith('localhost')) {
+      clean = `http://${clean}`;
+    } else {
+      clean = `https://${clean}`;
+    }
+  }
+
+  // Ensure /api/v1 suffix
+  if (clean.endsWith('/api/v1')) {
+    return clean;
+  }
+  if (clean.endsWith('/api')) {
+    return `${clean}/v1`;
+  }
+  return `${clean}/api/v1`;
+};
+
+export const getApiBaseUrl = (): string => {
+  if (typeof window === 'undefined') {
+    return DEFAULT_RAILWAY_URL;
+  }
+
+  // 1. Explicit override in localStorage (user configured)
+  const saved = localStorage.getItem('zamzam_api_url');
+  if (saved && saved.trim()) {
+    return normalizeApiUrl(saved);
+  }
+
+  // 2. Local browser development on Django port 8000
+  const hostname = window.location.hostname;
+  const port = window.location.port;
+  if ((hostname === 'localhost' || hostname === '127.0.0.1') && port === '8000') {
+    return `${window.location.origin}/api/v1`;
+  }
+
+  // 3. Default to Railway Cloud
+  return DEFAULT_RAILWAY_URL;
+};
+
+export let API_BASE_URL = getApiBaseUrl();
+
+export const setApiBaseUrl = (url: string): string => {
+  if (typeof window !== 'undefined') {
+    if (!url || !url.trim()) {
+      localStorage.removeItem('zamzam_api_url');
+      API_BASE_URL = DEFAULT_RAILWAY_URL;
+      window.dispatchEvent(new CustomEvent('zamzam:api-url-changed', { detail: DEFAULT_RAILWAY_URL }));
+      return DEFAULT_RAILWAY_URL;
+    } else {
+      const normalized = normalizeApiUrl(url);
+      localStorage.setItem('zamzam_api_url', normalized);
+      API_BASE_URL = normalized;
+      window.dispatchEvent(new CustomEvent('zamzam:api-url-changed', { detail: normalized }));
+      return normalized;
+    }
+  }
+  return DEFAULT_RAILWAY_URL;
+};
+
+/**
+ * Quick server health verification used by Login Page and Settings
+ */
+export const checkServerHealth = async (
+  targetUrl?: string
+): Promise<{ ok: boolean; status: number; message: string; url: string }> => {
+  const base = normalizeApiUrl(targetUrl || getApiBaseUrl());
+  const rootUrl = base.replace(/\/api\/v1$/, '');
+  const testEndpoints = [
+    `${rootUrl}/api/health/`,
+    `${base}/settings/`,
+    `${base}/auth/verify/`,
+  ];
+
+  for (const endpoint of testEndpoints) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(endpoint, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (res.status === 200 || res.status === 401 || res.status === 403) {
+        return { ok: true, status: res.status, message: 'Server is online and responding', url: base };
+      }
+    } catch {
+      // Continue to next test endpoint
+    }
+  }
+
+  return { ok: false, status: 0, message: 'Server unreachable', url: base };
+};
+
+/**
+ * Fire-and-forget background ping to warm up backend on app launch.
  */
 export const warmUpServer = (): void => {
   if (typeof window === 'undefined') return;
-  fetch(`${API_BASE_URL}/settings/`, { method: 'GET', credentials: 'include' }).catch(() => {});
+  const base = getApiBaseUrl();
+  fetch(`${base}/settings/`, { method: 'GET', credentials: 'include' }).catch(() => {});
 };
 
 interface RequestOptions extends RequestInit {
@@ -92,13 +182,14 @@ class ApiClient {
     }
 
     this.refreshPromise = (async (): Promise<RefreshResult> => {
-      // Retry with progressive backoff for sleeping/cold-start Railway instances (up to 4 attempts)
+      // Retry with progressive backoff if server is busy (up to 4 attempts)
       const refreshBackoffs = [800, 1500, 2500];
       const maxRefreshAttempts = refreshBackoffs.length + 1;
 
       for (let attempt = 1; attempt <= maxRefreshAttempts; attempt++) {
         try {
-          const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+          const baseUrl = getApiBaseUrl();
+          const response = await fetch(`${baseUrl}/auth/refresh/`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -200,7 +291,8 @@ class ApiClient {
     const { _skipRefresh, params, bypassCache, cacheTtlMs, ...fetchOptions } = options;
     const method = (fetchOptions.method || 'GET').toUpperCase();
 
-    let url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const baseUrl = getApiBaseUrl();
+    let url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
     if (params) {
       const queryParams = new URLSearchParams();
@@ -259,9 +351,9 @@ class ApiClient {
     }
 
     let response: Response | null = null;
-    // Progressive backoff delays for server cold starts (covers up to ~13.5s of Railway container spin-up)
-    const coldStartDelays = [800, 1500, 2500, 3500, 5000];
-    const maxNetworkAttempts = coldStartDelays.length + 1; // 6 attempts
+    const isLocal = url.includes('127.0.0.1') || url.includes('localhost');
+    const coldStartDelays = isLocal ? [400, 800] : [800, 1500, 2500];
+    const maxNetworkAttempts = coldStartDelays.length + 1;
 
     for (let attempt = 1; attempt <= maxNetworkAttempts; attempt++) {
       try {

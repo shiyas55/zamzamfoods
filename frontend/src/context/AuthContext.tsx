@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('zamzam_user');
         setStatus('UNAUTHENTICATED');
       } else if (storedUser) {
-        // Transient network error, 500, or Railway cold start:
+        // Transient network error or 500 error:
         // KEEP stored user active so the session is never lost on refresh!
         setUser(storedUser);
         setStatus('AUTHENTICATED');

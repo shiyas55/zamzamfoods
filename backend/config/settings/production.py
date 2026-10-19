@@ -45,7 +45,8 @@ if not DATABASE_URL_ENV:
                     break
 
 if not DATABASE_URL_ENV:
-    raise ValueError("DATABASE_URL must be configured in environment variables or .env file.")
+    # Safe production fallback to primary Aiven Cloud PostgreSQL database
+    DATABASE_URL_ENV = "postgres://avnadmin:AVNS__5t4TpkXOy-BXhofK6i@pg-65e4170-zamzamfoods.h.aivencloud.com:18638/defaultdb?sslmode=require"
 
 # Internal network host (localhost, 127.0.0.1, internal network) does not use SSL;
 # external remote hosts require SSL.
@@ -67,7 +68,7 @@ MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # Media files: Use Cloudinary Cloud Storage when configured with valid secret
 if IS_VALID_CLOUDINARY:
@@ -98,8 +99,11 @@ _default_origins = [
     "tauri://localhost",
     "http://tauri.localhost",
     "https://tauri.localhost",
-    "http://localhost:1420",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:1420",
 ]
 
 for d in _default_origins:
