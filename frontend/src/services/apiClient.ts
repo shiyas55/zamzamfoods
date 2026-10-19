@@ -23,9 +23,9 @@ const isTauriApp = (): boolean => {
   );
 };
 
-export const DEFAULT_RAILWAY_URL = 'https://zamzamfood.up.railway.app/api/v1';
 export const LOCAL_ENGINE_URL = 'http://127.0.0.1:8000/api/v1';
-export const DEFAULT_API_URL = DEFAULT_RAILWAY_URL;
+export const DEFAULT_RAILWAY_URL = 'https://zamzamfood.up.railway.app/api/v1';
+export const DEFAULT_API_URL = LOCAL_ENGINE_URL;
 
 /**
  * Normalizes any user-entered backend URL:
@@ -35,7 +35,7 @@ export const DEFAULT_API_URL = DEFAULT_RAILWAY_URL;
  */
 export const normalizeApiUrl = (raw: string): string => {
   if (!raw || !raw.trim()) {
-    return DEFAULT_RAILWAY_URL;
+    return LOCAL_ENGINE_URL;
   }
   let clean = raw.trim().replace(/\/+$/, '');
 
@@ -60,24 +60,22 @@ export const normalizeApiUrl = (raw: string): string => {
 
 export const getApiBaseUrl = (): string => {
   if (typeof window === 'undefined') {
-    return DEFAULT_RAILWAY_URL;
+    return LOCAL_ENGINE_URL;
   }
 
   // 1. Explicit override in localStorage (user configured)
   const saved = localStorage.getItem('zamzam_api_url');
   if (saved && saved.trim()) {
+    // If previously saved URL was Railway (which is offline/502), clear it and use local engine!
+    if (saved.includes('zamzamfood.up.railway.app')) {
+      localStorage.removeItem('zamzam_api_url');
+      return LOCAL_ENGINE_URL;
+    }
     return normalizeApiUrl(saved);
   }
 
-  // 2. Local browser development on Django port 8000
-  const hostname = window.location.hostname;
-  const port = window.location.port;
-  if ((hostname === 'localhost' || hostname === '127.0.0.1') && port === '8000') {
-    return `${window.location.origin}/api/v1`;
-  }
-
-  // 3. Default to Railway Cloud
-  return DEFAULT_RAILWAY_URL;
+  // 2. Default: always use Local Engine (127.0.0.1:8000)
+  return LOCAL_ENGINE_URL;
 };
 
 export let API_BASE_URL = getApiBaseUrl();
@@ -86,9 +84,9 @@ export const setApiBaseUrl = (url: string): string => {
   if (typeof window !== 'undefined') {
     if (!url || !url.trim()) {
       localStorage.removeItem('zamzam_api_url');
-      API_BASE_URL = DEFAULT_RAILWAY_URL;
-      window.dispatchEvent(new CustomEvent('zamzam:api-url-changed', { detail: DEFAULT_RAILWAY_URL }));
-      return DEFAULT_RAILWAY_URL;
+      API_BASE_URL = LOCAL_ENGINE_URL;
+      window.dispatchEvent(new CustomEvent('zamzam:api-url-changed', { detail: LOCAL_ENGINE_URL }));
+      return LOCAL_ENGINE_URL;
     } else {
       const normalized = normalizeApiUrl(url);
       localStorage.setItem('zamzam_api_url', normalized);
@@ -97,7 +95,7 @@ export const setApiBaseUrl = (url: string): string => {
       return normalized;
     }
   }
-  return DEFAULT_RAILWAY_URL;
+  return LOCAL_ENGINE_URL;
 };
 
 /**
