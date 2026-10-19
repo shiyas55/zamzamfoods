@@ -778,6 +778,11 @@ class DatabaseRestoreView(APIView):
                 objects_to_deserialize = parsed_json
             elif isinstance(parsed_json, dict) and "data" in parsed_json:
                 objects_to_deserialize = parsed_json.get("data", [])
+            elif isinstance(parsed_json, dict) and any(k in parsed_json for k in ["orders", "items", "entities", "customers"]):
+                for k in ["customers", "orders", "items", "entities"]:
+                    val = parsed_json.get(k)
+                    if isinstance(val, list):
+                        objects_to_deserialize.extend(val)
             else:
                 return Response({
                     "error": "Unrecognized JSON backup schema. Expected 'records' module object or list of serialized Django entities."

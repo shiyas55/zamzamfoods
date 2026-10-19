@@ -1,744 +1,3226 @@
+[
 {
-  "date": "2026-10-14",
-  "total_orders": 34,
-  "orders": [
-    {
-      "order_id": "fe5ae660-c514-4b49-8056-74f062dfdcd4",
-      "order_number": "ORD-20261014-0034",
-      "customer_id": "4d35c0eb-240e-4638-89c0-e2f283858605",
-      "customer_name": "zeezo mims",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 710.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 40,
-          "unit_price": 9.0,
-          "subtotal": 360.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 70,
-          "unit_price": 5.0,
-          "subtotal": 350.0
-        }
-      ]
-    },
-    {
-      "order_id": "4b3f1142-09ba-4092-bdcb-6700af6099f8",
-      "order_number": "ORD-20261014-0033",
-      "customer_id": "4f570478-e33e-47e8-930f-6607b8db78c0",
-      "customer_name": "thuba bakery",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 650.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 130,
-          "unit_price": 5.0,
-          "subtotal": 650.0
-        }
-      ]
-    },
-    {
-      "order_id": "5df3d9b5-4f45-4688-80a2-b1c9a34a7d88",
-      "order_number": "ORD-20261014-0032",
-      "customer_id": "04cfa0cf-b29a-4eb0-bdfe-658f446954cb",
-      "customer_name": "thondayad",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 200.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 40,
-          "unit_price": 5.0,
-          "subtotal": 200.0
-        }
-      ]
-    },
-    {
-      "order_id": "34443ced-bd81-4ad7-9b1e-513d61af4275",
-      "order_number": "ORD-20261014-0031",
-      "customer_id": "1d537e3a-af1a-447b-8e86-915b398cdca0",
-      "customer_name": "tasty hut restaurent",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 80.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 10,
-          "unit_price": 8.0,
-          "subtotal": 80.0
-        }
-      ]
-    },
-    {
-      "order_id": "8419aeba-2697-471f-a7fc-84ed9973b1f7",
-      "order_number": "ORD-20261014-0030",
-      "customer_id": "8b1162b2-53e6-471d-9f22-07cc459b4c88",
-      "customer_name": "shaz live alfahm",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 1395.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 30,
-          "unit_price": 9.0,
-          "subtotal": 270.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 250,
-          "unit_price": 4.5,
-          "subtotal": 1125.0
-        }
-      ]
-    },
-    {
-      "order_id": "83d9c170-a78e-4248-a041-79cbbd2eb3d8",
-      "order_number": "ORD-20261014-0029",
-      "customer_id": "7509f98b-5380-4e96-bd88-3c861d7acce7",
-      "customer_name": "raheem shop mediaone",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 300.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 60,
-          "unit_price": 5.0,
-          "subtotal": 300.0
-        }
-      ]
-    },
-    {
-      "order_id": "284f93dc-0151-44f2-9c2e-0953f935773b",
-      "order_number": "ORD-20261014-0028",
-      "customer_id": "7bc5658d-f208-44e9-b7c6-6db0313470bd",
-      "customer_name": "parambil;",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 530.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 20,
-          "unit_price": 9.0,
-          "subtotal": 180.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 70,
-          "unit_price": 5.0,
-          "subtotal": 350.0
-        }
-      ]
-    },
-    {
-      "order_id": "020db7a7-820d-4539-901f-ad6c495a9b24",
-      "order_number": "ORD-20261014-0027",
-      "customer_id": "fa25ce12-0bb5-4c5e-bf6a-a8ce9960c417",
-      "customer_name": "ossobocco",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 290.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 10,
-          "unit_price": 9.0,
-          "subtotal": 90.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 40,
-          "unit_price": 5.0,
-          "subtotal": 200.0
-        }
-      ]
-    },
-    {
-      "order_id": "b4ecf68c-0c0f-4b56-9be1-b482287299a9",
-      "order_number": "ORD-20261014-0026",
-      "customer_id": "1fb39cd6-c1b9-4fc2-b85e-99fce18b2c1b",
-      "customer_name": "orkid bekery velliparmba",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 200.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 40,
-          "unit_price": 5.0,
-          "subtotal": 200.0
-        }
-      ]
-    },
-    {
-      "order_id": "d3517802-c1e1-4dd5-b42e-d94ab68634ba",
-      "order_number": "ORD-20261014-0025",
-      "customer_id": "c1bee817-98f1-4b76-a7bc-8748f13e0fe5",
-      "customer_name": "ninja arakkinar",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 1215.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 270,
-          "unit_price": 4.5,
-          "subtotal": 1215.0
-        }
-      ]
-    },
-    {
-      "order_id": "42668f51-fd3e-4ad5-a476-cca7244e8257",
-      "order_number": "ORD-20261014-0024",
-      "customer_id": "0a680a34-0db8-4491-9c3f-871b8d9bb4db",
-      "customer_name": "ngo crunchy tales",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 150.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 30,
-          "unit_price": 5.0,
-          "subtotal": 150.0
-        }
-      ]
-    },
-    {
-      "order_id": "9a0fdc40-f5c9-4772-b6aa-c0bce7409576",
-      "order_number": "ORD-20261014-0023",
-      "customer_id": "0d413073-7e88-41a0-b409-30ca27db474a",
-      "customer_name": "mr mandi velliparamba",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 1510.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 90,
-          "unit_price": 9.0,
-          "subtotal": 810.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 140,
-          "unit_price": 5.0,
-          "subtotal": 700.0
-        }
-      ]
-    },
-    {
-      "order_id": "ba2bd217-5a9c-46a4-a908-1cb14a36b164",
-      "order_number": "ORD-20261014-0022",
-      "customer_id": "802f067e-e6ee-4c09-8ab2-b8f13cc17229",
-      "customer_name": "mr hypermartket",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 150.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 30,
-          "unit_price": 5.0,
-          "subtotal": 150.0
-        }
-      ]
-    },
-    {
-      "order_id": "1493f0b9-27fb-4f81-9c8e-3a366beb0dc2",
-      "order_number": "ORD-20261014-0021",
-      "customer_id": "47c25c46-6aee-49a3-a31c-5938e3f255cc",
-      "customer_name": "MR hypermarket",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 180.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 20,
-          "unit_price": 9.0,
-          "subtotal": 180.0
-        }
-      ]
-    },
-    {
-      "order_id": "f5fe1341-7a23-4f59-8051-b54dbe9f90a2",
-      "order_number": "ORD-20261014-0020",
-      "customer_id": "ea6a58ed-76ad-4e1c-9310-3a9c9271ae35",
-      "customer_name": "morris kovoor",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 1260.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 90,
-          "unit_price": 9.0,
-          "subtotal": 810.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 90,
-          "unit_price": 5.0,
-          "subtotal": 450.0
-        }
-      ]
-    },
-    {
-      "order_id": "9a5e9f94-fbf7-424d-b858-732a5963a005",
-      "order_number": "ORD-20261014-0019",
-      "customer_id": "39506eaf-b662-4bdf-8ff6-e9b373c58894",
-      "customer_name": "mandi pokkunnu",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 190.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 10,
-          "unit_price": 9.0,
-          "subtotal": 90.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 20,
-          "unit_price": 5.0,
-          "subtotal": 100.0
-        }
-      ]
-    },
-    {
-      "order_id": "144e59b5-08d0-4abe-9344-98e81b88fa5c",
-      "order_number": "ORD-20261014-0018",
-      "customer_id": "bcb83141-1c79-4ca2-9176-3e4c989cccee",
-      "customer_name": "live alfahm mangav",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 1665.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 90,
-          "unit_price": 9.0,
-          "subtotal": 810.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 190,
-          "unit_price": 4.5,
-          "subtotal": 855.0
-        }
-      ]
-    },
-    {
-      "order_id": "d79761b3-3010-49e2-b0d1-603ce6760840",
-      "order_number": "ORD-20261014-0017",
-      "customer_id": "1a233bc7-e647-47e0-862d-a509ccf29bee",
-      "customer_name": "khaleej restaurent",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 380.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 20,
-          "unit_price": 9.0,
-          "subtotal": 180.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 40,
-          "unit_price": 5.0,
-          "subtotal": 200.0
-        }
-      ]
-    },
-    {
-      "order_id": "d47d40e8-56fa-4ea7-b7ca-f5783c7e1efd",
-      "order_number": "ORD-20261014-0016",
-      "customer_id": "5305c2a9-b5e0-44cd-b2dd-df56fc8f7725",
-      "customer_name": "karthika bakes kannadkkal 1",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 970.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 30,
-          "unit_price": 9.0,
-          "subtotal": 270.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 140,
-          "unit_price": 5.0,
-          "subtotal": 700.0
-        }
-      ]
-    },
-    {
-      "order_id": "c2d75a90-976f-4152-bac4-f55f3863c75a",
-      "order_number": "ORD-20261014-0015",
-      "customer_id": "0ab72049-0b24-414e-b620-ccccd937ccc3",
-      "customer_name": "kannadikkal 2",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 620.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 20,
-          "unit_price": 9.0,
-          "subtotal": 180.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 80,
-          "unit_price": 5.5,
-          "subtotal": 440.0
-        }
-      ]
-    },
-    {
-      "order_id": "e0c2e7bf-5180-4de9-9bc0-8ebfe344322c",
-      "order_number": "ORD-20261014-0014",
-      "customer_id": "0b38a4d5-bc22-413f-8231-7f73a351f15f",
-      "customer_name": "grill cafe",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 540.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 40,
-          "unit_price": 9.0,
-          "subtotal": 360.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 40,
-          "unit_price": 4.5,
-          "subtotal": 180.0
-        }
-      ]
-    },
-    {
-      "order_id": "378b1b29-9f57-460d-98cf-f9da535a6db9",
-      "order_number": "ORD-20261014-0013",
-      "customer_id": "536feb85-6ad8-4cb3-a1af-32e81f0ad7c5",
-      "customer_name": "food qissa",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 142.0,
-      "items": [
-        {
-          "product_id": "442ad867-1d4a-4556-a47d-847a08124612",
-          "product_name": "hotdog",
-          "quantity": 1,
-          "unit_price": 37.0,
-          "subtotal": 37.0
-        },
-        {
-          "product_id": "8bf97a76-6248-4bc4-876f-6012c0850668",
-          "product_name": "Bun",
-          "quantity": 1,
-          "unit_price": 55.0,
-          "subtotal": 55.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 10,
-          "unit_price": 5.0,
-          "subtotal": 50.0
-        }
-      ]
-    },
-    {
-      "order_id": "6c365fc2-ad78-422d-a0e6-860f4001b4f2",
-      "order_number": "ORD-20261014-0012",
-      "customer_id": "1a182ba5-f01f-412f-aec9-3db0bd775c67",
-      "customer_name": "dana areekad",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 720.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 80,
-          "unit_price": 9.0,
-          "subtotal": 720.0
-        }
-      ]
-    },
-    {
-      "order_id": "07408825-459f-404d-a45f-96cad317b031",
-      "order_number": "ORD-20261014-0011",
-      "customer_id": "d8ce3cad-7cb2-49d3-96d5-3a25aa064c10",
-      "customer_name": "dana arakkinar",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 90.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 10,
-          "unit_price": 9.0,
-          "subtotal": 90.0
-        }
-      ]
-    },
-    {
-      "order_id": "2a0fbfb5-bc38-45cd-a258-b7a563de7bdc",
-      "order_number": "ORD-20261014-0010",
-      "customer_id": "496dd817-f7dd-4793-b46c-c4181cf61b70",
-      "customer_name": "dahban mandi",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 150.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 30,
-          "unit_price": 5.0,
-          "subtotal": 150.0
-        }
-      ]
-    },
-    {
-      "order_id": "1679becd-c628-4243-b9c2-5cd217ecf6e0",
-      "order_number": "ORD-20261014-0009",
-      "customer_id": "35d7dcde-4a67-4fd8-828a-f7620e79d3cf",
-      "customer_name": "chopstick palazhi",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 1930.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 120,
-          "unit_price": 9.0,
-          "subtotal": 1080.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 170,
-          "unit_price": 5.0,
-          "subtotal": 850.0
-        }
-      ]
-    },
-    {
-      "order_id": "72f61bec-c05c-445d-a034-fb217636ca88",
-      "order_number": "ORD-20261014-0008",
-      "customer_id": "c4892f20-ee28-4dcf-98d5-f635c76e77c8",
-      "customer_name": "chick co",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 2925.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 650,
-          "unit_price": 4.5,
-          "subtotal": 2925.0
-        }
-      ]
-    },
-    {
-      "order_id": "cddef518-c011-42b2-9ad4-e57bf1197b23",
-      "order_number": "ORD-20261014-0007",
-      "customer_id": "d52eaa2a-9399-4fea-accd-63a036ecf0ff",
-      "customer_name": "chakkara panthal",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 100.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 20,
-          "unit_price": 5.0,
-          "subtotal": 100.0
-        }
-      ]
-    },
-    {
-      "order_id": "a5b93393-e4dd-4dab-aba3-f2811c15ccc7",
-      "order_number": "ORD-20261014-0006",
-      "customer_id": "c2aa4bea-5cc5-4884-9901-d1cc84ee40e8",
-      "customer_name": "cafe 19",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 100.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 20,
-          "unit_price": 5.0,
-          "subtotal": 100.0
-        }
-      ]
-    },
-    {
-      "order_id": "acbd106e-145c-4c1c-822c-f820f1a61c30",
-      "order_number": "ORD-20261014-0005",
-      "customer_id": "acffbfc0-e27a-47a2-be42-44977d4525f5",
-      "customer_name": "burnight medical college",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 400.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 80,
-          "unit_price": 5.0,
-          "subtotal": 400.0
-        }
-      ]
-    },
-    {
-      "order_id": "a380dff4-3acb-4320-8416-132d06caa378",
-      "order_number": "ORD-20261014-0004",
-      "customer_id": "c29e9f36-b976-43a2-b238-4a21a9e48587",
-      "customer_name": "alshai shawarma shop",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 560.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 40,
-          "unit_price": 9.0,
-          "subtotal": 360.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 40,
-          "unit_price": 5.0,
-          "subtotal": 200.0
-        }
-      ]
-    },
-    {
-      "order_id": "e7ae766a-98eb-49cc-b01c-f91089b74d9e",
-      "order_number": "ORD-20261014-0003",
-      "customer_id": "651e2320-d0f3-4474-9236-b9bd8d297f10",
-      "customer_name": "adam golden chick",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 1020.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 40,
-          "unit_price": 8.0,
-          "subtotal": 320.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 140,
-          "unit_price": 5.0,
-          "subtotal": 700.0
-        }
-      ]
-    },
-    {
-      "order_id": "8d8965fb-28ca-4492-9f7b-7171b43c177b",
-      "order_number": "ORD-20261014-0002",
-      "customer_id": "1d35e983-f0fe-4759-b38b-058b546be03e",
-      "customer_name": "sulthan mandi",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 225.0,
-      "items": [
-        {
-          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
-          "product_name": "Romali",
-          "quantity": 10,
-          "unit_price": 9.0,
-          "subtotal": 90.0
-        },
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 30,
-          "unit_price": 4.5,
-          "subtotal": 135.0
-        }
-      ]
-    },
-    {
-      "order_id": "4ae31bb6-8f03-4291-aa89-17a52adf59e0",
-      "order_number": "ORD-20261014-0001",
-      "customer_id": "b6643869-e550-4846-8fdf-aa7fa817977e",
-      "customer_name": "rajitha chappathi company",
-      "order_date": "2026-10-14",
-      "status": "LOCKED",
-      "total_amount": 50.0,
-      "items": [
-        {
-          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
-          "product_name": "kubbus",
-          "quantity": 10,
-          "unit_price": 5.0,
-          "subtotal": 50.0
-        }
-      ]
-    }
-  ]
+  "model": "orders.order",
+  "pk": "fe5ae660-c514-4b49-8056-74f062dfdcd4",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.965Z",
+    "updated_at": "2026-10-14T15:54:14.971Z",
+    "order_number": "ORD-20261014-0034",
+    "customer": "4d35c0eb-240e-4638-89c0-e2f283858605",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:14.957Z",
+    "status": "LOCKED",
+    "total_amount": "710.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "4b3f1142-09ba-4092-bdcb-6700af6099f8",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.347Z",
+    "updated_at": "2026-10-14T15:54:14.348Z",
+    "order_number": "ORD-20261014-0033",
+    "customer": "4f570478-e33e-47e8-930f-6607b8db78c0",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:14.344Z",
+    "status": "LOCKED",
+    "total_amount": "650.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "5df3d9b5-4f45-4688-80a2-b1c9a34a7d88",
+  "fields": {
+    "created_at": "2026-10-14T15:54:13.791Z",
+    "updated_at": "2026-10-14T15:54:13.792Z",
+    "order_number": "ORD-20261014-0032",
+    "customer": "04cfa0cf-b29a-4eb0-bdfe-658f446954cb",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:13.754Z",
+    "status": "LOCKED",
+    "total_amount": "200.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "34443ced-bd81-4ad7-9b1e-513d61af4275",
+  "fields": {
+    "created_at": "2026-10-14T15:54:13.152Z",
+    "updated_at": "2026-10-14T15:54:13.153Z",
+    "order_number": "ORD-20261014-0031",
+    "customer": "1d537e3a-af1a-447b-8e86-915b398cdca0",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:13.148Z",
+    "status": "LOCKED",
+    "total_amount": "80.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "8419aeba-2697-471f-a7fc-84ed9973b1f7",
+  "fields": {
+    "created_at": "2026-10-14T15:54:12.591Z",
+    "updated_at": "2026-10-14T15:54:12.593Z",
+    "order_number": "ORD-20261014-0030",
+    "customer": "8b1162b2-53e6-471d-9f22-07cc459b4c88",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:12.584Z",
+    "status": "LOCKED",
+    "total_amount": "1395.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "83d9c170-a78e-4248-a041-79cbbd2eb3d8",
+  "fields": {
+    "created_at": "2026-10-14T15:54:11.544Z",
+    "updated_at": "2026-10-14T15:54:11.545Z",
+    "order_number": "ORD-20261014-0029",
+    "customer": "7509f98b-5380-4e96-bd88-3c861d7acce7",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:11.541Z",
+    "status": "LOCKED",
+    "total_amount": "300.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "284f93dc-0151-44f2-9c2e-0953f935773b",
+  "fields": {
+    "created_at": "2026-10-14T15:54:11.015Z",
+    "updated_at": "2026-10-14T15:54:11.018Z",
+    "order_number": "ORD-20261014-0028",
+    "customer": "7bc5658d-f208-44e9-b7c6-6db0313470bd",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:11.005Z",
+    "status": "LOCKED",
+    "total_amount": "530.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "020db7a7-820d-4539-901f-ad6c495a9b24",
+  "fields": {
+    "created_at": "2026-10-14T15:54:10.486Z",
+    "updated_at": "2026-10-14T15:54:10.488Z",
+    "order_number": "ORD-20261014-0027",
+    "customer": "fa25ce12-0bb5-4c5e-bf6a-a8ce9960c417",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:10.480Z",
+    "status": "LOCKED",
+    "total_amount": "290.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "b4ecf68c-0c0f-4b56-9be1-b482287299a9",
+  "fields": {
+    "created_at": "2026-10-14T15:54:09.942Z",
+    "updated_at": "2026-10-14T15:54:09.943Z",
+    "order_number": "ORD-20261014-0026",
+    "customer": "1fb39cd6-c1b9-4fc2-b85e-99fce18b2c1b",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:09.938Z",
+    "status": "LOCKED",
+    "total_amount": "200.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "d3517802-c1e1-4dd5-b42e-d94ab68634ba",
+  "fields": {
+    "created_at": "2026-10-14T15:54:09.407Z",
+    "updated_at": "2026-10-14T15:54:09.409Z",
+    "order_number": "ORD-20261014-0025",
+    "customer": "c1bee817-98f1-4b76-a7bc-8748f13e0fe5",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:09.404Z",
+    "status": "LOCKED",
+    "total_amount": "1215.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "42668f51-fd3e-4ad5-a476-cca7244e8257",
+  "fields": {
+    "created_at": "2026-10-14T15:54:08.864Z",
+    "updated_at": "2026-10-14T15:54:08.865Z",
+    "order_number": "ORD-20261014-0024",
+    "customer": "0a680a34-0db8-4491-9c3f-871b8d9bb4db",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:08.857Z",
+    "status": "LOCKED",
+    "total_amount": "150.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "9a0fdc40-f5c9-4772-b6aa-c0bce7409576",
+  "fields": {
+    "created_at": "2026-10-14T15:54:08.331Z",
+    "updated_at": "2026-10-14T15:54:08.333Z",
+    "order_number": "ORD-20261014-0023",
+    "customer": "0d413073-7e88-41a0-b409-30ca27db474a",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:08.324Z",
+    "status": "LOCKED",
+    "total_amount": "1510.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "ba2bd217-5a9c-46a4-a908-1cb14a36b164",
+  "fields": {
+    "created_at": "2026-10-14T15:54:07.785Z",
+    "updated_at": "2026-10-14T15:54:07.787Z",
+    "order_number": "ORD-20261014-0022",
+    "customer": "802f067e-e6ee-4c09-8ab2-b8f13cc17229",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:07.781Z",
+    "status": "LOCKED",
+    "total_amount": "150.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "1493f0b9-27fb-4f81-9c8e-3a366beb0dc2",
+  "fields": {
+    "created_at": "2026-10-14T15:54:07.247Z",
+    "updated_at": "2026-10-14T15:54:07.249Z",
+    "order_number": "ORD-20261014-0021",
+    "customer": "47c25c46-6aee-49a3-a31c-5938e3f255cc",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:07.242Z",
+    "status": "LOCKED",
+    "total_amount": "180.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "f5fe1341-7a23-4f59-8051-b54dbe9f90a2",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.708Z",
+    "updated_at": "2026-10-14T15:54:06.712Z",
+    "order_number": "ORD-20261014-0020",
+    "customer": "ea6a58ed-76ad-4e1c-9310-3a9c9271ae35",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:06.701Z",
+    "status": "LOCKED",
+    "total_amount": "1260.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "9a5e9f94-fbf7-424d-b858-732a5963a005",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.115Z",
+    "updated_at": "2026-10-14T15:54:06.119Z",
+    "order_number": "ORD-20261014-0019",
+    "customer": "39506eaf-b662-4bdf-8ff6-e9b373c58894",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:06.111Z",
+    "status": "LOCKED",
+    "total_amount": "190.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "144e59b5-08d0-4abe-9344-98e81b88fa5c",
+  "fields": {
+    "created_at": "2026-10-14T15:54:05.586Z",
+    "updated_at": "2026-10-14T15:54:05.588Z",
+    "order_number": "ORD-20261014-0018",
+    "customer": "bcb83141-1c79-4ca2-9176-3e4c989cccee",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:05.580Z",
+    "status": "LOCKED",
+    "total_amount": "1665.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "d79761b3-3010-49e2-b0d1-603ce6760840",
+  "fields": {
+    "created_at": "2026-10-14T15:54:05.041Z",
+    "updated_at": "2026-10-14T15:54:05.043Z",
+    "order_number": "ORD-20261014-0017",
+    "customer": "1a233bc7-e647-47e0-862d-a509ccf29bee",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:05.036Z",
+    "status": "LOCKED",
+    "total_amount": "380.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "d47d40e8-56fa-4ea7-b7ca-f5783c7e1efd",
+  "fields": {
+    "created_at": "2026-10-14T15:54:04.494Z",
+    "updated_at": "2026-10-14T15:54:04.496Z",
+    "order_number": "ORD-20261014-0016",
+    "customer": "5305c2a9-b5e0-44cd-b2dd-df56fc8f7725",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:04.489Z",
+    "status": "LOCKED",
+    "total_amount": "970.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "c2d75a90-976f-4152-bac4-f55f3863c75a",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.935Z",
+    "updated_at": "2026-10-14T15:54:03.937Z",
+    "order_number": "ORD-20261014-0015",
+    "customer": "0ab72049-0b24-414e-b620-ccccd937ccc3",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:03.929Z",
+    "status": "LOCKED",
+    "total_amount": "620.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "e0c2e7bf-5180-4de9-9bc0-8ebfe344322c",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.142Z",
+    "updated_at": "2026-10-14T15:54:03.144Z",
+    "order_number": "ORD-20261014-0014",
+    "customer": "0b38a4d5-bc22-413f-8231-7f73a351f15f",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:03.136Z",
+    "status": "LOCKED",
+    "total_amount": "540.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "378b1b29-9f57-460d-98cf-f9da535a6db9",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.603Z",
+    "updated_at": "2026-10-14T15:54:02.605Z",
+    "order_number": "ORD-20261014-0013",
+    "customer": "536feb85-6ad8-4cb3-a1af-32e81f0ad7c5",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:02.595Z",
+    "status": "LOCKED",
+    "total_amount": "142.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "6c365fc2-ad78-422d-a0e6-860f4001b4f2",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.059Z",
+    "updated_at": "2026-10-14T15:54:02.065Z",
+    "order_number": "ORD-20261014-0012",
+    "customer": "1a182ba5-f01f-412f-aec9-3db0bd775c67",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:02.056Z",
+    "status": "LOCKED",
+    "total_amount": "720.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "07408825-459f-404d-a45f-96cad317b031",
+  "fields": {
+    "created_at": "2026-10-14T15:54:01.502Z",
+    "updated_at": "2026-10-14T15:54:01.503Z",
+    "order_number": "ORD-20261014-0011",
+    "customer": "d8ce3cad-7cb2-49d3-96d5-3a25aa064c10",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:01.498Z",
+    "status": "LOCKED",
+    "total_amount": "90.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "2a0fbfb5-bc38-45cd-a258-b7a563de7bdc",
+  "fields": {
+    "created_at": "2026-10-14T15:54:00.943Z",
+    "updated_at": "2026-10-14T15:54:00.945Z",
+    "order_number": "ORD-20261014-0010",
+    "customer": "496dd817-f7dd-4793-b46c-c4181cf61b70",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:00.939Z",
+    "status": "LOCKED",
+    "total_amount": "150.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "1679becd-c628-4243-b9c2-5cd217ecf6e0",
+  "fields": {
+    "created_at": "2026-10-14T15:54:00.374Z",
+    "updated_at": "2026-10-14T15:54:00.376Z",
+    "order_number": "ORD-20261014-0009",
+    "customer": "35d7dcde-4a67-4fd8-828a-f7620e79d3cf",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:54:00.362Z",
+    "status": "LOCKED",
+    "total_amount": "1930.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "72f61bec-c05c-445d-a034-fb217636ca88",
+  "fields": {
+    "created_at": "2026-10-14T15:53:59.782Z",
+    "updated_at": "2026-10-14T15:53:59.784Z",
+    "order_number": "ORD-20261014-0008",
+    "customer": "c4892f20-ee28-4dcf-98d5-f635c76e77c8",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:53:59.777Z",
+    "status": "LOCKED",
+    "total_amount": "2925.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "cddef518-c011-42b2-9ad4-e57bf1197b23",
+  "fields": {
+    "created_at": "2026-10-14T15:53:59.237Z",
+    "updated_at": "2026-10-14T15:53:59.239Z",
+    "order_number": "ORD-20261014-0007",
+    "customer": "d52eaa2a-9399-4fea-accd-63a036ecf0ff",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:53:59.233Z",
+    "status": "LOCKED",
+    "total_amount": "100.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "a5b93393-e4dd-4dab-aba3-f2811c15ccc7",
+  "fields": {
+    "created_at": "2026-10-14T15:53:58.698Z",
+    "updated_at": "2026-10-14T15:53:58.701Z",
+    "order_number": "ORD-20261014-0006",
+    "customer": "c2aa4bea-5cc5-4884-9901-d1cc84ee40e8",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:53:58.695Z",
+    "status": "LOCKED",
+    "total_amount": "100.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "acbd106e-145c-4c1c-822c-f820f1a61c30",
+  "fields": {
+    "created_at": "2026-10-14T15:53:58.154Z",
+    "updated_at": "2026-10-14T15:53:58.155Z",
+    "order_number": "ORD-20261014-0005",
+    "customer": "acffbfc0-e27a-47a2-be42-44977d4525f5",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:53:58.151Z",
+    "status": "LOCKED",
+    "total_amount": "400.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "a380dff4-3acb-4320-8416-132d06caa378",
+  "fields": {
+    "created_at": "2026-10-14T15:53:57.594Z",
+    "updated_at": "2026-10-14T15:53:57.597Z",
+    "order_number": "ORD-20261014-0004",
+    "customer": "c29e9f36-b976-43a2-b238-4a21a9e48587",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:53:57.588Z",
+    "status": "LOCKED",
+    "total_amount": "560.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "e7ae766a-98eb-49cc-b01c-f91089b74d9e",
+  "fields": {
+    "created_at": "2026-10-14T15:53:56.997Z",
+    "updated_at": "2026-10-14T15:53:57.001Z",
+    "order_number": "ORD-20261014-0003",
+    "customer": "651e2320-d0f3-4474-9236-b9bd8d297f10",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:53:56.988Z",
+    "status": "LOCKED",
+    "total_amount": "1020.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "8d8965fb-28ca-4492-9f7b-7171b43c177b",
+  "fields": {
+    "created_at": "2026-10-14T15:36:40.388Z",
+    "updated_at": "2026-10-14T15:36:40.391Z",
+    "order_number": "ORD-20261014-0002",
+    "customer": "1d35e983-f0fe-4759-b38b-058b546be03e",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:36:40.381Z",
+    "status": "LOCKED",
+    "total_amount": "225.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.order",
+  "pk": "4ae31bb6-8f03-4291-aa89-17a52adf59e0",
+  "fields": {
+    "created_at": "2026-10-14T15:31:24.737Z",
+    "updated_at": "2026-10-14T15:31:24.739Z",
+    "order_number": "ORD-20261014-0001",
+    "customer": "b6643869-e550-4846-8fdf-aa7fa817977e",
+    "route": "eaa08628-f7b4-4eb3-913c-0f20aca5c41d",
+    "driver": null,
+    "order_date": "2026-10-14",
+    "submitted_at": "2026-10-14T15:31:24.729Z",
+    "status": "LOCKED",
+    "total_amount": "50.00",
+    "shop_expense": "0.00",
+    "shop_expense_notes": "",
+    "notes": "Fast wholesale daily entry",
+    "source": "MANAGER",
+    "entered_by_role": "",
+    "entered_by_user": 1,
+    "entered_by_name": "zamzam foods",
+    "created_by": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "17f6e393-1031-435d-9359-900f16eb56d6",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.604Z",
+    "updated_at": "2026-10-14T15:54:02.604Z",
+    "order": "378b1b29-9f57-460d-98cf-f9da535a6db9",
+    "product": "8bf97a76-6248-4bc4-876f-6012c0850668",
+    "quantity": 1,
+    "unit_price": "55.00",
+    "subtotal": "55.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "3284bba1-e13d-43f0-bd22-61ebb3f307dc",
+  "fields": {
+    "created_at": "2026-10-14T15:54:10.487Z",
+    "updated_at": "2026-10-14T15:54:10.487Z",
+    "order": "020db7a7-820d-4539-901f-ad6c495a9b24",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 10,
+    "unit_price": "9.00",
+    "subtotal": "90.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "c775419e-ceaf-4c82-8e01-67bf8ba46c6b",
+  "fields": {
+    "created_at": "2026-10-14T15:54:01.503Z",
+    "updated_at": "2026-10-14T15:54:01.503Z",
+    "order": "07408825-459f-404d-a45f-96cad317b031",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 10,
+    "unit_price": "9.00",
+    "subtotal": "90.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "935ec3de-2ed5-42ee-ae09-d0c41064aa14",
+  "fields": {
+    "created_at": "2026-10-14T15:54:05.588Z",
+    "updated_at": "2026-10-14T15:54:05.588Z",
+    "order": "144e59b5-08d0-4abe-9344-98e81b88fa5c",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 90,
+    "unit_price": "9.00",
+    "subtotal": "810.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "677ddad2-4213-48f1-b565-8d4309c9f632",
+  "fields": {
+    "created_at": "2026-10-14T15:54:07.248Z",
+    "updated_at": "2026-10-14T15:54:07.248Z",
+    "order": "1493f0b9-27fb-4f81-9c8e-3a366beb0dc2",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 20,
+    "unit_price": "9.00",
+    "subtotal": "180.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "71cd4c89-6a52-40b0-aed9-6adf6de2a856",
+  "fields": {
+    "created_at": "2026-10-14T15:54:00.376Z",
+    "updated_at": "2026-10-14T15:54:00.376Z",
+    "order": "1679becd-c628-4243-b9c2-5cd217ecf6e0",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 120,
+    "unit_price": "9.00",
+    "subtotal": "1080.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "a46adb85-cef1-4974-a324-6a7ce5b5afb8",
+  "fields": {
+    "created_at": "2026-10-14T15:54:11.016Z",
+    "updated_at": "2026-10-14T15:54:11.016Z",
+    "order": "284f93dc-0151-44f2-9c2e-0953f935773b",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 20,
+    "unit_price": "9.00",
+    "subtotal": "180.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "6cad84fd-3f33-46b5-b7d3-c6ddc02375e5",
+  "fields": {
+    "created_at": "2026-10-14T15:54:13.152Z",
+    "updated_at": "2026-10-14T15:54:13.152Z",
+    "order": "34443ced-bd81-4ad7-9b1e-513d61af4275",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 10,
+    "unit_price": "8.00",
+    "subtotal": "80.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "350290bb-6c7b-4230-80ad-4698e713961f",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.064Z",
+    "updated_at": "2026-10-14T15:54:02.064Z",
+    "order": "6c365fc2-ad78-422d-a0e6-860f4001b4f2",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 80,
+    "unit_price": "9.00",
+    "subtotal": "720.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "be38f5c4-b1de-42c6-82d1-86c98ce1ed5f",
+  "fields": {
+    "created_at": "2026-10-14T15:54:12.593Z",
+    "updated_at": "2026-10-14T15:54:12.593Z",
+    "order": "8419aeba-2697-471f-a7fc-84ed9973b1f7",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 30,
+    "unit_price": "9.00",
+    "subtotal": "270.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "69fc094b-0f3a-412e-9f92-ad7e1d6b1695",
+  "fields": {
+    "created_at": "2026-10-14T15:36:40.390Z",
+    "updated_at": "2026-10-14T15:36:40.390Z",
+    "order": "8d8965fb-28ca-4492-9f7b-7171b43c177b",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 10,
+    "unit_price": "9.00",
+    "subtotal": "90.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "f71586d4-3d30-47cd-99b1-154037ee481e",
+  "fields": {
+    "created_at": "2026-10-14T15:54:08.332Z",
+    "updated_at": "2026-10-14T15:54:08.332Z",
+    "order": "9a0fdc40-f5c9-4772-b6aa-c0bce7409576",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 90,
+    "unit_price": "9.00",
+    "subtotal": "810.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "48e733d3-90aa-40a0-94e4-ffb2e7fdef7e",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.118Z",
+    "updated_at": "2026-10-14T15:54:06.118Z",
+    "order": "9a5e9f94-fbf7-424d-b858-732a5963a005",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 10,
+    "unit_price": "9.00",
+    "subtotal": "90.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "f13c06ca-47d2-4231-8a10-63c7542f9591",
+  "fields": {
+    "created_at": "2026-10-14T15:53:57.596Z",
+    "updated_at": "2026-10-14T15:53:57.596Z",
+    "order": "a380dff4-3acb-4320-8416-132d06caa378",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 40,
+    "unit_price": "9.00",
+    "subtotal": "360.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "f8d17781-9a43-4a5a-8326-c159e76bb2a8",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.937Z",
+    "updated_at": "2026-10-14T15:54:03.937Z",
+    "order": "c2d75a90-976f-4152-bac4-f55f3863c75a",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 20,
+    "unit_price": "9.00",
+    "subtotal": "180.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "10cec692-1cc6-4b98-b562-858916dcc3bc",
+  "fields": {
+    "created_at": "2026-10-14T15:54:04.496Z",
+    "updated_at": "2026-10-14T15:54:04.496Z",
+    "order": "d47d40e8-56fa-4ea7-b7ca-f5783c7e1efd",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 30,
+    "unit_price": "9.00",
+    "subtotal": "270.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "59b0fe93-2264-4127-8e3f-e95bbc236752",
+  "fields": {
+    "created_at": "2026-10-14T15:54:05.043Z",
+    "updated_at": "2026-10-14T15:54:05.043Z",
+    "order": "d79761b3-3010-49e2-b0d1-603ce6760840",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 20,
+    "unit_price": "9.00",
+    "subtotal": "180.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "f1a70ccb-878d-47b5-930e-27a9da25fe48",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.144Z",
+    "updated_at": "2026-10-14T15:54:03.144Z",
+    "order": "e0c2e7bf-5180-4de9-9bc0-8ebfe344322c",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 40,
+    "unit_price": "9.00",
+    "subtotal": "360.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "290ca12b-f376-4940-9d54-8a4070a70868",
+  "fields": {
+    "created_at": "2026-10-14T15:53:57.000Z",
+    "updated_at": "2026-10-14T15:53:57.000Z",
+    "order": "e7ae766a-98eb-49cc-b01c-f91089b74d9e",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 40,
+    "unit_price": "8.00",
+    "subtotal": "320.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "20d7325a-c51e-4751-8536-08b883265435",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.711Z",
+    "updated_at": "2026-10-14T15:54:06.711Z",
+    "order": "f5fe1341-7a23-4f59-8051-b54dbe9f90a2",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 90,
+    "unit_price": "9.00",
+    "subtotal": "810.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "ea3b86bd-5251-4f10-b5ef-bea77da673e6",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.967Z",
+    "updated_at": "2026-10-14T15:54:14.967Z",
+    "order": "fe5ae660-c514-4b49-8056-74f062dfdcd4",
+    "product": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+    "quantity": 40,
+    "unit_price": "9.00",
+    "subtotal": "360.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "a90e1e33-1859-49ac-9eab-4ca8a89e94d2",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.604Z",
+    "updated_at": "2026-10-14T15:54:02.604Z",
+    "order": "378b1b29-9f57-460d-98cf-f9da535a6db9",
+    "product": "442ad867-1d4a-4556-a47d-847a08124612",
+    "quantity": 1,
+    "unit_price": "37.00",
+    "subtotal": "37.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "a8fff3ee-87ac-4385-984e-fb61f5befd61",
+  "fields": {
+    "created_at": "2026-10-14T15:54:10.487Z",
+    "updated_at": "2026-10-14T15:54:10.487Z",
+    "order": "020db7a7-820d-4539-901f-ad6c495a9b24",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 40,
+    "unit_price": "5.00",
+    "subtotal": "200.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "f8fe6cf8-cd7f-4194-9050-d2f10e4d6887",
+  "fields": {
+    "created_at": "2026-10-14T15:54:05.586Z",
+    "updated_at": "2026-10-14T15:54:05.586Z",
+    "order": "144e59b5-08d0-4abe-9344-98e81b88fa5c",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 190,
+    "unit_price": "4.50",
+    "subtotal": "855.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "69eedf43-d585-40f8-a6ae-3aed33bbd4a7",
+  "fields": {
+    "created_at": "2026-10-14T15:54:00.375Z",
+    "updated_at": "2026-10-14T15:54:00.375Z",
+    "order": "1679becd-c628-4243-b9c2-5cd217ecf6e0",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 170,
+    "unit_price": "5.00",
+    "subtotal": "850.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "a0062791-1ea5-4d1a-b77e-9f50a52d41b3",
+  "fields": {
+    "created_at": "2026-10-14T15:54:11.016Z",
+    "updated_at": "2026-10-14T15:54:11.016Z",
+    "order": "284f93dc-0151-44f2-9c2e-0953f935773b",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 70,
+    "unit_price": "5.00",
+    "subtotal": "350.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "02302183-4b91-437c-96a4-8aac69092abd",
+  "fields": {
+    "created_at": "2026-10-14T15:54:00.944Z",
+    "updated_at": "2026-10-14T15:54:00.944Z",
+    "order": "2a0fbfb5-bc38-45cd-a258-b7a563de7bdc",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 30,
+    "unit_price": "5.00",
+    "subtotal": "150.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "247456f1-e9c0-4508-8684-2fbd0681e937",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.603Z",
+    "updated_at": "2026-10-14T15:54:02.603Z",
+    "order": "378b1b29-9f57-460d-98cf-f9da535a6db9",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 10,
+    "unit_price": "5.00",
+    "subtotal": "50.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "12f0c0fb-55b2-40ed-ac1d-4c906f1b9e6a",
+  "fields": {
+    "created_at": "2026-10-14T15:54:08.865Z",
+    "updated_at": "2026-10-14T15:54:08.865Z",
+    "order": "42668f51-fd3e-4ad5-a476-cca7244e8257",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 30,
+    "unit_price": "5.00",
+    "subtotal": "150.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "ffbfeb46-69c5-41dd-8c38-e87106883506",
+  "fields": {
+    "created_at": "2026-10-14T15:31:24.738Z",
+    "updated_at": "2026-10-14T15:31:24.738Z",
+    "order": "4ae31bb6-8f03-4291-aa89-17a52adf59e0",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 10,
+    "unit_price": "5.00",
+    "subtotal": "50.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "aac77d60-2727-4d20-8db3-33caec44ad3f",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.347Z",
+    "updated_at": "2026-10-14T15:54:14.347Z",
+    "order": "4b3f1142-09ba-4092-bdcb-6700af6099f8",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 130,
+    "unit_price": "5.00",
+    "subtotal": "650.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "5ccba3c2-a633-47f6-8777-5f2c55bfb81f",
+  "fields": {
+    "created_at": "2026-10-14T15:54:13.791Z",
+    "updated_at": "2026-10-14T15:54:13.791Z",
+    "order": "5df3d9b5-4f45-4688-80a2-b1c9a34a7d88",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 40,
+    "unit_price": "5.00",
+    "subtotal": "200.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "a3161449-6fb6-44e3-82e0-70b534d5c1d7",
+  "fields": {
+    "created_at": "2026-10-14T15:53:59.783Z",
+    "updated_at": "2026-10-14T15:53:59.783Z",
+    "order": "72f61bec-c05c-445d-a034-fb217636ca88",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 650,
+    "unit_price": "4.50",
+    "subtotal": "2925.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "d59a3061-afcd-4818-8642-b463a7adeeb3",
+  "fields": {
+    "created_at": "2026-10-14T15:54:11.545Z",
+    "updated_at": "2026-10-14T15:54:11.545Z",
+    "order": "83d9c170-a78e-4248-a041-79cbbd2eb3d8",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 60,
+    "unit_price": "5.00",
+    "subtotal": "300.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "0b36d5a3-de4c-4a7c-a6f0-a6e43a089ccd",
+  "fields": {
+    "created_at": "2026-10-14T15:54:12.592Z",
+    "updated_at": "2026-10-14T15:54:12.592Z",
+    "order": "8419aeba-2697-471f-a7fc-84ed9973b1f7",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 250,
+    "unit_price": "4.50",
+    "subtotal": "1125.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "8c5a5e0f-eacc-42ef-8062-3df533569f9e",
+  "fields": {
+    "created_at": "2026-10-14T15:36:40.389Z",
+    "updated_at": "2026-10-14T15:36:40.389Z",
+    "order": "8d8965fb-28ca-4492-9f7b-7171b43c177b",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 30,
+    "unit_price": "4.50",
+    "subtotal": "135.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "f422f6b0-5955-4031-b95d-6851a6dac8e9",
+  "fields": {
+    "created_at": "2026-10-14T15:54:08.332Z",
+    "updated_at": "2026-10-14T15:54:08.332Z",
+    "order": "9a0fdc40-f5c9-4772-b6aa-c0bce7409576",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 140,
+    "unit_price": "5.00",
+    "subtotal": "700.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "3b5e2344-4002-4325-bb3e-e71862243260",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.116Z",
+    "updated_at": "2026-10-14T15:54:06.116Z",
+    "order": "9a5e9f94-fbf7-424d-b858-732a5963a005",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 20,
+    "unit_price": "5.00",
+    "subtotal": "100.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "2f2d6271-e6ea-42f6-abd8-539fbfcf5390",
+  "fields": {
+    "created_at": "2026-10-14T15:53:57.596Z",
+    "updated_at": "2026-10-14T15:53:57.596Z",
+    "order": "a380dff4-3acb-4320-8416-132d06caa378",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 40,
+    "unit_price": "5.00",
+    "subtotal": "200.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "81a304ab-633e-4a3c-97f3-f89a53632111",
+  "fields": {
+    "created_at": "2026-10-14T15:53:58.699Z",
+    "updated_at": "2026-10-14T15:53:58.699Z",
+    "order": "a5b93393-e4dd-4dab-aba3-f2811c15ccc7",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 20,
+    "unit_price": "5.00",
+    "subtotal": "100.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "344da2ae-b481-4880-b419-617865b188ba",
+  "fields": {
+    "created_at": "2026-10-14T15:53:58.155Z",
+    "updated_at": "2026-10-14T15:53:58.155Z",
+    "order": "acbd106e-145c-4c1c-822c-f820f1a61c30",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 80,
+    "unit_price": "5.00",
+    "subtotal": "400.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "ee65dc86-40c5-4e7b-adfe-e7349ab8f153",
+  "fields": {
+    "created_at": "2026-10-14T15:54:09.943Z",
+    "updated_at": "2026-10-14T15:54:09.943Z",
+    "order": "b4ecf68c-0c0f-4b56-9be1-b482287299a9",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 40,
+    "unit_price": "5.00",
+    "subtotal": "200.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "783b38fe-bbf8-4ec5-a234-31595545b3cd",
+  "fields": {
+    "created_at": "2026-10-14T15:54:07.786Z",
+    "updated_at": "2026-10-14T15:54:07.786Z",
+    "order": "ba2bd217-5a9c-46a4-a908-1cb14a36b164",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 30,
+    "unit_price": "5.00",
+    "subtotal": "150.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "d8e2a548-2d7f-4c00-9f67-4ecf0dea3cae",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.936Z",
+    "updated_at": "2026-10-14T15:54:03.936Z",
+    "order": "c2d75a90-976f-4152-bac4-f55f3863c75a",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 80,
+    "unit_price": "5.50",
+    "subtotal": "440.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "3d6e1fd6-f687-464b-9553-9fe95d0a7570",
+  "fields": {
+    "created_at": "2026-10-14T15:53:59.238Z",
+    "updated_at": "2026-10-14T15:53:59.238Z",
+    "order": "cddef518-c011-42b2-9ad4-e57bf1197b23",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 20,
+    "unit_price": "5.00",
+    "subtotal": "100.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "683d260c-1822-454f-9a6b-493a9ee3a905",
+  "fields": {
+    "created_at": "2026-10-14T15:54:09.408Z",
+    "updated_at": "2026-10-14T15:54:09.408Z",
+    "order": "d3517802-c1e1-4dd5-b42e-d94ab68634ba",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 270,
+    "unit_price": "4.50",
+    "subtotal": "1215.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "ada6b799-a408-41d0-913e-c23317fbd8ce",
+  "fields": {
+    "created_at": "2026-10-14T15:54:04.495Z",
+    "updated_at": "2026-10-14T15:54:04.495Z",
+    "order": "d47d40e8-56fa-4ea7-b7ca-f5783c7e1efd",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 140,
+    "unit_price": "5.00",
+    "subtotal": "700.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "dbae2622-c926-40ff-8196-cedfb9f12198",
+  "fields": {
+    "created_at": "2026-10-14T15:54:05.042Z",
+    "updated_at": "2026-10-14T15:54:05.042Z",
+    "order": "d79761b3-3010-49e2-b0d1-603ce6760840",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 40,
+    "unit_price": "5.00",
+    "subtotal": "200.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "55852c81-7c17-4f12-beee-5eae07309933",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.143Z",
+    "updated_at": "2026-10-14T15:54:03.143Z",
+    "order": "e0c2e7bf-5180-4de9-9bc0-8ebfe344322c",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 40,
+    "unit_price": "4.50",
+    "subtotal": "180.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "c792dd8d-d61e-43e2-99d9-ce79af94c9b4",
+  "fields": {
+    "created_at": "2026-10-14T15:53:56.999Z",
+    "updated_at": "2026-10-14T15:53:56.999Z",
+    "order": "e7ae766a-98eb-49cc-b01c-f91089b74d9e",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 140,
+    "unit_price": "5.00",
+    "subtotal": "700.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "8427b431-7181-4e3e-a322-b43e17128604",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.710Z",
+    "updated_at": "2026-10-14T15:54:06.710Z",
+    "order": "f5fe1341-7a23-4f59-8051-b54dbe9f90a2",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 90,
+    "unit_price": "5.00",
+    "subtotal": "450.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "orders.orderitem",
+  "pk": "3752c3cf-a34f-495d-8745-35abfe208b18",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.966Z",
+    "updated_at": "2026-10-14T15:54:14.966Z",
+    "order": "fe5ae660-c514-4b49-8056-74f062dfdcd4",
+    "product": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+    "quantity": 70,
+    "unit_price": "5.00",
+    "subtotal": "350.00",
+    "entered_by_type": "MANAGER",
+    "entered_by_user": 1
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "e635091c-bc1d-4210-994e-eb1fd24f5773",
+  "fields": {
+    "created_at": "2026-10-14T15:54:15.301Z",
+    "updated_at": "2026-10-14T15:54:15.301Z",
+    "payment_number": "PAY-20261014-0018",
+    "customer": "4d35c0eb-240e-4638-89c0-e2f283858605",
+    "order": "fe5ae660-c514-4b49-8056-74f062dfdcd4",
+    "amount": "780.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "c1f85f8e-a12b-4d15-8ea1-e804167c27ab",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.633Z",
+    "updated_at": "2026-10-14T15:54:14.633Z",
+    "payment_number": "PAY-20261014-0017",
+    "customer": "4f570478-e33e-47e8-930f-6607b8db78c0",
+    "order": "4b3f1142-09ba-4092-bdcb-6700af6099f8",
+    "amount": "650.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "fed27122-be7d-475b-b39e-3919b60dc13f",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.083Z",
+    "updated_at": "2026-10-14T15:54:14.083Z",
+    "payment_number": "PAY-20261014-0016",
+    "customer": "04cfa0cf-b29a-4eb0-bdfe-658f446954cb",
+    "order": "5df3d9b5-4f45-4688-80a2-b1c9a34a7d88",
+    "amount": "200.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "2ef77259-c4e0-488f-adcd-02f471a1307f",
+  "fields": {
+    "created_at": "2026-10-14T15:54:13.444Z",
+    "updated_at": "2026-10-14T15:54:13.444Z",
+    "payment_number": "PAY-20261014-0015",
+    "customer": "1d537e3a-af1a-447b-8e86-915b398cdca0",
+    "order": "34443ced-bd81-4ad7-9b1e-513d61af4275",
+    "amount": "80.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "41c16107-7527-41d6-8095-44a1065f23b8",
+  "fields": {
+    "created_at": "2026-10-14T15:54:10.221Z",
+    "updated_at": "2026-10-14T15:54:10.221Z",
+    "payment_number": "PAY-20261014-0014",
+    "customer": "1fb39cd6-c1b9-4fc2-b85e-99fce18b2c1b",
+    "order": "b4ecf68c-0c0f-4b56-9be1-b482287299a9",
+    "amount": "200.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "525ec97b-67ab-40d8-8530-26d7e7040fcb",
+  "fields": {
+    "created_at": "2026-10-14T15:54:09.691Z",
+    "updated_at": "2026-10-14T15:54:09.691Z",
+    "payment_number": "PAY-20261014-0013",
+    "customer": "c1bee817-98f1-4b76-a7bc-8748f13e0fe5",
+    "order": "d3517802-c1e1-4dd5-b42e-d94ab68634ba",
+    "amount": "1440.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "20935742-72b0-435c-a97f-110dc5a93e11",
+  "fields": {
+    "created_at": "2026-10-14T15:54:08.057Z",
+    "updated_at": "2026-10-14T15:54:08.057Z",
+    "payment_number": "PAY-20261014-0012",
+    "customer": "802f067e-e6ee-4c09-8ab2-b8f13cc17229",
+    "order": "ba2bd217-5a9c-46a4-a908-1cb14a36b164",
+    "amount": "130.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "8fcc2c66-277d-4688-bbaf-a94b367a6292",
+  "fields": {
+    "created_at": "2026-10-14T15:54:07.527Z",
+    "updated_at": "2026-10-14T15:54:07.527Z",
+    "payment_number": "PAY-20261014-0011",
+    "customer": "47c25c46-6aee-49a3-a31c-5938e3f255cc",
+    "order": "1493f0b9-27fb-4f81-9c8e-3a366beb0dc2",
+    "amount": "360.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "11f3deac-9bef-4171-921a-6c26879d4ba1",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.389Z",
+    "updated_at": "2026-10-14T15:54:06.389Z",
+    "payment_number": "PAY-20261014-0010",
+    "customer": "39506eaf-b662-4bdf-8ff6-e9b373c58894",
+    "order": "9a5e9f94-fbf7-424d-b858-732a5963a005",
+    "amount": "190.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "5065ab28-e35a-4eba-8cc6-3416f966eedc",
+  "fields": {
+    "created_at": "2026-10-14T15:54:04.776Z",
+    "updated_at": "2026-10-14T15:54:04.776Z",
+    "payment_number": "PAY-20261014-0009",
+    "customer": "5305c2a9-b5e0-44cd-b2dd-df56fc8f7725",
+    "order": "d47d40e8-56fa-4ea7-b7ca-f5783c7e1efd",
+    "amount": "970.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "d1655f89-d7b5-4450-9dbc-65fb83b6d6a4",
+  "fields": {
+    "created_at": "2026-10-14T15:54:04.214Z",
+    "updated_at": "2026-10-14T15:54:04.214Z",
+    "payment_number": "PAY-20261014-0008",
+    "customer": "0ab72049-0b24-414e-b620-ccccd937ccc3",
+    "order": "c2d75a90-976f-4152-bac4-f55f3863c75a",
+    "amount": "530.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "9fc6440f-3d73-4b85-b6bc-0c351e292175",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.677Z",
+    "updated_at": "2026-10-14T15:54:03.677Z",
+    "payment_number": "PAY-20261014-0007",
+    "customer": "39eb1902-7d9f-4074-aa46-334c51db9a94",
+    "order": null,
+    "amount": "2000.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "a85af7c9-9a13-4b2d-b4c9-ef40e3882f28",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.333Z",
+    "updated_at": "2026-10-14T15:54:02.333Z",
+    "payment_number": "PAY-20261014-0006",
+    "customer": "1a182ba5-f01f-412f-aec9-3db0bd775c67",
+    "order": "6c365fc2-ad78-422d-a0e6-860f4001b4f2",
+    "amount": "720.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "e3018b8d-4127-4381-958a-65aad48d42dd",
+  "fields": {
+    "created_at": "2026-10-14T15:54:01.784Z",
+    "updated_at": "2026-10-14T15:54:01.784Z",
+    "payment_number": "PAY-20261014-0005",
+    "customer": "d8ce3cad-7cb2-49d3-96d5-3a25aa064c10",
+    "order": "07408825-459f-404d-a45f-96cad317b031",
+    "amount": "90.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "b1bf09f9-9419-46e6-9019-8c6d8cafe60c",
+  "fields": {
+    "created_at": "2026-10-14T15:54:01.237Z",
+    "updated_at": "2026-10-14T15:54:01.237Z",
+    "payment_number": "PAY-20261014-0004",
+    "customer": "496dd817-f7dd-4793-b46c-c4181cf61b70",
+    "order": "2a0fbfb5-bc38-45cd-a258-b7a563de7bdc",
+    "amount": "150.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "2b83679f-5bac-4bb7-9ae0-14aee9a7c903",
+  "fields": {
+    "created_at": "2026-10-14T15:54:00.685Z",
+    "updated_at": "2026-10-14T15:54:00.685Z",
+    "payment_number": "PAY-20261014-0003",
+    "customer": "35d7dcde-4a67-4fd8-828a-f7620e79d3cf",
+    "order": "1679becd-c628-4243-b9c2-5cd217ecf6e0",
+    "amount": "1690.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "842f5839-f9f7-476d-b67e-1643967c30e9",
+  "fields": {
+    "created_at": "2026-10-14T15:53:58.984Z",
+    "updated_at": "2026-10-14T15:53:58.984Z",
+    "payment_number": "PAY-20261014-0002",
+    "customer": "c2aa4bea-5cc5-4884-9901-d1cc84ee40e8",
+    "order": "a5b93393-e4dd-4dab-aba3-f2811c15ccc7",
+    "amount": "100.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "payments.payment",
+  "pk": "d2fd4040-3d63-4637-8269-b39454dd1f05",
+  "fields": {
+    "created_at": "2026-10-14T15:53:57.314Z",
+    "updated_at": "2026-10-14T15:53:57.314Z",
+    "payment_number": "PAY-20261014-0001",
+    "customer": "651e2320-d0f3-4474-9236-b9bd8d297f10",
+    "order": "e7ae766a-98eb-49cc-b01c-f91089b74d9e",
+    "amount": "1020.00",
+    "payment_method": "CASH",
+    "status": "COMPLETED",
+    "reference_number": "",
+    "collected_by": 1,
+    "staff_member": null,
+    "received_at": "2026-10-14T06:30:00Z",
+    "notes": "Wholesale counter CASH collection (2026-10-14)",
+    "reversed_by": null,
+    "reversed_at": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "d004a90e-4539-4b2f-9439-332d70d4f68f",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.977Z",
+    "updated_at": "2026-10-14T15:54:14.977Z",
+    "customer": "4d35c0eb-240e-4638-89c0-e2f283858605",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "710.00",
+    "balance_after": "1490.00",
+    "reference_order": "fe5ae660-c514-4b49-8056-74f062dfdcd4",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0034",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "c33d05a6-f162-42cc-a875-57bb3a3d6349",
+  "fields": {
+    "created_at": "2026-10-14T15:54:14.351Z",
+    "updated_at": "2026-10-14T15:54:14.351Z",
+    "customer": "4f570478-e33e-47e8-930f-6607b8db78c0",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "650.00",
+    "balance_after": "650.00",
+    "reference_order": "4b3f1142-09ba-4092-bdcb-6700af6099f8",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0033",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "73064046-e80f-4c23-b20a-11eb5a843a8a",
+  "fields": {
+    "created_at": "2026-10-14T15:54:13.796Z",
+    "updated_at": "2026-10-14T15:54:13.796Z",
+    "customer": "04cfa0cf-b29a-4eb0-bdfe-658f446954cb",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "200.00",
+    "balance_after": "200.00",
+    "reference_order": "5df3d9b5-4f45-4688-80a2-b1c9a34a7d88",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0032",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "5a80f49b-4827-4aae-a619-273d18aa7ade",
+  "fields": {
+    "created_at": "2026-10-14T15:54:13.157Z",
+    "updated_at": "2026-10-14T15:54:13.157Z",
+    "customer": "1d537e3a-af1a-447b-8e86-915b398cdca0",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "80.00",
+    "balance_after": "80.00",
+    "reference_order": "34443ced-bd81-4ad7-9b1e-513d61af4275",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0031",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "81aad3c3-2d2b-4d4d-a2c9-f0c5b23c4f57",
+  "fields": {
+    "created_at": "2026-10-14T15:54:12.599Z",
+    "updated_at": "2026-10-14T15:54:12.599Z",
+    "customer": "8b1162b2-53e6-471d-9f22-07cc459b4c88",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "1395.00",
+    "balance_after": "2955.00",
+    "reference_order": "8419aeba-2697-471f-a7fc-84ed9973b1f7",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0030",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "5f210796-012d-49ca-bf50-87128f1c6a3d",
+  "fields": {
+    "created_at": "2026-10-14T15:54:11.550Z",
+    "updated_at": "2026-10-14T15:54:11.550Z",
+    "customer": "7509f98b-5380-4e96-bd88-3c861d7acce7",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "300.00",
+    "balance_after": "5530.00",
+    "reference_order": "83d9c170-a78e-4248-a041-79cbbd2eb3d8",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0029",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "05044b9e-11ed-4237-a5e0-30bea790fbfd",
+  "fields": {
+    "created_at": "2026-10-14T15:54:11.025Z",
+    "updated_at": "2026-10-14T15:54:11.025Z",
+    "customer": "7bc5658d-f208-44e9-b7c6-6db0313470bd",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "530.00",
+    "balance_after": "1235.00",
+    "reference_order": "284f93dc-0151-44f2-9c2e-0953f935773b",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0028",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "b9a9db89-b756-4ea4-bf1a-765f35565eed",
+  "fields": {
+    "created_at": "2026-10-14T15:54:10.493Z",
+    "updated_at": "2026-10-14T15:54:10.493Z",
+    "customer": "fa25ce12-0bb5-4c5e-bf6a-a8ce9960c417",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "290.00",
+    "balance_after": "460.00",
+    "reference_order": "020db7a7-820d-4539-901f-ad6c495a9b24",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0027",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "dd942db6-9cac-48d3-b133-9c607bc48038",
+  "fields": {
+    "created_at": "2026-10-14T15:54:09.948Z",
+    "updated_at": "2026-10-14T15:54:09.948Z",
+    "customer": "1fb39cd6-c1b9-4fc2-b85e-99fce18b2c1b",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "200.00",
+    "balance_after": "200.00",
+    "reference_order": "b4ecf68c-0c0f-4b56-9be1-b482287299a9",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0026",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "f9611196-3a8b-4aac-815d-879403cf6091",
+  "fields": {
+    "created_at": "2026-10-14T15:54:09.413Z",
+    "updated_at": "2026-10-14T15:54:09.413Z",
+    "customer": "c1bee817-98f1-4b76-a7bc-8748f13e0fe5",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "1215.00",
+    "balance_after": "2655.00",
+    "reference_order": "d3517802-c1e1-4dd5-b42e-d94ab68634ba",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0025",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "9541c959-aaff-40b0-872c-566c3380b052",
+  "fields": {
+    "created_at": "2026-10-14T15:54:08.872Z",
+    "updated_at": "2026-10-14T15:54:08.872Z",
+    "customer": "0a680a34-0db8-4491-9c3f-871b8d9bb4db",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "150.00",
+    "balance_after": "1200.00",
+    "reference_order": "42668f51-fd3e-4ad5-a476-cca7244e8257",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0024",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "563246f6-b1d3-4932-803f-ce2eda245ced",
+  "fields": {
+    "created_at": "2026-10-14T15:54:08.336Z",
+    "updated_at": "2026-10-14T15:54:08.336Z",
+    "customer": "0d413073-7e88-41a0-b409-30ca27db474a",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "1510.00",
+    "balance_after": "6940.00",
+    "reference_order": "9a0fdc40-f5c9-4772-b6aa-c0bce7409576",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0023",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "b9c5b908-012b-4783-b806-9eb6754e950b",
+  "fields": {
+    "created_at": "2026-10-14T15:54:07.791Z",
+    "updated_at": "2026-10-14T15:54:07.791Z",
+    "customer": "802f067e-e6ee-4c09-8ab2-b8f13cc17229",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "150.00",
+    "balance_after": "150.00",
+    "reference_order": "ba2bd217-5a9c-46a4-a908-1cb14a36b164",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0022",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "bf0b30f0-c334-4196-8e50-15e82132e3ad",
+  "fields": {
+    "created_at": "2026-10-14T15:54:07.253Z",
+    "updated_at": "2026-10-14T15:54:07.253Z",
+    "customer": "47c25c46-6aee-49a3-a31c-5938e3f255cc",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "180.00",
+    "balance_after": "390.00",
+    "reference_order": "1493f0b9-27fb-4f81-9c8e-3a366beb0dc2",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0021",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "8df2b7b6-e242-4af6-8244-08d387380ce9",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.718Z",
+    "updated_at": "2026-10-14T15:54:06.718Z",
+    "customer": "ea6a58ed-76ad-4e1c-9310-3a9c9271ae35",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "1260.00",
+    "balance_after": "1260.00",
+    "reference_order": "f5fe1341-7a23-4f59-8051-b54dbe9f90a2",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0020",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "0835e3b2-a099-49cf-8830-e855a03dd9f8",
+  "fields": {
+    "created_at": "2026-10-14T15:54:06.123Z",
+    "updated_at": "2026-10-14T15:54:06.123Z",
+    "customer": "39506eaf-b662-4bdf-8ff6-e9b373c58894",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "190.00",
+    "balance_after": "190.00",
+    "reference_order": "9a5e9f94-fbf7-424d-b858-732a5963a005",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0019",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "f9642806-073b-4bf2-a8be-c6dfbd1fa7cc",
+  "fields": {
+    "created_at": "2026-10-14T15:54:05.592Z",
+    "updated_at": "2026-10-14T15:54:05.592Z",
+    "customer": "bcb83141-1c79-4ca2-9176-3e4c989cccee",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "1665.00",
+    "balance_after": "27225.00",
+    "reference_order": "144e59b5-08d0-4abe-9344-98e81b88fa5c",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0018",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "8ef391e0-aa39-4265-87fd-4683f40b9145",
+  "fields": {
+    "created_at": "2026-10-14T15:54:05.047Z",
+    "updated_at": "2026-10-14T15:54:05.047Z",
+    "customer": "1a233bc7-e647-47e0-862d-a509ccf29bee",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "380.00",
+    "balance_after": "960.00",
+    "reference_order": "d79761b3-3010-49e2-b0d1-603ce6760840",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0017",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "574351a1-a4ea-44bb-86f5-23f7dbfa374e",
+  "fields": {
+    "created_at": "2026-10-14T15:54:04.500Z",
+    "updated_at": "2026-10-14T15:54:04.500Z",
+    "customer": "5305c2a9-b5e0-44cd-b2dd-df56fc8f7725",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "970.00",
+    "balance_after": "970.00",
+    "reference_order": "d47d40e8-56fa-4ea7-b7ca-f5783c7e1efd",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0016",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "931a9bae-7800-4cc9-86f1-82e14f3ee614",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.941Z",
+    "updated_at": "2026-10-14T15:54:03.941Z",
+    "customer": "0ab72049-0b24-414e-b620-ccccd937ccc3",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "620.00",
+    "balance_after": "1150.00",
+    "reference_order": "c2d75a90-976f-4152-bac4-f55f3863c75a",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0015",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "31ed011f-5764-4d5e-857d-1de5033716db",
+  "fields": {
+    "created_at": "2026-10-14T15:54:03.149Z",
+    "updated_at": "2026-10-14T15:54:03.149Z",
+    "customer": "0b38a4d5-bc22-413f-8231-7f73a351f15f",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "540.00",
+    "balance_after": "540.00",
+    "reference_order": "e0c2e7bf-5180-4de9-9bc0-8ebfe344322c",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0014",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "973ad18b-15b7-46e4-a562-5bc3461c0a12",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.609Z",
+    "updated_at": "2026-10-14T15:54:02.609Z",
+    "customer": "536feb85-6ad8-4cb3-a1af-32e81f0ad7c5",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "142.00",
+    "balance_after": "504.00",
+    "reference_order": "378b1b29-9f57-460d-98cf-f9da535a6db9",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0013",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "6a475e0d-c2ad-43c1-8544-11bdad33a529",
+  "fields": {
+    "created_at": "2026-10-14T15:54:02.071Z",
+    "updated_at": "2026-10-14T15:54:02.071Z",
+    "customer": "1a182ba5-f01f-412f-aec9-3db0bd775c67",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "720.00",
+    "balance_after": "720.00",
+    "reference_order": "6c365fc2-ad78-422d-a0e6-860f4001b4f2",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0012",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "baaf0289-9433-457c-aded-dce117e43a31",
+  "fields": {
+    "created_at": "2026-10-14T15:54:01.506Z",
+    "updated_at": "2026-10-14T15:54:01.506Z",
+    "customer": "d8ce3cad-7cb2-49d3-96d5-3a25aa064c10",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "90.00",
+    "balance_after": "90.00",
+    "reference_order": "07408825-459f-404d-a45f-96cad317b031",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0011",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "ca67a5eb-b028-4ca4-94e3-860ded3255c8",
+  "fields": {
+    "created_at": "2026-10-14T15:54:00.949Z",
+    "updated_at": "2026-10-14T15:54:00.949Z",
+    "customer": "496dd817-f7dd-4793-b46c-c4181cf61b70",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "150.00",
+    "balance_after": "150.00",
+    "reference_order": "2a0fbfb5-bc38-45cd-a258-b7a563de7bdc",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0010",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "f9e4ca90-100b-4012-84c7-c6393d30bbec",
+  "fields": {
+    "created_at": "2026-10-14T15:54:00.388Z",
+    "updated_at": "2026-10-14T15:54:00.388Z",
+    "customer": "35d7dcde-4a67-4fd8-828a-f7620e79d3cf",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "1930.00",
+    "balance_after": "3620.00",
+    "reference_order": "1679becd-c628-4243-b9c2-5cd217ecf6e0",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0009",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "3acc3e41-50fb-48c9-b92b-c86986f7bf7c",
+  "fields": {
+    "created_at": "2026-10-14T15:53:59.789Z",
+    "updated_at": "2026-10-14T15:53:59.789Z",
+    "customer": "c4892f20-ee28-4dcf-98d5-f635c76e77c8",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "2925.00",
+    "balance_after": "5400.00",
+    "reference_order": "72f61bec-c05c-445d-a034-fb217636ca88",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0008",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "b902aaf0-21b3-48eb-b4cd-58591ede4563",
+  "fields": {
+    "created_at": "2026-10-14T15:53:59.244Z",
+    "updated_at": "2026-10-14T15:53:59.244Z",
+    "customer": "d52eaa2a-9399-4fea-accd-63a036ecf0ff",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "100.00",
+    "balance_after": "600.00",
+    "reference_order": "cddef518-c011-42b2-9ad4-e57bf1197b23",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0007",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "84137a00-83ca-49b3-8f9d-dfc647d243ae",
+  "fields": {
+    "created_at": "2026-10-14T15:53:58.706Z",
+    "updated_at": "2026-10-14T15:53:58.706Z",
+    "customer": "c2aa4bea-5cc5-4884-9901-d1cc84ee40e8",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "100.00",
+    "balance_after": "100.00",
+    "reference_order": "a5b93393-e4dd-4dab-aba3-f2811c15ccc7",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0006",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "6b175b9c-c63d-4fc6-baf0-09e4a3c96621",
+  "fields": {
+    "created_at": "2026-10-14T15:53:58.158Z",
+    "updated_at": "2026-10-14T15:53:58.158Z",
+    "customer": "acffbfc0-e27a-47a2-be42-44977d4525f5",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "400.00",
+    "balance_after": "400.00",
+    "reference_order": "acbd106e-145c-4c1c-822c-f820f1a61c30",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0005",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "9e5cd60a-e917-412c-9547-209c2b15f0a1",
+  "fields": {
+    "created_at": "2026-10-14T15:53:57.601Z",
+    "updated_at": "2026-10-14T15:53:57.601Z",
+    "customer": "c29e9f36-b976-43a2-b238-4a21a9e48587",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "560.00",
+    "balance_after": "1590.00",
+    "reference_order": "a380dff4-3acb-4320-8416-132d06caa378",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0004",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "37d00a59-da26-4ee4-a421-6492af273487",
+  "fields": {
+    "created_at": "2026-10-14T15:53:57.007Z",
+    "updated_at": "2026-10-14T15:53:57.007Z",
+    "customer": "651e2320-d0f3-4474-9236-b9bd8d297f10",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "1020.00",
+    "balance_after": "1020.00",
+    "reference_order": "e7ae766a-98eb-49cc-b01c-f91089b74d9e",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0003",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "ca4fb525-5235-4e78-b21c-d7a440341fc5",
+  "fields": {
+    "created_at": "2026-10-14T15:36:40.396Z",
+    "updated_at": "2026-10-14T15:36:40.396Z",
+    "customer": "1d35e983-f0fe-4759-b38b-058b546be03e",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "225.00",
+    "balance_after": "1305.00",
+    "reference_order": "8d8965fb-28ca-4492-9f7b-7171b43c177b",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0002",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "ca02736c-6be6-42f2-8db7-d65451b88d18",
+  "fields": {
+    "created_at": "2026-10-14T15:31:24.745Z",
+    "updated_at": "2026-10-14T15:31:24.745Z",
+    "customer": "b6643869-e550-4846-8fdf-aa7fa817977e",
+    "transaction_type": "CREDIT_SALE",
+    "amount": "50.00",
+    "balance_after": "50.00",
+    "reference_order": "4ae31bb6-8f03-4291-aa89-17a52adf59e0",
+    "reference_payment": null,
+    "notes": "Credit sale for order #ORD-20261014-0001",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "1b0b8fd5-bdc1-495e-b622-4cc394663987",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:08.059Z",
+    "customer": "802f067e-e6ee-4c09-8ab2-b8f13cc17229",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-130.00",
+    "balance_after": "20.00",
+    "reference_order": "ba2bd217-5a9c-46a4-a908-1cb14a36b164",
+    "reference_payment": "20935742-72b0-435c-a97f-110dc5a93e11",
+    "notes": "Payment for Order #ORD-20261014-0022 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "d6e5cd49-19e4-4f64-9607-a1d8e3a0707b",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:04.778Z",
+    "customer": "5305c2a9-b5e0-44cd-b2dd-df56fc8f7725",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-970.00",
+    "balance_after": "0.00",
+    "reference_order": "d47d40e8-56fa-4ea7-b7ca-f5783c7e1efd",
+    "reference_payment": "5065ab28-e35a-4eba-8cc6-3416f966eedc",
+    "notes": "Payment for Order #ORD-20261014-0016 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "8114813c-87b3-453b-9c5c-e12f8d90a70a",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:02.335Z",
+    "customer": "1a182ba5-f01f-412f-aec9-3db0bd775c67",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-720.00",
+    "balance_after": "0.00",
+    "reference_order": "6c365fc2-ad78-422d-a0e6-860f4001b4f2",
+    "reference_payment": "a85af7c9-9a13-4b2d-b4c9-ef40e3882f28",
+    "notes": "Payment for Order #ORD-20261014-0012 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "7fa2645c-865c-40d3-9433-c821ea89ef3d",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:01.786Z",
+    "customer": "d8ce3cad-7cb2-49d3-96d5-3a25aa064c10",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-90.00",
+    "balance_after": "0.00",
+    "reference_order": "07408825-459f-404d-a45f-96cad317b031",
+    "reference_payment": "e3018b8d-4127-4381-958a-65aad48d42dd",
+    "notes": "Payment for Order #ORD-20261014-0011 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "e7105305-dd74-41ff-a901-c9432900af29",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:53:57.316Z",
+    "customer": "651e2320-d0f3-4474-9236-b9bd8d297f10",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-1020.00",
+    "balance_after": "0.00",
+    "reference_order": "e7ae766a-98eb-49cc-b01c-f91089b74d9e",
+    "reference_payment": "d2fd4040-3d63-4637-8269-b39454dd1f05",
+    "notes": "Payment for Order #ORD-20261014-0003 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "5c634487-c095-44da-a9a5-a6c1cec41673",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:09.692Z",
+    "customer": "c1bee817-98f1-4b76-a7bc-8748f13e0fe5",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-1440.00",
+    "balance_after": "1215.00",
+    "reference_order": "d3517802-c1e1-4dd5-b42e-d94ab68634ba",
+    "reference_payment": "525ec97b-67ab-40d8-8530-26d7e7040fcb",
+    "notes": "Payment for Order #ORD-20261014-0025 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "b87dc4bb-b122-494e-910d-7b8141fcd258",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:13.445Z",
+    "customer": "1d537e3a-af1a-447b-8e86-915b398cdca0",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-80.00",
+    "balance_after": "0.00",
+    "reference_order": "34443ced-bd81-4ad7-9b1e-513d61af4275",
+    "reference_payment": "2ef77259-c4e0-488f-adcd-02f471a1307f",
+    "notes": "Payment for Order #ORD-20261014-0031 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "90d12ba7-7746-44b7-92a6-96a8ab24016c",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:14.634Z",
+    "customer": "4f570478-e33e-47e8-930f-6607b8db78c0",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-650.00",
+    "balance_after": "0.00",
+    "reference_order": "4b3f1142-09ba-4092-bdcb-6700af6099f8",
+    "reference_payment": "c1f85f8e-a12b-4d15-8ea1-e804167c27ab",
+    "notes": "Payment for Order #ORD-20261014-0033 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "34b984c4-96fd-4ede-88fa-759e6b7f2372",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:15.303Z",
+    "customer": "4d35c0eb-240e-4638-89c0-e2f283858605",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-780.00",
+    "balance_after": "710.00",
+    "reference_order": "fe5ae660-c514-4b49-8056-74f062dfdcd4",
+    "reference_payment": "e635091c-bc1d-4210-994e-eb1fd24f5773",
+    "notes": "Payment for Order #ORD-20261014-0034 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "106b301a-a1bf-46cc-a027-c935ba399cd7",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:53:58.985Z",
+    "customer": "c2aa4bea-5cc5-4884-9901-d1cc84ee40e8",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-100.00",
+    "balance_after": "0.00",
+    "reference_order": "a5b93393-e4dd-4dab-aba3-f2811c15ccc7",
+    "reference_payment": "842f5839-f9f7-476d-b67e-1643967c30e9",
+    "notes": "Payment for Order #ORD-20261014-0006 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "04902b45-6737-4cc2-9691-e1fc145575d4",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:00.687Z",
+    "customer": "35d7dcde-4a67-4fd8-828a-f7620e79d3cf",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-1690.00",
+    "balance_after": "1930.00",
+    "reference_order": "1679becd-c628-4243-b9c2-5cd217ecf6e0",
+    "reference_payment": "2b83679f-5bac-4bb7-9ae0-14aee9a7c903",
+    "notes": "Payment for Order #ORD-20261014-0009 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "b7447b4c-8e2b-4994-a263-ca50b7ed3f20",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:03.679Z",
+    "customer": "39eb1902-7d9f-4074-aa46-334c51db9a94",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-2000.00",
+    "balance_after": "3990.00",
+    "reference_order": null,
+    "reference_payment": "9fc6440f-3d73-4b85-b6bc-0c351e292175",
+    "notes": "Payment for Previous Credit Balance via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "583f2379-5c7f-4f39-8546-164c81c1aaae",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:14.085Z",
+    "customer": "04cfa0cf-b29a-4eb0-bdfe-658f446954cb",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-200.00",
+    "balance_after": "0.00",
+    "reference_order": "5df3d9b5-4f45-4688-80a2-b1c9a34a7d88",
+    "reference_payment": "fed27122-be7d-475b-b39e-3919b60dc13f",
+    "notes": "Payment for Order #ORD-20261014-0032 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "3a05f08d-c536-4a89-a157-14217d0f8798",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:01.239Z",
+    "customer": "496dd817-f7dd-4793-b46c-c4181cf61b70",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-150.00",
+    "balance_after": "0.00",
+    "reference_order": "2a0fbfb5-bc38-45cd-a258-b7a563de7bdc",
+    "reference_payment": "b1bf09f9-9419-46e6-9019-8c6d8cafe60c",
+    "notes": "Payment for Order #ORD-20261014-0010 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "51794806-e9ec-45ac-a946-582674f14f7b",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:04.216Z",
+    "customer": "0ab72049-0b24-414e-b620-ccccd937ccc3",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-530.00",
+    "balance_after": "620.00",
+    "reference_order": "c2d75a90-976f-4152-bac4-f55f3863c75a",
+    "reference_payment": "d1655f89-d7b5-4450-9dbc-65fb83b6d6a4",
+    "notes": "Payment for Order #ORD-20261014-0015 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "a716b754-62e8-4e22-8f15-b494760fa20f",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:06.391Z",
+    "customer": "39506eaf-b662-4bdf-8ff6-e9b373c58894",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-190.00",
+    "balance_after": "0.00",
+    "reference_order": "9a5e9f94-fbf7-424d-b858-732a5963a005",
+    "reference_payment": "11f3deac-9bef-4171-921a-6c26879d4ba1",
+    "notes": "Payment for Order #ORD-20261014-0019 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "3404ef7f-de8a-446c-a031-061fd9ca7b0a",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:07.528Z",
+    "customer": "47c25c46-6aee-49a3-a31c-5938e3f255cc",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-360.00",
+    "balance_after": "30.00",
+    "reference_order": "1493f0b9-27fb-4f81-9c8e-3a366beb0dc2",
+    "reference_payment": "8fcc2c66-277d-4688-bbaf-a94b367a6292",
+    "notes": "Payment for Order #ORD-20261014-0021 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "4ed0e688-672a-4454-aea2-660bab7e9b2c",
+  "fields": {
+    "created_at": "2026-10-14T06:30:00Z",
+    "updated_at": "2026-10-14T15:54:10.222Z",
+    "customer": "1fb39cd6-c1b9-4fc2-b85e-99fce18b2c1b",
+    "transaction_type": "CASH_PAYMENT",
+    "amount": "-200.00",
+    "balance_after": "0.00",
+    "reference_order": "b4ecf68c-0c0f-4b56-9be1-b482287299a9",
+    "reference_payment": "41c16107-7527-41d6-8095-44a1065f23b8",
+    "notes": "Payment for Order #ORD-20261014-0026 via Cash. Notes: Wholesale counter CASH collection (2026-10-14).",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "12a292d4-6578-4dcf-8297-68311aa6628d",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:29:07.064Z",
+    "customer": "40f3d622-ef3b-4763-b87d-7356be83219d",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "500.00",
+    "balance_after": "7790.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹7790.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "faf9dfe4-e38c-40e9-a2f7-b479837b67ca",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:26:16.946Z",
+    "customer": "0b38a4d5-bc22-413f-8231-7f73a351f15f",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "30.00",
+    "balance_after": "0.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹0.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "a94c3299-74f3-4b45-a08a-e6777574992e",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:25:34.900Z",
+    "customer": "d52eaa2a-9399-4fea-accd-63a036ecf0ff",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "300.00",
+    "balance_after": "500.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹500.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "555c9451-f3dc-4726-8db4-e3d6cf4b6b3a",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:24:15.354Z",
+    "customer": "c2aa4bea-5cc5-4884-9901-d1cc84ee40e8",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "-100.00",
+    "balance_after": "0.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹0.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "581ea390-e4a5-43dd-a7a0-f29b2b885507",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:23:58.755Z",
+    "customer": "0d413073-7e88-41a0-b409-30ca27db474a",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "3800.00",
+    "balance_after": "5430.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹5430.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "4665f90a-bc65-4d5a-97a8-28dbf4995e7b",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:23:40.728Z",
+    "customer": "7509f98b-5380-4e96-bd88-3c861d7acce7",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "1100.00",
+    "balance_after": "5230.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹5230.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "600d2dd6-3e4d-4895-8159-abd1f266720b",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:28:48.022Z",
+    "customer": "c4892f20-ee28-4dcf-98d5-f635c76e77c8",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "-3190.00",
+    "balance_after": "2475.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹2475.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "9e05f54e-735f-4ffa-8018-381132f1c18f",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:28:35.952Z",
+    "customer": "bcb83141-1c79-4ca2-9176-3e4c989cccee",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "23355.00",
+    "balance_after": "25560.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹25560.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "60a4e51f-874d-4ab3-8bdb-ab553c65a4f3",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:28:25.448Z",
+    "customer": "4d35c0eb-240e-4638-89c0-e2f283858605",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "80.00",
+    "balance_after": "780.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹780.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "673c6966-65d0-40ce-9533-c9109c8d1443",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:27:05.112Z",
+    "customer": "47c25c46-6aee-49a3-a31c-5938e3f255cc",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "210.00",
+    "balance_after": "210.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹210.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "d3ae36df-9118-4131-8c31-9f4b4504da53",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:26:09.794Z",
+    "customer": "536feb85-6ad8-4cb3-a1af-32e81f0ad7c5",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "312.00",
+    "balance_after": "362.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹362.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "128bcda8-308a-4c39-b040-6557c0c24d6a",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:25:29.629Z",
+    "customer": "fa25ce12-0bb5-4c5e-bf6a-a8ce9960c417",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "150.00",
+    "balance_after": "170.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹170.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "a808f0e2-a87f-4e0a-8abb-8c280da4c83e",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:23:25.632Z",
+    "customer": "c29e9f36-b976-43a2-b238-4a21a9e48587",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "700.00",
+    "balance_after": "1030.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹1030.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "5dcdc9a0-52dc-452b-b4cb-056d2e9b9a62",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:30:28.678Z",
+    "customer": "90b663d7-fffa-478e-bb4f-7dea1dc18801",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "5.00",
+    "balance_after": "5.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹5.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "c60c3dc6-3352-4b4e-b25a-71d0c20ec8cd",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:30:02.125Z",
+    "customer": "94dc3226-bb3a-4e28-94ae-953f79136112",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "-120.00",
+    "balance_after": "0.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹0.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "33c22bd4-e10b-46de-8d74-bae6c58b4ab8",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:29:29.538Z",
+    "customer": "c1bee817-98f1-4b76-a7bc-8748f13e0fe5",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "270.00",
+    "balance_after": "1440.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹1440.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "c25e4304-4ead-4b31-aaef-a6420ed85cef",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:26:48.915Z",
+    "customer": "35d7dcde-4a67-4fd8-828a-f7620e79d3cf",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "-510.00",
+    "balance_after": "1690.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹1690.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "c7b2cd50-af96-49b2-942c-6dafcdd45ee5",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:26:39.228Z",
+    "customer": "0ab72049-0b24-414e-b620-ccccd937ccc3",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "-145.00",
+    "balance_after": "530.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹530.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "ebfa6818-3f3a-4ba0-b1c1-229de4d04132",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:26:23.013Z",
+    "customer": "0a680a34-0db8-4491-9c3f-871b8d9bb4db",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "220.00",
+    "balance_after": "1050.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹1050.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "e5868571-f101-47c3-a747-90d828c18d7b",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:25:08.221Z",
+    "customer": "ea6a58ed-76ad-4e1c-9310-3a9c9271ae35",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "-110.00",
+    "balance_after": "0.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹0.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "ae88db4b-a6e4-47aa-973b-a00f5aa43020",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:24:58.793Z",
+    "customer": "8b1162b2-53e6-471d-9f22-07cc459b4c88",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "1260.00",
+    "balance_after": "1560.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹1560.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "47e87caa-522e-44f0-9645-b2a7d76594ab",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:24:25.045Z",
+    "customer": "1a233bc7-e647-47e0-862d-a509ccf29bee",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "200.00",
+    "balance_after": "580.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹580.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "ad639d9b-11b6-4255-bffb-b9d78d540334",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:23:16.047Z",
+    "customer": "1d35e983-f0fe-4759-b38b-058b546be03e",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "855.00",
+    "balance_after": "1080.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹1080.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "b8924577-9a4b-473a-b94d-4d19ea8e80d4",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:30:45.253Z",
+    "customer": "7bc5658d-f208-44e9-b7c6-6db0313470bd",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "235.00",
+    "balance_after": "705.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹705.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
+},
+{
+  "model": "credits.credittransaction",
+  "pk": "a70d3b16-975e-423f-9831-f1a649d8443b",
+  "fields": {
+    "created_at": "2026-10-13T18:30:01Z",
+    "updated_at": "2026-10-14T15:29:16.339Z",
+    "customer": "39eb1902-7d9f-4074-aa46-334c51db9a94",
+    "transaction_type": "ADJUSTMENT",
+    "amount": "390.00",
+    "balance_after": "5990.00",
+    "reference_order": null,
+    "reference_payment": null,
+    "notes": "Previous due on 2026-10-14 set to ₹5990.00 from Fast Wholesale Entry",
+    "recorded_by": 1
+  }
 }
+]
