@@ -21,6 +21,7 @@ _default_hosts = [
     "zamzamfoods.up.railway.app",
     ".up.railway.app",
     ".railway.app",
+    ".pythonanywhere.com",
     "localhost",
     "127.0.0.1",
     "*",
@@ -122,6 +123,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
     r"^https://.*\.up\.railway\.app$",
     r"^https://.*\.railway\.app$",
+    r"^https://.*\.pythonanywhere\.com$",
     r"^tauri://.*$",
     r"^https?://tauri\.localhost$",
 ]
