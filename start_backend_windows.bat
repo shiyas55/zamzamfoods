@@ -63,10 +63,14 @@ if %errorlevel% neq 0 (
     pip install -r "!REQ_TXT!"
 )
 
-:: Ensure SQLite database exists with 128 shops and 5 users
+:: Ensure SQLite database exists with complete Oct 14 data
 if not exist "%~dp0backend\db.sqlite3" (
-    if exist "%~dp0backups\zamzam_clean_shops_and_users.sqlite3" (
-        echo [INFO] Initializing clean SQLite database with 128 shops and 5 users...
+    if exist "%~dp0backups\zamzam_backup_oct14.sqlite3" (
+        echo [INFO] Initializing SQLite database with complete Oct 14 data...
+        copy /y "%~dp0backups\zamzam_backup_oct14.sqlite3" "%~dp0backend\db.sqlite3" >nul 2>&1
+        copy /y "%~dp0backups\zamzam_backup_oct14.sqlite3" "%~dp0db.sqlite3" >nul 2>&1
+    ) else if exist "%~dp0backups\zamzam_clean_shops_and_users.sqlite3" (
+        echo [INFO] Initializing clean SQLite database...
         copy /y "%~dp0backups\zamzam_clean_shops_and_users.sqlite3" "%~dp0backend\db.sqlite3" >nul 2>&1
         copy /y "%~dp0backups\zamzam_clean_shops_and_users.sqlite3" "%~dp0db.sqlite3" >nul 2>&1
     )
