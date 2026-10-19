@@ -1,0 +1,744 @@
+{
+  "date": "2026-10-14",
+  "total_orders": 34,
+  "orders": [
+    {
+      "order_id": "fe5ae660-c514-4b49-8056-74f062dfdcd4",
+      "order_number": "ORD-20261014-0034",
+      "customer_id": "4d35c0eb-240e-4638-89c0-e2f283858605",
+      "customer_name": "zeezo mims",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 710.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 40,
+          "unit_price": 9.0,
+          "subtotal": 360.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 70,
+          "unit_price": 5.0,
+          "subtotal": 350.0
+        }
+      ]
+    },
+    {
+      "order_id": "4b3f1142-09ba-4092-bdcb-6700af6099f8",
+      "order_number": "ORD-20261014-0033",
+      "customer_id": "4f570478-e33e-47e8-930f-6607b8db78c0",
+      "customer_name": "thuba bakery",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 650.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 130,
+          "unit_price": 5.0,
+          "subtotal": 650.0
+        }
+      ]
+    },
+    {
+      "order_id": "5df3d9b5-4f45-4688-80a2-b1c9a34a7d88",
+      "order_number": "ORD-20261014-0032",
+      "customer_id": "04cfa0cf-b29a-4eb0-bdfe-658f446954cb",
+      "customer_name": "thondayad",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 200.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 40,
+          "unit_price": 5.0,
+          "subtotal": 200.0
+        }
+      ]
+    },
+    {
+      "order_id": "34443ced-bd81-4ad7-9b1e-513d61af4275",
+      "order_number": "ORD-20261014-0031",
+      "customer_id": "1d537e3a-af1a-447b-8e86-915b398cdca0",
+      "customer_name": "tasty hut restaurent",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 80.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 10,
+          "unit_price": 8.0,
+          "subtotal": 80.0
+        }
+      ]
+    },
+    {
+      "order_id": "8419aeba-2697-471f-a7fc-84ed9973b1f7",
+      "order_number": "ORD-20261014-0030",
+      "customer_id": "8b1162b2-53e6-471d-9f22-07cc459b4c88",
+      "customer_name": "shaz live alfahm",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 1395.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 30,
+          "unit_price": 9.0,
+          "subtotal": 270.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 250,
+          "unit_price": 4.5,
+          "subtotal": 1125.0
+        }
+      ]
+    },
+    {
+      "order_id": "83d9c170-a78e-4248-a041-79cbbd2eb3d8",
+      "order_number": "ORD-20261014-0029",
+      "customer_id": "7509f98b-5380-4e96-bd88-3c861d7acce7",
+      "customer_name": "raheem shop mediaone",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 300.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 60,
+          "unit_price": 5.0,
+          "subtotal": 300.0
+        }
+      ]
+    },
+    {
+      "order_id": "284f93dc-0151-44f2-9c2e-0953f935773b",
+      "order_number": "ORD-20261014-0028",
+      "customer_id": "7bc5658d-f208-44e9-b7c6-6db0313470bd",
+      "customer_name": "parambil;",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 530.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 20,
+          "unit_price": 9.0,
+          "subtotal": 180.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 70,
+          "unit_price": 5.0,
+          "subtotal": 350.0
+        }
+      ]
+    },
+    {
+      "order_id": "020db7a7-820d-4539-901f-ad6c495a9b24",
+      "order_number": "ORD-20261014-0027",
+      "customer_id": "fa25ce12-0bb5-4c5e-bf6a-a8ce9960c417",
+      "customer_name": "ossobocco",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 290.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 10,
+          "unit_price": 9.0,
+          "subtotal": 90.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 40,
+          "unit_price": 5.0,
+          "subtotal": 200.0
+        }
+      ]
+    },
+    {
+      "order_id": "b4ecf68c-0c0f-4b56-9be1-b482287299a9",
+      "order_number": "ORD-20261014-0026",
+      "customer_id": "1fb39cd6-c1b9-4fc2-b85e-99fce18b2c1b",
+      "customer_name": "orkid bekery velliparmba",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 200.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 40,
+          "unit_price": 5.0,
+          "subtotal": 200.0
+        }
+      ]
+    },
+    {
+      "order_id": "d3517802-c1e1-4dd5-b42e-d94ab68634ba",
+      "order_number": "ORD-20261014-0025",
+      "customer_id": "c1bee817-98f1-4b76-a7bc-8748f13e0fe5",
+      "customer_name": "ninja arakkinar",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 1215.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 270,
+          "unit_price": 4.5,
+          "subtotal": 1215.0
+        }
+      ]
+    },
+    {
+      "order_id": "42668f51-fd3e-4ad5-a476-cca7244e8257",
+      "order_number": "ORD-20261014-0024",
+      "customer_id": "0a680a34-0db8-4491-9c3f-871b8d9bb4db",
+      "customer_name": "ngo crunchy tales",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 150.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 30,
+          "unit_price": 5.0,
+          "subtotal": 150.0
+        }
+      ]
+    },
+    {
+      "order_id": "9a0fdc40-f5c9-4772-b6aa-c0bce7409576",
+      "order_number": "ORD-20261014-0023",
+      "customer_id": "0d413073-7e88-41a0-b409-30ca27db474a",
+      "customer_name": "mr mandi velliparamba",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 1510.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 90,
+          "unit_price": 9.0,
+          "subtotal": 810.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 140,
+          "unit_price": 5.0,
+          "subtotal": 700.0
+        }
+      ]
+    },
+    {
+      "order_id": "ba2bd217-5a9c-46a4-a908-1cb14a36b164",
+      "order_number": "ORD-20261014-0022",
+      "customer_id": "802f067e-e6ee-4c09-8ab2-b8f13cc17229",
+      "customer_name": "mr hypermartket",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 150.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 30,
+          "unit_price": 5.0,
+          "subtotal": 150.0
+        }
+      ]
+    },
+    {
+      "order_id": "1493f0b9-27fb-4f81-9c8e-3a366beb0dc2",
+      "order_number": "ORD-20261014-0021",
+      "customer_id": "47c25c46-6aee-49a3-a31c-5938e3f255cc",
+      "customer_name": "MR hypermarket",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 180.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 20,
+          "unit_price": 9.0,
+          "subtotal": 180.0
+        }
+      ]
+    },
+    {
+      "order_id": "f5fe1341-7a23-4f59-8051-b54dbe9f90a2",
+      "order_number": "ORD-20261014-0020",
+      "customer_id": "ea6a58ed-76ad-4e1c-9310-3a9c9271ae35",
+      "customer_name": "morris kovoor",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 1260.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 90,
+          "unit_price": 9.0,
+          "subtotal": 810.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 90,
+          "unit_price": 5.0,
+          "subtotal": 450.0
+        }
+      ]
+    },
+    {
+      "order_id": "9a5e9f94-fbf7-424d-b858-732a5963a005",
+      "order_number": "ORD-20261014-0019",
+      "customer_id": "39506eaf-b662-4bdf-8ff6-e9b373c58894",
+      "customer_name": "mandi pokkunnu",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 190.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 10,
+          "unit_price": 9.0,
+          "subtotal": 90.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 20,
+          "unit_price": 5.0,
+          "subtotal": 100.0
+        }
+      ]
+    },
+    {
+      "order_id": "144e59b5-08d0-4abe-9344-98e81b88fa5c",
+      "order_number": "ORD-20261014-0018",
+      "customer_id": "bcb83141-1c79-4ca2-9176-3e4c989cccee",
+      "customer_name": "live alfahm mangav",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 1665.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 90,
+          "unit_price": 9.0,
+          "subtotal": 810.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 190,
+          "unit_price": 4.5,
+          "subtotal": 855.0
+        }
+      ]
+    },
+    {
+      "order_id": "d79761b3-3010-49e2-b0d1-603ce6760840",
+      "order_number": "ORD-20261014-0017",
+      "customer_id": "1a233bc7-e647-47e0-862d-a509ccf29bee",
+      "customer_name": "khaleej restaurent",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 380.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 20,
+          "unit_price": 9.0,
+          "subtotal": 180.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 40,
+          "unit_price": 5.0,
+          "subtotal": 200.0
+        }
+      ]
+    },
+    {
+      "order_id": "d47d40e8-56fa-4ea7-b7ca-f5783c7e1efd",
+      "order_number": "ORD-20261014-0016",
+      "customer_id": "5305c2a9-b5e0-44cd-b2dd-df56fc8f7725",
+      "customer_name": "karthika bakes kannadkkal 1",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 970.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 30,
+          "unit_price": 9.0,
+          "subtotal": 270.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 140,
+          "unit_price": 5.0,
+          "subtotal": 700.0
+        }
+      ]
+    },
+    {
+      "order_id": "c2d75a90-976f-4152-bac4-f55f3863c75a",
+      "order_number": "ORD-20261014-0015",
+      "customer_id": "0ab72049-0b24-414e-b620-ccccd937ccc3",
+      "customer_name": "kannadikkal 2",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 620.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 20,
+          "unit_price": 9.0,
+          "subtotal": 180.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 80,
+          "unit_price": 5.5,
+          "subtotal": 440.0
+        }
+      ]
+    },
+    {
+      "order_id": "e0c2e7bf-5180-4de9-9bc0-8ebfe344322c",
+      "order_number": "ORD-20261014-0014",
+      "customer_id": "0b38a4d5-bc22-413f-8231-7f73a351f15f",
+      "customer_name": "grill cafe",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 540.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 40,
+          "unit_price": 9.0,
+          "subtotal": 360.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 40,
+          "unit_price": 4.5,
+          "subtotal": 180.0
+        }
+      ]
+    },
+    {
+      "order_id": "378b1b29-9f57-460d-98cf-f9da535a6db9",
+      "order_number": "ORD-20261014-0013",
+      "customer_id": "536feb85-6ad8-4cb3-a1af-32e81f0ad7c5",
+      "customer_name": "food qissa",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 142.0,
+      "items": [
+        {
+          "product_id": "442ad867-1d4a-4556-a47d-847a08124612",
+          "product_name": "hotdog",
+          "quantity": 1,
+          "unit_price": 37.0,
+          "subtotal": 37.0
+        },
+        {
+          "product_id": "8bf97a76-6248-4bc4-876f-6012c0850668",
+          "product_name": "Bun",
+          "quantity": 1,
+          "unit_price": 55.0,
+          "subtotal": 55.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 10,
+          "unit_price": 5.0,
+          "subtotal": 50.0
+        }
+      ]
+    },
+    {
+      "order_id": "6c365fc2-ad78-422d-a0e6-860f4001b4f2",
+      "order_number": "ORD-20261014-0012",
+      "customer_id": "1a182ba5-f01f-412f-aec9-3db0bd775c67",
+      "customer_name": "dana areekad",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 720.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 80,
+          "unit_price": 9.0,
+          "subtotal": 720.0
+        }
+      ]
+    },
+    {
+      "order_id": "07408825-459f-404d-a45f-96cad317b031",
+      "order_number": "ORD-20261014-0011",
+      "customer_id": "d8ce3cad-7cb2-49d3-96d5-3a25aa064c10",
+      "customer_name": "dana arakkinar",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 90.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 10,
+          "unit_price": 9.0,
+          "subtotal": 90.0
+        }
+      ]
+    },
+    {
+      "order_id": "2a0fbfb5-bc38-45cd-a258-b7a563de7bdc",
+      "order_number": "ORD-20261014-0010",
+      "customer_id": "496dd817-f7dd-4793-b46c-c4181cf61b70",
+      "customer_name": "dahban mandi",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 150.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 30,
+          "unit_price": 5.0,
+          "subtotal": 150.0
+        }
+      ]
+    },
+    {
+      "order_id": "1679becd-c628-4243-b9c2-5cd217ecf6e0",
+      "order_number": "ORD-20261014-0009",
+      "customer_id": "35d7dcde-4a67-4fd8-828a-f7620e79d3cf",
+      "customer_name": "chopstick palazhi",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 1930.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 120,
+          "unit_price": 9.0,
+          "subtotal": 1080.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 170,
+          "unit_price": 5.0,
+          "subtotal": 850.0
+        }
+      ]
+    },
+    {
+      "order_id": "72f61bec-c05c-445d-a034-fb217636ca88",
+      "order_number": "ORD-20261014-0008",
+      "customer_id": "c4892f20-ee28-4dcf-98d5-f635c76e77c8",
+      "customer_name": "chick co",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 2925.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 650,
+          "unit_price": 4.5,
+          "subtotal": 2925.0
+        }
+      ]
+    },
+    {
+      "order_id": "cddef518-c011-42b2-9ad4-e57bf1197b23",
+      "order_number": "ORD-20261014-0007",
+      "customer_id": "d52eaa2a-9399-4fea-accd-63a036ecf0ff",
+      "customer_name": "chakkara panthal",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 100.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 20,
+          "unit_price": 5.0,
+          "subtotal": 100.0
+        }
+      ]
+    },
+    {
+      "order_id": "a5b93393-e4dd-4dab-aba3-f2811c15ccc7",
+      "order_number": "ORD-20261014-0006",
+      "customer_id": "c2aa4bea-5cc5-4884-9901-d1cc84ee40e8",
+      "customer_name": "cafe 19",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 100.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 20,
+          "unit_price": 5.0,
+          "subtotal": 100.0
+        }
+      ]
+    },
+    {
+      "order_id": "acbd106e-145c-4c1c-822c-f820f1a61c30",
+      "order_number": "ORD-20261014-0005",
+      "customer_id": "acffbfc0-e27a-47a2-be42-44977d4525f5",
+      "customer_name": "burnight medical college",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 400.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 80,
+          "unit_price": 5.0,
+          "subtotal": 400.0
+        }
+      ]
+    },
+    {
+      "order_id": "a380dff4-3acb-4320-8416-132d06caa378",
+      "order_number": "ORD-20261014-0004",
+      "customer_id": "c29e9f36-b976-43a2-b238-4a21a9e48587",
+      "customer_name": "alshai shawarma shop",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 560.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 40,
+          "unit_price": 9.0,
+          "subtotal": 360.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 40,
+          "unit_price": 5.0,
+          "subtotal": 200.0
+        }
+      ]
+    },
+    {
+      "order_id": "e7ae766a-98eb-49cc-b01c-f91089b74d9e",
+      "order_number": "ORD-20261014-0003",
+      "customer_id": "651e2320-d0f3-4474-9236-b9bd8d297f10",
+      "customer_name": "adam golden chick",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 1020.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 40,
+          "unit_price": 8.0,
+          "subtotal": 320.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 140,
+          "unit_price": 5.0,
+          "subtotal": 700.0
+        }
+      ]
+    },
+    {
+      "order_id": "8d8965fb-28ca-4492-9f7b-7171b43c177b",
+      "order_number": "ORD-20261014-0002",
+      "customer_id": "1d35e983-f0fe-4759-b38b-058b546be03e",
+      "customer_name": "sulthan mandi",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 225.0,
+      "items": [
+        {
+          "product_id": "8f196b7d-42c2-4af8-90d7-b20fc63c7914",
+          "product_name": "Romali",
+          "quantity": 10,
+          "unit_price": 9.0,
+          "subtotal": 90.0
+        },
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 30,
+          "unit_price": 4.5,
+          "subtotal": 135.0
+        }
+      ]
+    },
+    {
+      "order_id": "4ae31bb6-8f03-4291-aa89-17a52adf59e0",
+      "order_number": "ORD-20261014-0001",
+      "customer_id": "b6643869-e550-4846-8fdf-aa7fa817977e",
+      "customer_name": "rajitha chappathi company",
+      "order_date": "2026-10-14",
+      "status": "LOCKED",
+      "total_amount": 50.0,
+      "items": [
+        {
+          "product_id": "aecd1280-ef53-4445-a8a6-7b0256046bd6",
+          "product_name": "kubbus",
+          "quantity": 10,
+          "unit_price": 5.0,
+          "subtotal": 50.0
+        }
+      ]
+    }
+  ]
+}
