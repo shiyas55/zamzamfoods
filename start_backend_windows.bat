@@ -63,19 +63,21 @@ if %errorlevel% neq 0 (
     pip install -r "!REQ_TXT!"
 )
 
-:: Set Live Aiven Cloud Database URL
-set "DATABASE_URL=postgres://avnadmin:AVNS__5t4TpkXOy-BXhofK6i@pg-65e4170-zamzamfoods.h.aivencloud.com:18638/defaultdb?sslmode=require"
+:: Database configuration: Default to local fast SQLite with 128 shops and 5 users
+if "%DATABASE_URL%"=="" (
+    set "DATABASE_URL=sqlite:///db.sqlite3"
+)
 set "DJANGO_ENV=development"
 set "DJANGO_DEBUG=True"
 
-echo [3/3] Checking database schema on Aiven Cloud...
+echo [3/3] Checking database schema...
 python "!MANAGE_PY!" migrate --noinput
 
 echo.
 echo ==============================================================================
 echo  BACKEND SERVER RUNNING AT: http://127.0.0.1:8000/api/v1/
-echo  ONLINE DATABASE          : Aiven PostgreSQL Cloud
-echo  NO RAILWAY / NO VERCEL   : 100%% Free Local Setup
+echo  DATABASE                 : Local SQLite (Fast, 100%% Free, No Connection Limit)
+echo  DATA LOADED              : 128 Shops + 5 Users (Clean Orders)
 echo ==============================================================================
 echo Keep this window open while using the Zamzam Foods Desktop application.
 echo.

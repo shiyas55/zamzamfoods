@@ -35,15 +35,23 @@ if not DATABASE_URL_ENV:
 if not DATABASE_URL_ENV or any(p in DATABASE_URL_ENV for p in ["[YOUR-PASSWORD]", "<your-", "<password>", "YOUR_PASSWORD"]):
     DATABASE_URL_ENV = AIVEN_DEFAULT_DATABASE_URL
 
-_is_internal = any(h in DATABASE_URL_ENV for h in ["railway.internal", "localhost", "127.0.0.1"])
-_ssl_require = not _is_internal
+_is_sqlite = DATABASE_URL_ENV.startswith("sqlite")
+_is_internal = any(h in DATABASE_URL_ENV for h in ["railway.internal", "localhost", "127.0.0.1"]) or _is_sqlite
+_ssl_require = not _is_internal and not _is_sqlite
+_parsed_db = dj_database_url.parse(
+    DATABASE_URL_ENV,
+    conn_max_age=0,
+    conn_health_checks=False if _is_sqlite else True,
+    ssl_require=_ssl_require,
+)
+if _is_sqlite:
+    _name = _parsed_db.get("NAME", "db.sqlite3")
+    if not os.path.isabs(_name):
+        clean_name = os.path.basename(_name) if "sqlite" in _name else _name
+        _parsed_db["NAME"] = str(BASE_DIR / clean_name)
+
 DATABASES = {
-    "default": dj_database_url.parse(
-        DATABASE_URL_ENV,
-        conn_max_age=0,
-        conn_health_checks=True,
-        ssl_require=_ssl_require,
-    )
+    "default": _parsed_db
 }
 
 # CORS settings for development (React dev server on port 5173 & Tailscale)
