@@ -760,7 +760,7 @@ class DatabaseRestoreView(APIView):
         if format_param == "json":
             import json
             from django.core import serializers
-            from django.db import transaction
+            from django.db import transaction, connection
 
             try:
                 parsed_json = json.loads(raw_content)
@@ -854,6 +854,40 @@ class DatabaseRestoreView(APIView):
                     except Exception:
                         pass
 
+            # Sort by model dependency order so parent models are restored before children
+            MODEL_DEPENDENCY_ORDER = {
+                "common.systemsettings": 1,
+                "accounts.user": 2,
+                "accounts.staffmember": 3,
+                "routes.route": 4,
+                "routes.driver": 5,
+                "products.product": 6,
+                "customers.customer": 7,
+                "customers.customerproductprice": 8,
+                "orders.order": 9,
+                "orders.orderitem": 10,
+                "orders.orderactivitylog": 11,
+                "deliveries.delivery": 12,
+                "payments.payment": 13,
+                "credits.credittransaction": 14,
+                "reports.dailyclosing": 15,
+                "routes.drivershift": 16,
+                "routes.driverexpense": 17,
+                "common.activitylog": 18,
+            }
+            if isinstance(objects_to_deserialize, list):
+                objects_to_deserialize.sort(
+                    key=lambda x: MODEL_DEPENDENCY_ORDER.get(x.get("model", "").lower(), 99) if isinstance(x, dict) else 99
+                )
+
+            is_sqlite = "sqlite" in connection.settings_dict.get("ENGINE", "").lower()
+            if is_sqlite:
+                try:
+                    with connection.cursor() as cur:
+                        cur.execute("PRAGMA foreign_keys = OFF;")
+                except Exception:
+                    pass
+
             try:
                 with transaction.atomic():
                     for deserialized_obj in serializers.deserialize("python", objects_to_deserialize, ignorenonexistent=True):
@@ -865,7 +899,7 @@ class DatabaseRestoreView(APIView):
                         _resolve_conflicts_before_save(instance)
 
                         # Wrap each entity save in an inner atomic block (savepoint)
-                        # so that an isolated duplicate key violation never breaks the entire restoration
+                        # so that an isolated duplicate key or foreign key violation never breaks the entire restoration
                         try:
                             with transaction.atomic():
                                 deserialized_obj.save()
@@ -892,10 +926,20 @@ class DatabaseRestoreView(APIView):
                                         restored_count += 1
                                         continue
                                 skipped_duplicates += 1
+                            elif "foreign key" in err_str:
+                                skipped_duplicates += 1
+                                continue
                             else:
                                 raise entity_err
             except Exception as e:
                 return Response({"error": f"Failed during JSON entity restoration: {str(e)}"}, status=400)
+            finally:
+                if is_sqlite:
+                    try:
+                        with connection.cursor() as cur:
+                            cur.execute("PRAGMA foreign_keys = ON;")
+                    except Exception:
+                        pass
 
             from apps.common.audit import log_activity
             log_activity(
