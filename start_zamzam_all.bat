@@ -52,39 +52,28 @@ if %errorlevel% neq 0 (
 echo.
 echo [2/2] Opening Zamzam Foods Application...
 
-:: Check for native Zamzam Foods.exe first, then fallback to Edge/Chrome App Mode
+:: Open in Dedicated Desktop Window App Mode (Always running latest build with live status & backend)
 set "APP_OPENED=0"
 
-if exist "%~dp0Zamzam Foods.exe" (
-    echo Launching Native Desktop App: "%~dp0Zamzam Foods.exe"...
-    start "" "%~dp0Zamzam Foods.exe"
+if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
+    echo Launching Desktop Window: Microsoft Edge App Mode...
+    start "" "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
     set "APP_OPENED=1"
-) else if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
-    echo Launching Installed Desktop App...
-    start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
+) else if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
+    echo Launching Desktop Window: Microsoft Edge App Mode...
+    start "" "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
     set "APP_OPENED=1"
-) else if exist "%~dp0frontend\src-tauri\target\release\Zamzam Foods.exe" (
-    echo Launching Release Desktop App...
-    start "" "%~dp0frontend\src-tauri\target\release\Zamzam Foods.exe"
+) else if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
+    echo Launching Desktop Window: Google Chrome App Mode...
+    start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
     set "APP_OPENED=1"
-)
-
-if "!APP_OPENED!"=="0" (
-    if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
-        start "" "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
-        set "APP_OPENED=1"
-    ) else if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
-        start "" "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
-        set "APP_OPENED=1"
-    ) else if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
-        start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
-        set "APP_OPENED=1"
-    ) else if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" (
-        start "" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
-        set "APP_OPENED=1"
-    ) else (
-        start http://127.0.0.1:8000/
-    )
+) else if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" (
+    echo Launching Desktop Window: Google Chrome App Mode...
+    start "" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
+    set "APP_OPENED=1"
+) else (
+    echo Opening Default Browser...
+    start http://127.0.0.1:8000/
 )
 
 timeout /t 2 /nobreak >nul

@@ -56,7 +56,7 @@ _ssl_require = not _is_internal_db
 DATABASES = {
     "default": dj_database_url.parse(
         DATABASE_URL_ENV,
-        conn_max_age=600,
+        conn_max_age=0,
         conn_health_checks=True,
         ssl_require=_ssl_require,
     )
