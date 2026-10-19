@@ -198,9 +198,9 @@ export const DriverDashboard: React.FC = () => {
     e.preventDefault();
     if (!paymentDelivery) return;
 
-    const amt = parseFloat(collectAmount);
-    if (isNaN(amt) || amt <= 0) {
-      setActionError('Please enter a valid amount greater than ₹0');
+    const amt = parseFloat(collectAmount.trim() || '0');
+    if (isNaN(amt) || amt < 0) {
+      setActionError('Please enter a valid amount (₹0 or greater)');
       return;
     }
 
@@ -208,6 +208,17 @@ export const DriverDashboard: React.FC = () => {
       setSubmitting(true);
       setActionError(null);
       const shopName = paymentDelivery.order_details?.customer_details?.name || 'Shop';
+
+      if (amt === 0) {
+        // Zero cash collected - mark delivery completed with zero collection (bill is on credit)
+        await deliveryService.completeDelivery(paymentDelivery.id, {
+          recipient_name: paymentDelivery.order_details?.customer_details?.owner_name || 'Staff',
+        });
+        setSuccessToast(`✓ Delivery completed for ${shopName} (₹0 Cash collected — Bill on Credit)`);
+        setPaymentDelivery(null);
+        await fetchDeliveries(true);
+        return;
+      }
 
       await paymentService.recordPayment({
         customer_id: paymentDelivery.order_details?.customer || '',
@@ -1033,8 +1044,7 @@ export const DriverDashboard: React.FC = () => {
                   <input
                     type="number"
                     step="0.01"
-                    min="1"
-                    required
+                    min="0"
                     autoFocus
                     value={collectAmount}
                     onChange={(e) => setCollectAmount(e.target.value)}

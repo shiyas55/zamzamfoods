@@ -30,8 +30,8 @@ def record_payment_service(customer_id, amount, payment_method, collected_by, or
     - Appends entry into Customer Credit Ledger
     """
     amount = Decimal(str(amount)).quantize(Decimal("0.01"))
-    if amount <= Decimal("0.00"):
-        raise ValueError("Payment amount must be greater than zero.")
+    if amount < Decimal("0.00"):
+        raise ValueError("Payment amount cannot be negative.")
 
     if received_at is None:
         received_at = timezone.now()

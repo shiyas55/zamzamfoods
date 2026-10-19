@@ -99,7 +99,7 @@ class CreatePaymentSerializer(serializers.Serializer):
     order_id = serializers.UUIDField(required=False, allow_null=True)
     staff_member_id = serializers.UUIDField(required=False, allow_null=True)
     payment_type = serializers.ChoiceField(choices=["ORDER_PAYMENT", "PREVIOUS_CREDIT"], required=False, allow_null=True)
-    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.01"))
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.00"), default=Decimal("0.00"))
     payment_method = serializers.ChoiceField(choices=Payment.Method.choices)
     reference_number = serializers.CharField(required=False, allow_blank=True, default="")
     notes = serializers.CharField(required=False, allow_blank=True, default="")

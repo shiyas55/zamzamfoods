@@ -145,8 +145,9 @@ export const DriverCollectPaymentPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCustomerId || !amount || parseFloat(amount) <= 0) {
-      setError('Please select a customer and specify a valid collected amount.');
+    const parsedAmt = parseFloat(amount || '0');
+    if (!selectedCustomerId || isNaN(parsedAmt) || parsedAmt < 0) {
+      setError('Please select a customer and specify a valid amount (₹0 or greater).');
       return;
     }
 
@@ -154,19 +155,23 @@ export const DriverCollectPaymentPage: React.FC = () => {
       setSubmitting(true);
       setError(null);
 
-      const recorded = await paymentService.recordPayment({
-        customer_id: selectedCustomerId,
-        amount: parseFloat(amount).toFixed(2),
-        payment_method: paymentMethod,
-        order_id: activeOrder ? activeOrder.id : null,
-        reference_number: referenceNumber.trim() || undefined,
-        notes: notes.trim() || (activeOrder ? "Delivery collection" : 'Customer balance collection'),
-      });
+      let paymentNum = 'CREDIT-VISIT';
+      if (parsedAmt > 0) {
+        const recorded = await paymentService.recordPayment({
+          customer_id: selectedCustomerId,
+          amount: parsedAmt.toFixed(2),
+          payment_method: paymentMethod,
+          order_id: activeOrder ? activeOrder.id : null,
+          reference_number: referenceNumber.trim() || undefined,
+          notes: notes.trim() || (activeOrder ? "Delivery collection" : 'Customer balance collection'),
+        });
+        paymentNum = recorded.payment_number;
+      }
 
       setSuccessData({
         customerName: selectedCustomer?.name || 'Customer Shop',
         customerPhone: selectedCustomer?.phone,
-        paymentNumber: recorded.payment_number,
+        paymentNumber: paymentNum,
         amount,
         paymentMethod,
         remainingBalance: currentOutstanding.toFixed(2),
@@ -646,7 +651,7 @@ export const DriverCollectPaymentPage: React.FC = () => {
                 <input
                   type="number"
                   step="0.01"
-                  min="0.01"
+                  min="0"
                   className="form-input"
                   style={{
                     fontSize: '1.6rem',
