@@ -78,10 +78,9 @@ CORS_ALLOWED_ORIGINS += [
     "http://shiyass-macbook-air.tail4ef336.ts.net",
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https?://localhost(:[0-9]+)?$",
-    r"^https?://127\.0\.0\.1(:[0-9]+)?$",
+    r"^https?://.*$",
     r"^tauri://.*$",
-    r"^https?://tauri\.localhost$",
+    r"^app://.*$",
 ]
 CORS_ALLOW_CREDENTIALS = True
 

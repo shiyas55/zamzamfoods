@@ -50,12 +50,24 @@ if %errorlevel% neq 0 (
 :BACKEND_UP
 
 echo.
-echo [2/2] Opening Zamzam Foods Application...
+echo [2/2] Opening Zamzam Foods Desktop Window...
 
 set "APP_OPENED=0"
 
-:: 1. Try native installed Desktop application first
-if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
+:: 1. Launch borderless Desktop Window (Edge / Chrome App Mode - standalone desktop window, 0ms local engine connection, no browser URL bar)
+if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
+    echo Launching Desktop Window: Microsoft Edge Standalone App...
+    start "" "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
+    set "APP_OPENED=1"
+) else if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
+    echo Launching Desktop Window: Microsoft Edge Standalone App...
+    start "" "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
+    set "APP_OPENED=1"
+) else if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
+    echo Launching Desktop Window: Google Chrome Standalone App...
+    start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
+    set "APP_OPENED=1"
+) else if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
     echo Launching Native Desktop App...
     start "" "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe"
     set "APP_OPENED=1"
@@ -67,20 +79,8 @@ if exist "%LocalAppData%\Programs\Zamzam Foods\Zamzam Foods.exe" (
     echo Launching Native Desktop App...
     start "" "%~dp0Zamzam Foods.exe"
     set "APP_OPENED=1"
-) else if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
-    echo Launching Desktop Window: Microsoft Edge App Mode...
-    start "" "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
-    set "APP_OPENED=1"
-) else if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
-    echo Launching Desktop Window: Microsoft Edge App Mode...
-    start "" "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" --app=http://127.0.0.1:8000/
-    set "APP_OPENED=1"
-) else if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" (
-    echo Launching Desktop Window: Google Chrome App Mode...
-    start "" "%ProgramFiles%\Google\Chrome\Application\chrome.exe" --app=http://127.0.0.1:8000/
-    set "APP_OPENED=1"
 ) else (
-    echo Opening Default Browser...
+    echo Opening Zamzam Foods in Default Browser...
     start http://127.0.0.1:8000/
 )
 
