@@ -12,7 +12,8 @@ $ws = New-Object -ComObject WScript.Shell;
 $s = $ws.CreateShortcut($desktop);
 $s.TargetPath = '%~dp0start_zamzam_all.bat';
 $s.WorkingDirectory = '%~dp0';
-$icon = '%~dp0frontend\src-tauri\icons\icon.ico';
+$icon = '%~dp0icon.ico';
+if (-not (Test-Path $icon)) { $icon = '%~dp0frontend\src-tauri\icons\icon.ico'; }
 if (Test-Path $icon) { $s.IconLocation = $icon; }
 $s.Description = 'Zamzam Foods Wholesale & Distribution Management';
 $s.Save();
