@@ -18,6 +18,8 @@ let clientReady = false;
 let latestQrText = null;
 let latestQrImage = null;
 let clientInfo = null;
+let stepStatus = 'Initializing Chromium browser...';
+let lastError = null;
 
 // Incoming order queue (Holds overnight orders for local PC sync)
 let incomingOrdersQueue = [];
@@ -61,8 +63,8 @@ function getPuppeteerArgs() {
     '--disable-accelerated-2d-canvas',
     '--no-first-run',
     '--no-zygote',
-    '--single-process',
     '--disable-gpu',
+    '--disable-extensions',
   ];
   const executablePath = getBrowserExecutablePath();
   const config = {
@@ -83,10 +85,16 @@ const client = new Client({
   puppeteer: getPuppeteerArgs(),
 });
 
+client.on('loading_screen', (percent, message) => {
+  stepStatus = `Loading WhatsApp Web: ${percent}% (${message || 'syncing'})`;
+  console.log(`⏳ ${stepStatus}`);
+});
+
 client.on('qr', async (qr) => {
   latestQrText = qr;
   clientReady = false;
   clientInfo = null;
+  stepStatus = 'QR Code Ready for Scanning';
 
   try {
     latestQrImage = await QRCode.toDataURL(qr);
@@ -107,6 +115,7 @@ client.on('ready', () => {
   latestQrText = null;
   latestQrImage = null;
   clientInfo = client.info;
+  stepStatus = 'Connected & Active';
 
   console.log('\n======================================================');
   console.log('✅ ZAMZAM FOODS WHATSAPP BRIDGE IS CONNECTED & READY!');
@@ -116,22 +125,29 @@ client.on('ready', () => {
 });
 
 client.on('authenticated', () => {
+  stepStatus = 'Authenticated. Finalizing session...';
   console.log('🔐 WhatsApp Session authenticated successfully.');
 });
 
 client.on('auth_failure', (msg) => {
+  lastError = `Authentication failure: ${msg}`;
+  stepStatus = 'Auth Failed';
   console.error('❌ WhatsApp Authentication failure:', msg);
   clientReady = false;
 });
 
 client.on('disconnected', (reason) => {
+  stepStatus = `Disconnected: ${reason}`;
   console.warn('⚠️ WhatsApp client disconnected:', reason);
   clientReady = false;
   latestQrText = null;
   latestQrImage = null;
   clientInfo = null;
   console.log('🔄 Re-initializing WhatsApp client...');
-  client.initialize().catch((e) => console.error('Failed to reinitialize:', e));
+  client.initialize().catch((e) => {
+    lastError = e.message || String(e);
+    console.error('Failed to reinitialize:', e);
+  });
 });
 
 // Incoming message listener (Receives 24/7 orders and queues for local PC)
@@ -198,6 +214,8 @@ app.get('/status', (req, res) => {
   res.json({
     connected: clientReady,
     hasQr: Boolean(latestQrImage),
+    stepStatus,
+    lastError,
     pendingOrdersCount: incomingOrdersQueue.length,
     info: clientInfo
       ? {
@@ -258,13 +276,19 @@ app.get('/qr', (req, res) => {
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-            .box { background: #1e293b; padding: 2.5rem; border-radius: 16px; border: 1px solid #334155; }
+            .box { background: #1e293b; padding: 2.5rem; border-radius: 16px; border: 1px solid #334155; max-width: 420px; }
+            .status-badge { display: inline-block; padding: 6px 14px; background: #334155; border-radius: 999px; font-size: 0.85rem; color: #38bdf8; margin: 10px 0; font-family: monospace; }
+            .spinner { width: 36px; height: 36px; border: 3px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+            @keyframes spin { to { transform: rotate(360deg); } }
           </style>
         </head>
         <body>
           <div class="box">
-            <h2>⏳ Generating QR Code...</h2>
-            <p>Please wait a few seconds. This page will automatically refresh.</p>
+            <div class="spinner"></div>
+            <h2 style="margin: 0;">⏳ Generating QR Code...</h2>
+            <div class="status-badge">${stepStatus}</div>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Starting Chromium browser & loading WhatsApp Web.<br/>This page will auto-refresh every 3s.</p>
+            ${lastError ? `<p style="color: #f87171; font-size: 0.8rem; background: #450a0a; padding: 8px; border-radius: 8px;">⚠️ ${lastError}</p>` : ''}
           </div>
         </body>
       </html>
@@ -403,6 +427,8 @@ app.listen(PORT, () => {
 
   console.log('⏳ Starting WhatsApp Web browser session...');
   client.initialize().catch((err) => {
+    lastError = err.message || String(err);
+    stepStatus = `Init Error: ${lastError}`;
     console.error('❌ Error initializing WhatsApp client:', err);
   });
 });
