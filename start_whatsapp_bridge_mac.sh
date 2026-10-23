@@ -7,5 +7,8 @@ echo "==========================================================================
 echo ""
 echo "Starting WhatsApp Bridge on http://localhost:3005 ..."
 echo ""
+echo "Cleaning up any stale WhatsApp Chrome processes..."
+pkill -f "wwebjs_auth" 2>/dev/null || true
+sleep 1
 
 node server.js

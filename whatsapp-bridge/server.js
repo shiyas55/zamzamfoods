@@ -401,9 +401,15 @@ app.post('/send-file', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error sending WhatsApp file:', error);
+    const errMsg = error.message || String(error);
+    if (errMsg.includes('detached Frame') || errMsg.includes('Session closed') || errMsg.includes('Execution context was destroyed')) {
+      console.warn('🔄 Detached frame or stale browser detected. Auto-reloading client...');
+      clientReady = false;
+      client.initialize().catch((e) => console.error('Auto-reinit error:', e));
+    }
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to send WhatsApp message.',
+      error: errMsg || 'Failed to send WhatsApp message.',
     });
   }
 });
@@ -430,7 +436,13 @@ app.post('/send-text', async (req, res) => {
     res.json({ success: true, messageId: msgId });
   } catch (error) {
     console.error('❌ Error sending WhatsApp text:', error);
-    res.status(500).json({ success: false, error: error.message });
+    const errMsg = error.message || String(error);
+    if (errMsg.includes('detached Frame') || errMsg.includes('Session closed') || errMsg.includes('Execution context was destroyed')) {
+      console.warn('🔄 Detached frame or stale browser detected. Auto-reloading client...');
+      clientReady = false;
+      client.initialize().catch((e) => console.error('Auto-reinit error:', e));
+    }
+    res.status(500).json({ success: false, error: errMsg });
   }
 });
 
