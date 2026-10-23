@@ -1114,11 +1114,10 @@ export const BulkSendWhatsAppBillsModal: React.FC<BulkSendWhatsAppBillsModalProp
           ref={renderContainerRef}
           style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
+            top: '-9999px',
+            left: '-9999px',
             width: '760px',
             zIndex: -9999,
-            opacity: 0,
             pointerEvents: 'none',
             backgroundColor: '#ffffff',
             color: '#0f172a',

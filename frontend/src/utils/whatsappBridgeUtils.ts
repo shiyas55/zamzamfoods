@@ -4,6 +4,7 @@
  * to send PDF or Image invoices directly to customer chats.
  */
 
+import { toJpeg } from 'html-to-image';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -73,98 +74,90 @@ export async function sendInvoiceFileViaBridge({
       };
     }
 
-    // 2. Render element into a high-resolution canvas
+    // 2. Render element into a high-resolution image using html-to-image (Native Browser Engine)
     const width = element.offsetWidth || 760;
     const height = element.offsetHeight || 900;
-
-    const canvas = await html2canvas(element, {
-      scale: 2, // High DPI for crisp text
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      width: width,
-      height: height,
-      x: 0,
-      y: 0,
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: 1200,
-      windowHeight: Math.max(height + 200, 1200),
-      onclone: (clonedDoc, clonedElement) => {
-        // 1. Inject global reset in cloned iframe to completely defeat html2canvas kerning/overlapping bugs
-        try {
-          const style = clonedDoc.createElement('style');
-          style.innerHTML = `
-            * {
-              letter-spacing: 0px !important;
-              word-spacing: normal !important;
-              font-kerning: none !important;
-              font-variant-ligatures: none !important;
-              text-rendering: geometricPrecision !important;
-            }
-            body, div, span, p, td, th, h1, h2, h3, h4, strong, b, em, table {
-              font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
-              letter-spacing: 0px !important;
-            }
-          `;
-          clonedDoc.head.appendChild(style);
-        } catch (e) {
-          console.warn('Could not inject cloned style:', e);
-        }
-
-        // Ensure cloned element is visible and completely opaque in html2canvas iframe
-        clonedElement.style.position = 'static';
-        clonedElement.style.left = '0px';
-        clonedElement.style.top = '0px';
-        clonedElement.style.margin = '0px';
-        clonedElement.style.opacity = '1';
-        clonedElement.style.visibility = 'visible';
-        clonedElement.style.display = 'block';
-        clonedElement.style.letterSpacing = '0px';
-        clonedElement.style.wordSpacing = 'normal';
-        clonedElement.style.fontFamily = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
-
-        // 2. Remove letter-spacing from all elements to avoid html2canvas character splitting
-        const allChildren = clonedElement.querySelectorAll('*');
-        allChildren.forEach((child: any) => {
-          if (child.style) {
-            child.style.letterSpacing = '0px';
-            child.style.fontKerning = 'none';
-            child.style.fontVariantLigatures = 'none';
-            if (!child.style.fontFamily || child.style.fontFamily.includes('system-ui') || child.style.fontFamily.includes('-apple-system')) {
-              child.style.fontFamily = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
-            }
-          }
-        });
-      },
-    });
 
     let base64Data: string;
     let filename: string;
     let mimetype: string;
 
-    if (format === 'IMAGE') {
-      base64Data = canvas.toDataURL('image/jpeg', 0.95);
-      filename = `Invoice_${orderNumber}.jpg`;
-      mimetype = 'image/jpeg';
-    } else {
-      // PDF generation using jsPDF
-      const imgWidth = 210; // A4 mm
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      const pdf = new jsPDF({
-        orientation: imgHeight > pageHeight ? 'portrait' : 'portrait',
-        unit: 'mm',
-        format: 'a4',
+    try {
+      // Primary: html-to-image uses native browser SVG foreignObject rendering.
+      // It eliminates all text kerning, missing spaces, and overlapping bugs.
+      const dataUrl = await toJpeg(element, {
+        quality: 0.95,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        width: width,
+        height: height,
+        style: {
+          position: 'static',
+          left: '0px',
+          top: '0px',
+          margin: '0px',
+          opacity: '1',
+          visibility: 'visible',
+          display: 'block',
+        },
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
-      
-      base64Data = pdf.output('datauristring');
-      filename = `Bill_${orderNumber}.pdf`;
-      mimetype = 'application/pdf';
+      if (format === 'IMAGE') {
+        base64Data = dataUrl;
+        filename = `Invoice_${orderNumber}.jpg`;
+        mimetype = 'image/jpeg';
+      } else {
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4',
+        });
+        const imgProps = pdf.getImageProperties(dataUrl);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        base64Data = pdf.output('datauristring');
+        filename = `Bill_${orderNumber}.pdf`;
+        mimetype = 'application/pdf';
+      }
+    } catch (renderError) {
+      console.warn('html-to-image failed, falling back to html2canvas:', renderError);
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: width,
+        height: height,
+        onclone: (clonedDoc, clonedElement) => {
+          clonedElement.style.position = 'static';
+          clonedElement.style.left = '0px';
+          clonedElement.style.top = '0px';
+          clonedElement.style.opacity = '1';
+          clonedElement.style.display = 'block';
+        },
+      });
+
+      if (format === 'IMAGE') {
+        base64Data = canvas.toDataURL('image/jpeg', 0.95);
+        filename = `Invoice_${orderNumber}.jpg`;
+        mimetype = 'image/jpeg';
+      } else {
+        const imgWidth = 210;
+        const pageHeight = 297;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4',
+        });
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
+        base64Data = pdf.output('datauristring');
+        filename = `Bill_${orderNumber}.pdf`;
+        mimetype = 'application/pdf';
+      }
     }
 
     // 3. Post to local bridge
