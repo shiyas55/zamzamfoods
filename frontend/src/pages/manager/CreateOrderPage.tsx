@@ -47,6 +47,7 @@ import {
   ChevronDown,
   ArrowUpDown,
   BarChart2,
+  BellRing,
 } from 'lucide-react';
 
 const RealWhatsAppWebView = React.lazy(() =>
@@ -58,6 +59,8 @@ const InvoiceModal = React.lazy(() =>
 import { UniversalDatePicker } from '../../components/UniversalDatePicker';
 import { useSettings } from '../../context/SettingsContext';
 import { draftOrderStorage } from '../../utils/draftOrderStorage';
+import { BulkSendWhatsAppBillsModal, BulkBillItem } from '../../components/BulkSendWhatsAppBillsModal';
+import { BulkSendWhatsAppReminderModal, PendingCustomerReminderItem } from '../../components/BulkSendWhatsAppReminderModal';
 
 export interface WhatsAppCustomerContext {
   id: string;
@@ -232,6 +235,8 @@ export const CreateOrderPage: React.FC = () => {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
   const [invoiceModalOrder, setInvoiceModalOrder] = useState<{ order: Order; customer?: Customer | null } | null>(null);
+  const [isBulkWhatsAppModalOpen, setIsBulkWhatsAppModalOpen] = useState(false);
+  const [isPendingReminderModalOpen, setIsPendingReminderModalOpen] = useState(false);
 
   // Customer Details Edit Modal State
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = useState(false);
@@ -1829,11 +1834,26 @@ export const CreateOrderPage: React.FC = () => {
   };
 
   const handlePrintRowOrder = async (row: OrderRow) => {
-    if (!row.orderId) return;
     try {
-      const fullOrder = await orderService.getOrder(row.orderId);
-      const cust = customers.find((c) => c.id === row.customerId) || fullOrder.customer_details || null;
-      setInvoiceModalOrder({ order: fullOrder, customer: cust });
+      const cust = customers.find((c) => c.id === row.customerId) || null;
+      if (row.orderId) {
+        const fullOrder = await orderService.getOrder(row.orderId);
+        setInvoiceModalOrder({ order: fullOrder, customer: cust || fullOrder.customer_details });
+      } else {
+        // If order hasn't been submitted yet today, open bill statement with customer's balance & info
+        const mockOrder: any = {
+          id: 'temp-' + (row.customerId || 'shop'),
+          order_number: row.orderNumber || 'BILL-' + (cust?.phone?.slice(-4) || 'DUE'),
+          order_date: orderDate,
+          customer: row.customerId,
+          customer_details: cust,
+          items: [],
+          total_amount: '0.00',
+          paid_amount: '0.00',
+          status: 'DELIVERED',
+        };
+        setInvoiceModalOrder({ order: mockOrder, customer: cust });
+      }
     } catch (err) {
       console.error('Failed to load order for printing:', err);
     }
@@ -2133,6 +2153,115 @@ export const CreateOrderPage: React.FC = () => {
   const resubmitOrdersCount = useMemo(() => {
     return rows.filter((r) => Boolean(r.orderId) && isRowPendingSubmit(r)).length;
   }, [rows, isRowPendingSubmit]);
+
+  // List of all customer bills ready for WhatsApp sending (Bulk Dispatcher)
+  const bulkBillItems = useMemo((): BulkBillItem[] => {
+    return rows
+      .filter((row) => {
+        const fin = getRowFinancials(row);
+        return (fin.hasOrder || fin.rowTotal > 0 || Boolean(row.orderId)) && Boolean(row.customerId);
+      })
+      .map((row) => {
+        const fin = getRowFinancials(row);
+        const cust = customers.find((c) => c.id === row.customerId);
+
+        const itemsParts: string[] = [];
+        const lines: any[] = [];
+        const activeProducts = products.length > 0 ? products : [
+          ...(kubbusProduct ? [kubbusProduct] : []),
+          ...(romaliProduct ? [romaliProduct] : []),
+        ];
+
+        activeProducts.forEach((prod) => {
+          let qStr = row.productQuantities?.[prod.id];
+          if (qStr === undefined) {
+            if (kubbusProduct && prod.id === kubbusProduct.id) qStr = row.kubbusQty;
+            else if (romaliProduct && prod.id === romaliProduct.id) qStr = row.romaliQty;
+          }
+          const qty = parseInt(qStr || '0', 10) || 0;
+          if (qty > 0) {
+            const price = getProductPriceForCustomer(row.customerId, prod);
+            lines.push({
+              id: prod.id,
+              name: prod.name,
+              quantity: qty,
+              unitPrice: price,
+              subtotal: qty * price,
+              packetSize: prod.packet_size,
+            });
+            itemsParts.push(`${prod.name} x ${qty}`);
+          }
+        });
+
+        if (lines.length === 0) {
+          if (fin.kQty > 0) {
+            lines.push({
+              id: kubbusProduct?.id || 'kubbus',
+              name: kubbusProduct?.name || 'Kubbus Normal',
+              quantity: fin.kQty,
+              unitPrice: fin.kPrice,
+              subtotal: fin.kQty * fin.kPrice,
+              packetSize: kubbusProduct?.packet_size,
+            });
+            itemsParts.push(`Kubbus x ${fin.kQty}`);
+          }
+          if (fin.rQty > 0) {
+            lines.push({
+              id: romaliProduct?.id || 'romali',
+              name: romaliProduct?.name || 'Romali Roti',
+              quantity: fin.rQty,
+              unitPrice: fin.rPrice,
+              subtotal: fin.rQty * fin.rPrice,
+              packetSize: romaliProduct?.packet_size,
+            });
+            itemsParts.push(`Romali x ${fin.rQty}`);
+          }
+        }
+
+        return {
+          rowId: row.rowId,
+          orderId: row.orderId,
+          orderNumber: row.orderNumber,
+          customerId: row.customerId,
+          customerName: row.customerName || cust?.name || 'Customer Shop',
+          customerPhone: row.customerPhone || cust?.phone || '',
+          ownerName: row.customerOwner || cust?.owner_name || '',
+          customerAddress: cust?.address || '',
+          customerRoute: row.customerRoute || cust?.route_details?.name || '',
+          driverName: row.driverName || '',
+          itemsSummary: itemsParts.length > 0 ? itemsParts.join(', ') : 'Daily Wholesale Dispatch',
+          lines,
+          totalAmount: fin.rowTotal,
+          prevDue: fin.prevDue,
+          orderDate: orderDate,
+          status: 'PENDING',
+        };
+      });
+  }, [rows, customers, products, kubbusProduct, romaliProduct, orderDate, getRowFinancials, getProductPriceForCustomer]);
+
+  // List of customers who have NO order entered yet for today (0 quantities, 0 bill, no saved orderId)
+  const pendingCustomers = useMemo((): PendingCustomerReminderItem[] => {
+    return rows
+      .filter((row) => {
+        if (!row.customerId) return false;
+        const fin = getRowFinancials(row);
+        const hasOrder = fin.hasOrder || fin.rowTotal > 0 || Boolean(row.orderId);
+        return !hasOrder;
+      })
+      .map((row) => {
+        const cust = customers.find((c) => c.id === row.customerId);
+        return {
+          rowId: row.rowId,
+          customerId: row.customerId,
+          customerName: row.customerName || cust?.name || 'Customer Shop',
+          customerOwner: row.customerOwner || cust?.owner_name || '',
+          customerPhone: row.customerPhone || cust?.phone || '',
+          customerRoute: row.customerRoute || cust?.route_details?.name || '',
+          customerAddress: cust?.address || '',
+          status: 'PENDING' as const,
+        };
+      });
+  }, [rows, customers, getRowFinancials]);
 
   // Count removed shops that could be restored
   const removedCount = useMemo(() => {
@@ -2849,6 +2978,8 @@ export const CreateOrderPage: React.FC = () => {
           autoConfirmDriver ? 'Confirmed & dispatched to route delivery drivers.' : ''
         }`
       );
+      // Automatically open Bulk WhatsApp modal so user can dispatch PDF or Image bills to all customers
+      setIsBulkWhatsAppModalOpen(true);
     }
   };
 
@@ -3153,6 +3284,58 @@ export const CreateOrderPage: React.FC = () => {
                   : `Submit / Re-submit Orders (${pendingOrdersCount}) • ${formatCurrency(sheetStats.totalBill)}`
                 : 'All Orders Saved'}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsBulkWhatsAppModalOpen(true)}
+            disabled={bulkBillItems.length === 0}
+            style={{
+              height: '28px',
+              padding: '0 0.75rem',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              background: bulkBillItems.length > 0 ? '#16a34a' : '#94a3b8',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              cursor: bulkBillItems.length > 0 ? 'pointer' : 'not-allowed',
+              opacity: bulkBillItems.length > 0 ? 1 : 0.6,
+              boxShadow: bulkBillItems.length > 0 ? '0 1px 3px rgba(22, 163, 74, 0.3)' : 'none',
+            }}
+            title="Send WhatsApp Bill (PDF or Image) to all customers"
+          >
+            <MessageCircle size={14} />
+            <span>Send All WhatsApp Bills ({bulkBillItems.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsPendingReminderModalOpen(true)}
+            disabled={pendingCustomers.length === 0}
+            style={{
+              height: '28px',
+              padding: '0 0.75rem',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              background: pendingCustomers.length > 0 ? '#d97706' : '#94a3b8',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              cursor: pendingCustomers.length > 0 ? 'pointer' : 'not-allowed',
+              opacity: pendingCustomers.length > 0 ? 1 : 0.6,
+              boxShadow: pendingCustomers.length > 0 ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none',
+            }}
+            title="Send WhatsApp Order Reminder / Enquiry to customers with no orders entered for today"
+          >
+            <BellRing size={14} />
+            <span>Ask Pending Orders ({pendingCustomers.length})</span>
           </button>
         </div>
       </div>
@@ -3850,248 +4033,9 @@ export const CreateOrderPage: React.FC = () => {
           </button>
         )}
 
-        {/* Mobile WhatsApp Panel Trigger */}
-        {isWhatsAppEnabled && (
-          <button
-            type="button"
-            className="billing-whatsapp-mobile-trigger btn btn-sm"
-            onClick={() => setMobileWhatsAppOpen(true)}
-            style={{
-              height: '26px',
-              padding: '0 0.45rem',
-              background: '#ecfdf5',
-              border: '1.5px solid #10b981',
-              color: '#047857',
-              fontWeight: 700,
-              fontSize: '0.72rem',
-              borderRadius: 'var(--radius)',
-              cursor: 'pointer',
-            }}
-            title="Open WhatsApp Customer Chat"
-          >
-            <MessageCircle size={12} color="#059669" />
-            <span>WhatsApp{activeCustomer ? ` (${activeCustomer.name.slice(0, 10)})` : ''}</span>
-          </button>
-        )}
       </div>
 
-      {/* ── TOP WORKSPACE TOOLBAR ── */}
-      {isWhatsAppEnabled && (
-        <div
-          className="workspace-toolbar"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            borderRadius: '10px',
-            padding: '0.4rem 0.75rem',
-            marginBottom: '0.65rem',
-            flexShrink: 0,
-            gap: '0.65rem',
-            flexWrap: 'wrap',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          {/* Left: WhatsApp Cloud API Status & Responsive View Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', flexWrap: 'wrap' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                padding: '0.28rem 0.65rem',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                borderRadius: '6px',
-                background: '#ecfdf5',
-                color: '#047857',
-                border: '1px solid #a7f3d0',
-                height: '30px',
-              }}
-            >
-              <MessageCircle size={14} color="#059669" />
-              <span>WhatsApp Cloud API</span>
-              <span
-                style={{
-                  fontSize: '0.66rem',
-                  background: '#dcfce7',
-                  padding: '0.1rem 0.35rem',
-                  borderRadius: '4px',
-                  color: '#15803d',
-                  fontWeight: 800,
-                }}
-              >
-                ● Connected
-              </span>
-            </div>
-
-            {/* Responsive Layout Controls */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                background: 'var(--bg-subtle, #f1f5f9)',
-                borderRadius: '7px',
-                padding: '2px',
-                border: '1px solid var(--border)',
-                height: '30px',
-                boxSizing: 'border-box',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setWorkspaceMode('split');
-                  setWhatsappVisible(true);
-                }}
-                style={{
-                  background: whatsappVisible && workspaceMode === 'split' ? '#008069' : 'transparent',
-                  color: whatsappVisible && workspaceMode === 'split' ? '#ffffff' : 'var(--text-secondary)',
-                  border: 'none',
-                  borderRadius: '5px',
-                  padding: '0.2rem 0.65rem',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  transition: 'all 0.15s ease',
-                }}
-                title="Side-by-side: WhatsApp phone (385px) on left + Billing on right"
-              >
-                <span>◧ Split View</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setWorkspaceMode('billing_only');
-                  setWhatsappVisible(false);
-                }}
-                style={{
-                  background: !whatsappVisible || workspaceMode === 'billing_only' ? '#0f172a' : 'transparent',
-                  color: !whatsappVisible || workspaceMode === 'billing_only' ? '#ffffff' : 'var(--text-secondary)',
-                  border: 'none',
-                  borderRadius: '5px',
-                  padding: '0.2rem 0.65rem',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  transition: 'all 0.15s ease',
-                }}
-                title="Full Billing Table: Hide WhatsApp to get 100% wide grid columns"
-              >
-                <span>⛶ Full Table</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMobileWhatsAppOpen(true)}
-                style={{
-                  background: mobileWhatsAppOpen ? '#008069' : 'transparent',
-                  color: mobileWhatsAppOpen ? '#ffffff' : 'var(--text-secondary)',
-                  border: 'none',
-                  borderRadius: '5px',
-                  padding: '0.2rem 0.65rem',
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  transition: 'all 0.15s ease',
-                }}
-                title="Floating Phone: Open WhatsApp in floating modal"
-              >
-                <span>📱 Floating</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Right: Customer WhatsApp Connection */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flexWrap: 'wrap' }}>
-            {activeCustomer ? (
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  background: 'rgba(37, 211, 102, 0.08)',
-                  border: '1px solid rgba(37, 211, 102, 0.35)',
-                  borderRadius: '7px',
-                  padding: '0.25rem 0.65rem',
-                  fontSize: '0.78rem',
-                  height: '30px',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <Store size={14} color="#059669" />
-                <strong style={{ color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
-                  {activeCustomer.name}
-                </strong>
-                {activeCustomer.phone && activeCustomer.phone !== 'No phone registered' && (
-                  <span style={{ color: '#047857', fontFamily: 'monospace', fontWeight: 600 }}>
-                    {activeCustomer.phone}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (activeCustomer.phone && activeCustomer.phone !== 'No phone registered') {
-                      const digits = activeCustomer.phone.replace(/[^0-9+]/g, '');
-                      navigator.clipboard.writeText(digits || activeCustomer.phone);
-                    }
-                  }}
-                  style={{
-                    background: '#dcfce7',
-                    border: '1px solid #86efac',
-                    borderRadius: '4px',
-                    padding: '1px 6px',
-                    color: '#15803d',
-                    cursor: 'pointer',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                  }}
-                  title="Copy phone number"
-                >
-                  Copy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCustomerId(null);
-                    if (searchQuery) setSearchQuery('');
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    padding: '0 2px',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                  }}
-                  title="Clear selection"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            ) : (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                No shop selected &bull; Click any row or search
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 4. Responsive Split Workspace: Real WhatsApp Web (Left) + Billing (Right) */}
+      {/* 4. Billing Workspace Grid */}
       <div
         className="billing-workspace-grid"
         style={{
@@ -4107,36 +4051,6 @@ export const CreateOrderPage: React.FC = () => {
           boxSizing: 'border-box',
         }}
       >
-        {/* Left: Dedicated Real WhatsApp Web Workspace Panel (Fixed Phone Size: 385px) */}
-        {showSplitWhatsAppPanel && (
-          <div
-            className="billing-whatsapp-desktop-wrapper"
-            style={{
-              width: '385px',
-              minWidth: '385px',
-              maxWidth: '385px',
-              flexDirection: 'column',
-              height: '100%',
-              minHeight: 0,
-              flexShrink: 0,
-              boxSizing: 'border-box',
-            }}
-          >
-            <RealWhatsAppWebView
-              customer={activeCustomer}
-              targetCustomerId={selectedCustomerId}
-              openChatTimestamp={whatsAppNavToken}
-              allCustomers={customers}
-              orderRows={rows}
-              onSelectCustomer={(customerId) => handleSelectCustomerForWhatsApp(customerId)}
-              onApplyQuantities={handleApplyWhatsAppOrder}
-              onHide={() => {
-                setWhatsappVisible(false);
-                setWorkspaceMode('billing_only');
-              }}
-            />
-          </div>
-        )}
 
         {/* Right: Existing Billing Table Container */}
         <div
@@ -4571,9 +4485,34 @@ export const CreateOrderPage: React.FC = () => {
                                 <ArrowUpDown size={8} />
                                 <span>Change</span>
                               </button>
-                              {row.orderNumber ? (
-                                <span title={`Order #${row.orderNumber}`} style={{ fontSize: '0.6rem', fontWeight: 800, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '3px', padding: '0.03rem 0.25rem', whiteSpace: 'nowrap', flexShrink: 0 }}>#{row.orderNumber}</span>
-                              ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePrintRowOrder(row);
+                                }}
+                                title={`View & Send WhatsApp Bill for ${row.customerName || 'shop'}`}
+                                style={{
+                                  fontSize: '0.62rem',
+                                  fontWeight: 700,
+                                  background: '#dcfce7',
+                                  color: '#15803d',
+                                  border: '1px solid #86efac',
+                                  borderRadius: '4px',
+                                  padding: '0.05rem 0.35rem',
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                }}
+                              >
+                                <MessageCircle size={10} />
+                                <span>{row.orderNumber ? `#${row.orderNumber} Bill` : 'Send Bill'}</span>
+                              </button>
+
+                              {!row.orderNumber && (
                                 <button type="button" onClick={() => { const v = window.prompt(`Custom Order # / Token for ${row.customerName || 'shop'} (optional, leave blank to auto-generate):`, ''); if (v !== null) handleSetRowOrderDetails(row.rowId, v.trim() || undefined); }} style={{ fontSize: '0.58rem', padding: '0.03rem 0.22rem', background: 'transparent', color: 'var(--text-muted)', border: '1px dashed var(--border)', borderRadius: '3px', cursor: 'pointer', flexShrink: 0 }} title="Add custom order # / token for this order">+Ord#</button>
                               )}
                               {(orderSort === 'SHOP_CREATE_ASC' || orderSort === 'CUSTOM') && row.customerCreatedAt && (
@@ -5329,28 +5268,53 @@ export const CreateOrderPage: React.FC = () => {
                           )}
 
                           {row.orderId && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePrintRowOrder(row);
-                              }}
-                              title={`Print bill / slip for Order #${row.orderNumber || ''}`}
-                              style={{
-                                background: '#eff6ff',
-                                border: '1px solid #bfdbfe',
-                                cursor: 'pointer',
-                                padding: '3px 6px',
-                                borderRadius: '6px',
-                                color: '#1d4ed8',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.15s ease',
-                              }}
-                            >
-                              <Printer size={13} />
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePrintRowOrder(row);
+                                }}
+                                title={`Send WhatsApp Bill for Order #${row.orderNumber || ''}`}
+                                style={{
+                                  background: '#dcfce7',
+                                  border: '1px solid #86efac',
+                                  cursor: 'pointer',
+                                  padding: '3px 6px',
+                                  borderRadius: '6px',
+                                  color: '#15803d',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <MessageCircle size={13} />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePrintRowOrder(row);
+                                }}
+                                title={`Print bill / slip for Order #${row.orderNumber || ''}`}
+                                style={{
+                                  background: '#eff6ff',
+                                  border: '1px solid #bfdbfe',
+                                  cursor: 'pointer',
+                                  padding: '3px 6px',
+                                  borderRadius: '6px',
+                                  color: '#1d4ed8',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <Printer size={13} />
+                              </button>
+                            </>
                           )}
 
                           {(orderSort !== 'CUSTOM' || isCustomEditing || row.isCustomRow) && (
@@ -5960,6 +5924,58 @@ export const CreateOrderPage: React.FC = () => {
                     : `Submit Orders (${pendingOrdersCount})`
                   : 'All Orders Saved'}
               </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsBulkWhatsAppModalOpen(true)}
+              disabled={bulkBillItems.length === 0}
+              style={{
+                height: '26px',
+                padding: '0 0.65rem',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: '#ffffff',
+                background: bulkBillItems.length > 0 ? '#16a34a' : '#94a3b8',
+                border: 'none',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                cursor: bulkBillItems.length > 0 ? 'pointer' : 'not-allowed',
+                opacity: bulkBillItems.length > 0 ? 1 : 0.6,
+                boxShadow: bulkBillItems.length > 0 ? '0 1px 3px rgba(22, 163, 74, 0.3)' : 'none',
+              }}
+              title="Send WhatsApp Bill (PDF or Image) to all customers"
+            >
+              <MessageCircle size={11} />
+              <span>Send All WhatsApp Bills ({bulkBillItems.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsPendingReminderModalOpen(true)}
+              disabled={pendingCustomers.length === 0}
+              style={{
+                height: '26px',
+                padding: '0 0.65rem',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                color: '#ffffff',
+                background: pendingCustomers.length > 0 ? '#d97706' : '#94a3b8',
+                border: 'none',
+                borderRadius: '6px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                cursor: pendingCustomers.length > 0 ? 'pointer' : 'not-allowed',
+                opacity: pendingCustomers.length > 0 ? 1 : 0.6,
+                boxShadow: pendingCustomers.length > 0 ? '0 1px 3px rgba(217, 119, 6, 0.3)' : 'none',
+              }}
+              title="Send WhatsApp Order Reminder / Enquiry to customers with no orders entered for today"
+            >
+              <BellRing size={11} />
+              <span>Ask Pending Orders ({pendingCustomers.length})</span>
             </button>
           </div>
 
@@ -7239,77 +7255,9 @@ export const CreateOrderPage: React.FC = () => {
         </div>
       )}
 
-      {/* 6. Mobile WhatsApp Panel Modal Drawer */}
-      {isWhatsAppEnabled && mobileWhatsAppOpen && (
-        <div
-          className="billing-whatsapp-mobile-modal"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setMobileWhatsAppOpen(false);
-          }}
-        >
-          <div style={{ width: '100%', maxWidth: '385px', height: '620px', maxHeight: '90vh' }}>
-            <RealWhatsAppWebView
-              customer={activeCustomer}
-              targetCustomerId={selectedCustomerId}
-              openChatTimestamp={whatsAppNavToken}
-              allCustomers={customers}
-              orderRows={rows}
-              onSelectCustomer={(customerId) => handleSelectCustomerForWhatsApp(customerId)}
-              onApplyQuantities={handleApplyWhatsAppOrder}
-              onClose={() => setMobileWhatsAppOpen(false)}
-            />
-          </div>
-        </div>
-      )}
 
-      {/* Floating Quick Access WhatsApp Button when Side Panel is Hidden */}
-      {isWhatsAppEnabled && (!whatsappVisible || workspaceMode === 'billing_only') && !mobileWhatsAppOpen && (
-        <button
-          type="button"
-          onClick={() => {
-            setWorkspaceMode('split');
-            setWhatsappVisible(true);
-          }}
-          style={{
-            position: 'fixed',
-            bottom: '1.25rem',
-            left: '16.5rem',
-            zIndex: 90,
-            background: '#008069',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '24px',
-            padding: '0.5rem 1.1rem',
-            fontWeight: 800,
-            fontSize: '0.82rem',
-            boxShadow: '0 4px 16px rgba(0, 128, 105, 0.4)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-          }}
-          title="Open WhatsApp Panel (Split Screen)"
-        >
-          <div
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: '#25d366',
-              boxShadow: '0 0 8px #25d366',
-            }}
-          />
-          <MessageCircle size={17} />
-          <span>Open WhatsApp Feed</span>
-        </button>
-      )}
+
+
 
       {/* Invoice Modal for Order Printing / Thermal POS Slip */}
       {invoiceModalOrder && (
@@ -7319,7 +7267,28 @@ export const CreateOrderPage: React.FC = () => {
           onClose={() => setInvoiceModalOrder(null)}
         />
       )}
+
+      {/* Bulk WhatsApp Bills Modal (Send All PDF or Image to All Customers) */}
+      {isBulkWhatsAppModalOpen && (
+        <BulkSendWhatsAppBillsModal
+          isOpen={isBulkWhatsAppModalOpen}
+          onClose={() => setIsBulkWhatsAppModalOpen(false)}
+          orderDate={orderDate}
+          orders={bulkBillItems}
+        />
+      )}
+
+      {/* Bulk WhatsApp Pending Orders Reminder Modal (Ask Pending Customers 1-Click) */}
+      {isPendingReminderModalOpen && (
+        <BulkSendWhatsAppReminderModal
+          isOpen={isPendingReminderModalOpen}
+          onClose={() => setIsPendingReminderModalOpen(false)}
+          orderDate={orderDate}
+          pendingCustomers={pendingCustomers}
+        />
+      )}
     </div>
   );
 };
+
 

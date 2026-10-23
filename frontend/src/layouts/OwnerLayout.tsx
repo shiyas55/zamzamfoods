@@ -10,8 +10,9 @@ import {
   Lock, ChevronLeft, ChevronRight,
   PanelLeftClose, PanelLeftOpen, Menu, X, PlusCircle, MessageCircle, Settings,
   Wrench, AlertTriangle, Headphones, FolderArchive, UserCheck, Zap,
-  Search, Bell,
+  Search, Bell, FileSpreadsheet,
 } from 'lucide-react';
+import { NotepadSheetModal } from '../components/NotepadSheetModal';
 
 export const OwnerLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -26,6 +27,20 @@ export const OwnerLayout: React.FC = () => {
 
   // Mobile drawer open state
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Quick Notepad & Sheet Modal state
+  const [isNotepadOpen, setIsNotepadOpen] = useState(false);
+
+  // Global Alt+N shortcut to toggle Notepad & Sheet
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setIsNotepadOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -69,6 +84,7 @@ export const OwnerLayout: React.FC = () => {
     { to: '/owner/credit',             label: 'Credit Ledger',      icon: BookOpen        },
     { to: '/owner/reports',            label: 'Financial Reports',  icon: BarChart3       },
     { to: '/owner/attendance',         label: 'Attendance & Wages', icon: UserCheck       },
+    { to: '/owner/notepad',            label: 'Notepad & Sheets',   icon: FileSpreadsheet },
     { to: '/owner/settings',           label: 'Settings',           icon: Settings        },
   ];
 
@@ -299,8 +315,31 @@ export const OwnerLayout: React.FC = () => {
             />
           </div>
 
-          {/* Right Header Actions: Notification, Theme, User Pill (Strictly Red & White, AI flag removed) */}
+          {/* Right Header Actions: Notepad, Notification, Theme, User Pill */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+            {/* Quick Notepad & Google Sheet Button */}
+            <button
+              type="button"
+              onClick={() => setIsNotepadOpen(true)}
+              className="header-action-btn"
+              title="Quick Notepad & Google Sheet (Alt+N)"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0 0.75rem',
+                borderRadius: '8px',
+                fontWeight: 800,
+                fontSize: '0.78rem',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+              }}
+            >
+              <FileSpreadsheet size={15} />
+              <span className="sidebar-toggle-label">Notepad & Sheet</span>
+            </button>
+
             {/* Notification Bell with Badge */}
             <button
               type="button"
@@ -407,6 +446,9 @@ export const OwnerLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Global Quick Notepad & Google Sheets Modal */}
+      <NotepadSheetModal isOpen={isNotepadOpen} onClose={() => setIsNotepadOpen(false)} />
     </div>
   );
 };

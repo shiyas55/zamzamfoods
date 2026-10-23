@@ -9,9 +9,10 @@ import { formatCurrency } from '../../utils/formatters';
 import { 
   Plus, Search, Store, AlertCircle, X, ChevronRight, Eye, Tag, 
   ExternalLink, Copy, Check, Smartphone, Edit2, Trash2, AlertTriangle, 
-  CheckCircle2, Save, FileText, FolderArchive 
+  CheckCircle2, Save, FileText, FolderArchive, MessageCircle 
 } from 'lucide-react';
 import { CustomerStatementModal } from '../../components/CustomerStatementModal';
+import { BulkSendCustomerStatementsModal } from '../../components/BulkSendCustomerStatementsModal';
 
 export const CustomerShopsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export const CustomerShopsPage: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkStatementModalOpen, setIsBulkStatementModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [statementCustomer, setStatementCustomer] = useState<Customer | null>(null);
 
@@ -51,6 +53,7 @@ export const CustomerShopsPage: React.FC = () => {
   const [editLandmark, setEditLandmark] = useState('');
   const [editRouteId, setEditRouteId] = useState('');
   const [editCreditLimit, setEditCreditLimit] = useState('5000.00');
+  const [editDueBalance, setEditDueBalance] = useState('0.00');
   const [editIsActive, setEditIsActive] = useState(true);
   const [editNotes, setEditNotes] = useState('');
   const [editProductPrices, setEditProductPrices] = useState<Record<string, string>>({});
@@ -177,6 +180,7 @@ export const CustomerShopsPage: React.FC = () => {
     const rId = typeof c.route === 'string' ? c.route : c.route_details?.id || (routes[0]?.id ?? '');
     setEditRouteId(rId);
     setEditCreditLimit(c.credit_limit || '5000.00');
+    setEditDueBalance(String(c.current_balance || '0.00'));
     setEditIsActive(c.is_active ?? true);
     setEditNotes(c.notes || '');
     setEditFormError(null);
@@ -240,6 +244,20 @@ export const CustomerShopsPage: React.FC = () => {
         notes: editNotes.trim(),
         product_prices: product_prices.length > 0 ? product_prices : undefined,
       });
+
+      // Update Due Balance if modified by manager/owner
+      if (
+        editDueBalance.trim() !== '' &&
+        !isNaN(Number(editDueBalance)) &&
+        Number(editDueBalance) !== Number(editingCustomer.current_balance || 0)
+      ) {
+        await customerService.setBalance(
+          editingCustomer.id,
+          editDueBalance.trim(),
+          undefined,
+          'Corrected via Customer Shops Management'
+        );
+      }
 
       const updatedName = editName.trim();
       setEditingCustomer(null);
@@ -314,19 +332,44 @@ export const CustomerShopsPage: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>
             Customer Shops Management
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-            Directory of ~200 retail bakeries, tea stalls, and restaurants.
+            Directory of retail bakeries, tea stalls, and wholesale restaurants.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} />
-          <span>Add New Shop</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setIsBulkStatementModalOpen(true)}
+            style={{
+              backgroundColor: '#047857',
+              color: '#ffffff',
+              border: 'none',
+              fontWeight: 800,
+              fontSize: '0.86rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              boxShadow: '0 2px 4px rgba(4, 120, 87, 0.25)',
+              padding: '0.5rem 0.95rem',
+              borderRadius: '8px',
+            }}
+            title="Bulk Send Due Statements / Monthly Reports on WhatsApp"
+          >
+            <MessageCircle size={16} />
+            <span>Send Due Statements on WhatsApp ({customers.filter((c) => Number(c.current_balance) > 0).length})</span>
+          </button>
+
+          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+            <Plus size={18} />
+            <span>Add New Shop</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -452,14 +495,39 @@ export const CustomerShopsPage: React.FC = () => {
                     {/* 5. Current Balance */}
                     <td
                       style={{
-                        minWidth: '120px',
+                        minWidth: '130px',
                         textAlign: 'right',
                         fontWeight: 700,
                         whiteSpace: 'nowrap',
-                        color: c.is_credit_exceeded ? 'var(--danger)' : 'var(--text-primary)',
                       }}
                     >
-                      {formatCurrency(c.current_balance)}
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            fontFamily: 'monospace',
+                            color: c.is_credit_exceeded || Number(c.current_balance) > 0 ? '#b91c1c' : 'var(--text-primary)',
+                          }}
+                        >
+                          {formatCurrency(c.current_balance)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(c)}
+                          title="Correct or adjust this shop's due balance"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#94a3b8',
+                            cursor: 'pointer',
+                            padding: '2px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Edit2 size={11} />
+                        </button>
+                      </div>
                     </td>
 
                     {/* 6. Status */}
@@ -856,6 +924,25 @@ export const CustomerShopsPage: React.FC = () => {
                     onChange={(e) => setEditCreditLimit(e.target.value)}
                   />
                 </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>Current Outstanding Due (₹)</span>
+                    <span style={{ fontSize: '0.72rem', color: '#b91c1c', fontWeight: 700 }}>Direct Balance Edit</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="form-input"
+                    style={{ fontWeight: 800, color: '#b91c1c' }}
+                    value={editDueBalance}
+                    onChange={(e) => setEditDueBalance(e.target.value)}
+                    placeholder="0.00"
+                  />
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                    Set or correct this shop's current outstanding receivable due.
+                  </div>
+                </div>
               </div>
 
               <div className="form-group">
@@ -1059,6 +1146,16 @@ export const CustomerShopsPage: React.FC = () => {
         <CustomerStatementModal
           customer={statementCustomer}
           onClose={() => setStatementCustomer(null)}
+        />
+      )}
+
+      {/* Bulk Send Customer Statements Modal */}
+      {isBulkStatementModalOpen && (
+        <BulkSendCustomerStatementsModal
+          customers={customers}
+          routes={routes}
+          onClose={() => setIsBulkStatementModalOpen(false)}
+          onRefresh={fetchData}
         />
       )}
     </div>

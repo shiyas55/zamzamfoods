@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { Order, Customer } from '../types';
 import { openWhatsApp, generateInvoiceMessage } from '../utils/whatsappUtils';
+import { sendInvoiceFileViaBridge } from '../utils/whatsappBridgeUtils';
 import { useSettings } from '../context/SettingsContext';
-import { Printer, MessageCircle, X, Check, Receipt, FileText, QrCode } from 'lucide-react';
+import { Printer, MessageCircle, X, Check, Receipt, FileText, QrCode, Send, Loader2, Image as ImageIcon } from 'lucide-react';
 
 interface InvoiceModalProps {
   order: Order;
@@ -154,6 +155,53 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, customer, onC
     });
 
     openWhatsApp(custPhone, msg);
+  };
+
+  const [isSendingWhatsAppFile, setIsSendingWhatsAppFile] = useState(false);
+  const [whatsAppFileStatus, setWhatsAppFileStatus] = useState<string | null>(null);
+
+  const handleWhatsAppSendFile = async (format: 'PDF' | 'IMAGE' = 'PDF') => {
+    const custName = customer?.name || order.customer_details?.name || 'Valued Customer';
+    const custPhone = customer?.phone || order.customer_details?.phone;
+    if (!custPhone) {
+      alert('This customer does not have a phone number entered.');
+      return;
+    }
+    if (!invoiceRef.current) return;
+
+    setIsSendingWhatsAppFile(true);
+    setWhatsAppFileStatus(`Sending ${format} Bill...`);
+
+    try {
+      const caption = `*${storeName.toUpperCase()}*\nTAX INVOICE / BILL: *#${order.order_number}*\nCustomer: *${custName}*\nTotal: ₹${finalTotal.toFixed(2)}\n\nThank you for choosing ${storeName}!`;
+
+      const res = await sendInvoiceFileViaBridge({
+        phone: custPhone,
+        element: invoiceRef.current,
+        orderNumber: order.order_number,
+        format,
+        caption,
+      });
+
+      if (res.success) {
+        setWhatsAppFileStatus(`✅ ${format} Sent!`);
+        setTimeout(() => setWhatsAppFileStatus(null), 4000);
+      } else {
+        setWhatsAppFileStatus(null);
+        const openQr = window.confirm(
+          `${res.error}\n\nWould you like to open the WhatsApp QR Code page on your laptop now to connect?`
+        );
+        if (openQr) {
+          window.open('http://localhost:3005/qr', '_blank');
+        }
+      }
+    } catch (err: unknown) {
+      setWhatsAppFileStatus(null);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      alert('Failed to send WhatsApp bill file: ' + errMsg);
+    } finally {
+      setIsSendingWhatsAppFile(false);
+    }
   };
 
   return (
@@ -366,26 +414,93 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, customer, onC
             </label>
 
             {isWhatsAppEnabled && (
-              <button
-                type="button"
-                onClick={handleWhatsAppShare}
-                style={{
-                  padding: '0.35rem 0.65rem',
-                  background: '#15803d',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-              >
-                <MessageCircle size={13} />
-                <span>WhatsApp</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={isSendingWhatsAppFile}
+                  onClick={() => handleWhatsAppSendFile('IMAGE')}
+                  title="Send Bill Image directly to customer WhatsApp (Recommended)"
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    background: '#047857',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    cursor: isSendingWhatsAppFile ? 'wait' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    opacity: isSendingWhatsAppFile ? 0.7 : 1,
+                    boxShadow: '0 2px 4px rgba(4, 120, 87, 0.25)',
+                  }}
+                >
+                  {isSendingWhatsAppFile ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />}
+                  <span>Send Bill Image (Default)</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isSendingWhatsAppFile}
+                  onClick={() => handleWhatsAppSendFile('PDF')}
+                  title="Send actual PDF Bill directly to customer WhatsApp"
+                  style={{
+                    padding: '0.35rem 0.65rem',
+                    background: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: isSendingWhatsAppFile ? 'wait' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    opacity: isSendingWhatsAppFile ? 0.7 : 1,
+                  }}
+                >
+                  <FileText size={13} />
+                  <span>Send PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleWhatsAppShare}
+                  title="Share text summary via WhatsApp link"
+                  style={{
+                    padding: '0.35rem 0.55rem',
+                    background: 'transparent',
+                    color: '#15803d',
+                    border: '1px solid #86efac',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                  }}
+                >
+                  <MessageCircle size={12} />
+                  <span>Text</span>
+                </button>
+
+                {whatsAppFileStatus && (
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      color: '#15803d',
+                      background: '#dcfce7',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                    }}
+                  >
+                    {whatsAppFileStatus}
+                  </span>
+                )}
+              </>
             )}
 
             <button

@@ -1,8 +1,25 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Customer, CustomerDetailSummary, Order, Payment } from '../types';
 import { openWhatsApp, generateCustomerStatementMessage } from '../utils/whatsappUtils';
+import { sendInvoiceFileViaBridge } from '../utils/whatsappBridgeUtils';
 import { useSettings } from '../context/SettingsContext';
-import { Printer, MessageCircle, X, Store, CreditCard, ShoppingBag, MapPin, Phone, RefreshCw } from 'lucide-react';
+import {
+  Printer,
+  MessageCircle,
+  X,
+  Store,
+  CreditCard,
+  ShoppingBag,
+  MapPin,
+  Phone,
+  RefreshCw,
+  Image as ImageIcon,
+  FileText,
+  Loader2,
+  Calendar,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 import { customerService } from '../services/customerService';
@@ -28,6 +45,15 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
   const [orders, setOrders] = useState<Order[]>(initialOrders || []);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Period Filter States
+  const [period, setPeriod] = useState<'THIS_MONTH' | 'TODAY' | 'ALL' | 'CUSTOM'>('THIS_MONTH');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
+
+  // WhatsApp Sending States
+  const [isSendingWhatsAppFile, setIsSendingWhatsAppFile] = useState(false);
+  const [whatsAppFileStatus, setWhatsAppFileStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!customer?.id) {
@@ -146,6 +172,50 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
     year: 'numeric',
   });
 
+  // Date Period Calculations
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+  const firstDayOfMonthIso = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+
+  let periodStartDate = '';
+  let periodEndDate = todayIso;
+  let periodLabel = 'All-Time Account History';
+
+  if (period === 'TODAY') {
+    periodStartDate = todayIso;
+    periodEndDate = todayIso;
+    periodLabel = `Today's Summary (${todayStr})`;
+  } else if (period === 'THIS_MONTH') {
+    periodStartDate = firstDayOfMonthIso;
+    periodEndDate = todayIso;
+    const monthName = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    periodLabel = `${monthName} Statement (${formatDate(firstDayOfMonthIso)} – ${todayStr})`;
+  } else if (period === 'CUSTOM') {
+    periodStartDate = customStartDate;
+    periodEndDate = customEndDate || todayIso;
+    periodLabel = `Custom Statement (${customStartDate || 'Start'} to ${customEndDate || 'Today'})`;
+  }
+
+  // Transactions within selected date period
+  const periodTransactions = transactions.filter((t) => {
+    if (!t.date) return period === 'ALL';
+    const txDateIso = String(t.date).slice(0, 10);
+    if (periodStartDate && txDateIso < periodStartDate) return false;
+    if (periodEndDate && txDateIso > periodEndDate) return false;
+    return true;
+  });
+
+  const periodPurchases = periodTransactions
+    .filter((t) => t.type === 'ORDER')
+    .reduce((acc, t) => acc + (t.debit || 0), 0);
+
+  const periodPayments = periodTransactions
+    .filter((t) => t.type === 'PAYMENT')
+    .reduce((acc, t) => acc + (t.credit || 0), 0);
+
+  const openingDue = period === 'ALL' ? 0 : Math.max(0, balance - (periodPurchases - periodPayments));
+  const closingDue = period === 'ALL' ? balance : Math.max(0, openingDue + periodPurchases - periodPayments);
+
   const handlePrint = () => {
     if (!statementRef.current) {
       window.print();
@@ -229,6 +299,56 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
     }, 200);
   };
 
+  const handleWhatsAppSendFile = async (format: 'IMAGE' | 'PDF' = 'IMAGE') => {
+    const custPhone = customer.phone;
+    if (!custPhone || custPhone.trim().length < 7) {
+      alert('This customer shop does not have a valid phone number entered.');
+      return;
+    }
+    if (!statementRef.current) return;
+
+    setIsSendingWhatsAppFile(true);
+    setWhatsAppFileStatus(`Sending Statement ${format}...`);
+
+    try {
+      const caption =
+        `*${storeName.toUpperCase()}*\n` +
+        `*CUSTOMER ACCOUNT STATEMENT*\n` +
+        `Shop: *${customer.name}*\n` +
+        `Period: *${periodLabel}*\n` +
+        `Outstanding Due: *₹${closingDue.toFixed(2)}*\n` +
+        (storeUpi ? `GPay / UPI Payment: *${storeUpi}*\n` : '') +
+        `\nThank you for choosing ${storeName}!`;
+
+      const res = await sendInvoiceFileViaBridge({
+        phone: custPhone,
+        element: statementRef.current,
+        orderNumber: `Statement_${customer.name.replace(/[^a-zA-Z0-9]/g, '_')}`,
+        format,
+        caption,
+      });
+
+      if (res.success) {
+        setWhatsAppFileStatus(`✅ Statement ${format} Sent!`);
+        setTimeout(() => setWhatsAppFileStatus(null), 4000);
+      } else {
+        setWhatsAppFileStatus(null);
+        const openQr = window.confirm(
+          `${res.error}\n\nWould you like to open the WhatsApp QR Code page on your laptop now to connect?`
+        );
+        if (openQr) {
+          window.open('http://localhost:3005/qr', '_blank');
+        }
+      }
+    } catch (err: unknown) {
+      setWhatsAppFileStatus(null);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      alert('Failed to send statement via WhatsApp: ' + errMsg);
+    } finally {
+      setIsSendingWhatsAppFile(false);
+    }
+  };
+
   const handleWhatsAppShare = () => {
     const msg = generateCustomerStatementMessage({
       customerName: customer.name,
@@ -237,10 +357,10 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
       route: typeof customer.route === 'object' ? (customer.route as any)?.name : undefined,
       statementDate: todayStr,
       totalOrdersCount,
-      totalOrdersAmount,
-      totalPaymentsAmount: totalPaidAmount,
-      outstandingBalance: balance,
-      recentTransactions: transactions.slice(0, 6).map((t) => ({
+      totalOrdersAmount: periodPurchases,
+      totalPaymentsAmount: periodPayments,
+      outstandingBalance: closingDue,
+      recentTransactions: periodTransactions.slice(0, 6).map((t) => ({
         date: formatDate(t.date),
         type: t.type,
         ref: t.ref,
@@ -374,7 +494,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
               style={{
                 fontSize: '0.68rem',
                 fontWeight: 800,
-                backgroundColor: '#15803d',
+                backgroundColor: '#047857',
                 color: '#ffffff',
                 padding: '0.12rem 0.45rem',
                 borderRadius: '4px',
@@ -386,37 +506,62 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-            {isWhatsAppEnabled && (
-              <button
-                type="button"
-                onClick={handleWhatsAppShare}
-                disabled={loading}
-                style={{
-                  padding: '0.35rem 0.65rem',
-                  background: loading ? '#94a3b8' : '#15803d',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-              >
-                <MessageCircle size={13} />
-                <span>Share Statement</span>
-              </button>
-            )}
+            {/* Direct WhatsApp Image Dispatch (Default) */}
+            <button
+              type="button"
+              onClick={() => handleWhatsAppSendFile('IMAGE')}
+              disabled={loading || isSendingWhatsAppFile}
+              style={{
+                padding: '0.35rem 0.75rem',
+                background: '#047857',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '0.76rem',
+                fontWeight: 800,
+                cursor: loading || isSendingWhatsAppFile ? 'wait' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                boxShadow: '0 2px 4px rgba(4, 120, 87, 0.3)',
+              }}
+              title="Send High-Res Statement Image directly to customer WhatsApp"
+            >
+              {isSendingWhatsAppFile ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />}
+              <span>Send Image (Default)</span>
+            </button>
+
+            {/* Direct WhatsApp PDF Dispatch */}
+            <button
+              type="button"
+              onClick={() => handleWhatsAppSendFile('PDF')}
+              disabled={loading || isSendingWhatsAppFile}
+              style={{
+                padding: '0.35rem 0.65rem',
+                background: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: loading || isSendingWhatsAppFile ? 'wait' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+              title="Send PDF Statement directly to customer WhatsApp"
+            >
+              <FileText size={13} />
+              <span>Send PDF</span>
+            </button>
 
             <button
               type="button"
               onClick={handlePrint}
               disabled={loading}
               style={{
-                padding: '0.35rem 0.75rem',
-                background: loading ? '#94a3b8' : '#b91c1c',
+                padding: '0.35rem 0.65rem',
+                background: '#475569',
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '4px',
@@ -429,7 +574,29 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
               }}
             >
               <Printer size={13} />
-              <span>Print Statement</span>
+              <span>Print</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleWhatsAppShare}
+              disabled={loading}
+              style={{
+                padding: '0.35rem 0.55rem',
+                background: 'transparent',
+                color: '#94a3b8',
+                border: '1px solid #475569',
+                borderRadius: '4px',
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+              }}
+              title="Share Text Link"
+            >
+              <MessageCircle size={12} />
+              <span>Share Link</span>
             </button>
 
             <button
@@ -449,6 +616,137 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
             >
               <X size={18} />
             </button>
+          </div>
+        </div>
+
+        {/* WhatsApp Sending Status Indicator */}
+        {whatsAppFileStatus && (
+          <div
+            className="statement-non-printable"
+            style={{
+              padding: '0.45rem 1.25rem',
+              backgroundColor: whatsAppFileStatus.includes('✅') ? '#ecfdf5' : '#eff6ff',
+              color: whatsAppFileStatus.includes('✅') ? '#065f46' : '#1d4ed8',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              borderBottom: '1px solid #cbd5e1',
+            }}
+          >
+            {whatsAppFileStatus.includes('Sending') && <Loader2 size={14} className="animate-spin" />}
+            {whatsAppFileStatus.includes('✅') && <CheckCircle2 size={14} />}
+            <span>{whatsAppFileStatus}</span>
+          </div>
+        )}
+
+        {/* Period Filter Toolbar (Hidden during print) */}
+        <div
+          className="statement-non-printable"
+          style={{
+            padding: '0.65rem 1.25rem',
+            backgroundColor: '#f8fafc',
+            borderBottom: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.6rem',
+            fontSize: '0.78rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 700, color: '#475569', marginRight: '4px' }}>Statement Period:</span>
+            <button
+              type="button"
+              onClick={() => setPeriod('THIS_MONTH')}
+              style={{
+                padding: '0.25rem 0.55rem',
+                borderRadius: '5px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                border: period === 'THIS_MONTH' ? '2px solid #047857' : '1px solid #cbd5e1',
+                backgroundColor: period === 'THIS_MONTH' ? '#ecfdf5' : '#ffffff',
+                color: period === 'THIS_MONTH' ? '#065f46' : '#64748b',
+                cursor: 'pointer',
+              }}
+            >
+              📅 This Month
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPeriod('TODAY')}
+              style={{
+                padding: '0.25rem 0.55rem',
+                borderRadius: '5px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                border: period === 'TODAY' ? '2px solid #047857' : '1px solid #cbd5e1',
+                backgroundColor: period === 'TODAY' ? '#ecfdf5' : '#ffffff',
+                color: period === 'TODAY' ? '#065f46' : '#64748b',
+                cursor: 'pointer',
+              }}
+            >
+              ⚡ Today
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPeriod('ALL')}
+              style={{
+                padding: '0.25rem 0.55rem',
+                borderRadius: '5px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                border: period === 'ALL' ? '2px solid #047857' : '1px solid #cbd5e1',
+                backgroundColor: period === 'ALL' ? '#ecfdf5' : '#ffffff',
+                color: period === 'ALL' ? '#065f46' : '#64748b',
+                cursor: 'pointer',
+              }}
+            >
+              📜 All-Time
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPeriod('CUSTOM')}
+              style={{
+                padding: '0.25rem 0.55rem',
+                borderRadius: '5px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                border: period === 'CUSTOM' ? '2px solid #047857' : '1px solid #cbd5e1',
+                backgroundColor: period === 'CUSTOM' ? '#ecfdf5' : '#ffffff',
+                color: period === 'CUSTOM' ? '#065f46' : '#64748b',
+                cursor: 'pointer',
+              }}
+            >
+              📆 Custom Range
+            </button>
+          </div>
+
+          {period === 'CUSTOM' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+              />
+              <span>to</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                style={{ padding: '0.2rem 0.4rem', fontSize: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+              />
+            </div>
+          )}
+
+          <div style={{ color: '#047857', fontWeight: 700 }}>
+            {periodLabel}
           </div>
         </div>
 
@@ -514,13 +812,11 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
                 <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', letterSpacing: '0.04em' }}>
                   CUSTOMER ACCOUNT STATEMENT
                 </div>
-                <div style={{ fontSize: '0.84rem', color: '#475569', marginTop: '3px' }}>
-                  Statement Date: <strong>{todayStr}</strong>
+                <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#047857', marginTop: '3px' }}>
+                  {periodLabel}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px' }}>
-                  Account Status: <strong style={{ color: balance > 0 ? '#b91c1c' : '#15803d' }}>
-                    {balance > 0 ? 'PAYMENT DUE' : 'SETTLED / CLEAR'}
-                  </strong>
+                <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                  Generated On: <strong>{todayStr}</strong>
                 </div>
               </div>
             </div>
@@ -554,11 +850,11 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
 
             <div style={{ textAlign: 'right' }}>
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '3px' }}>
-                ROUTE & CREDIT PROFILE:
+                ROUTE & PAYMENT PROFILE:
               </span>
               {customer.route_details?.name && <div>Delivery Route: <strong>{customer.route_details.name}</strong></div>}
               <div>Credit Limit: <strong>₹{creditLimit.toFixed(2)}</strong></div>
-              <div>Total Orders Count: <strong>{totalOrdersCount}</strong></div>
+              <div>Period Orders Count: <strong>{periodTransactions.filter(t => t.type === 'ORDER').length}</strong></div>
               {storeUpi && (
                 <div style={{ marginTop: '4px', fontWeight: 700 }}>
                   UPI / GPay: <span style={{ fontFamily: 'monospace', color: '#b91c1c' }}>{storeUpi}</span>
@@ -578,37 +874,37 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
           >
             <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
               <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                Total Purchases
+                Opening Due (b/f)
               </span>
               <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', marginTop: '2px', fontFamily: 'monospace' }}>
-                ₹{totalOrdersAmount.toFixed(2)}
+                ₹{openingDue.toFixed(2)}
               </div>
             </div>
 
             <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
               <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                Total Paid to Date
+                Period Purchases
+              </span>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', marginTop: '2px', fontFamily: 'monospace' }}>
+                ₹{periodPurchases.toFixed(2)}
+              </div>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
+                Period Payments
               </span>
               <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#15803d', marginTop: '2px', fontFamily: 'monospace' }}>
-                ₹{totalPaidAmount.toFixed(2)}
+                ₹{periodPayments.toFixed(2)}
               </div>
             </div>
 
             <div style={{ background: '#fef2f2', padding: '0.75rem', borderRadius: '6px', border: '1px solid #fecaca' }}>
               <span style={{ fontSize: '0.72rem', color: '#991b1b', fontWeight: 800, textTransform: 'uppercase' }}>
-                Outstanding Due
+                Net Outstanding Due
               </span>
               <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#b91c1c', marginTop: '2px', fontFamily: 'monospace' }}>
-                ₹{balance.toFixed(2)}
-              </div>
-            </div>
-
-            <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                Credit Status
-              </span>
-              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: balance > creditLimit ? '#b91c1c' : '#0f172a', marginTop: '4px' }}>
-                {balance > creditLimit ? 'Exceeded Limit' : 'Within Limit'}
+                ₹{closingDue.toFixed(2)}
               </div>
             </div>
           </div>
@@ -616,7 +912,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
           {/* Statement Transaction History Table */}
           <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
             <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#0f172a', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-              Transaction & Order Ledger History:
+              {periodLabel} — Transaction Ledger:
             </div>
             <table className="data-table" style={{ width: '100%', fontSize: '0.8rem', borderCollapse: 'collapse' }}>
               <thead>
@@ -630,14 +926,40 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {transactions.length === 0 ? (
+                {/* Opening balance row if filtered */}
+                {openingDue > 0 && (
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', backgroundColor: '#fcfcfd' }}>
+                    <td style={{ padding: '0.5rem 0.6rem', fontFamily: 'monospace', color: '#64748b' }}>
+                      {periodStartDate ? formatDate(periodStartDate) : '—'}
+                    </td>
+                    <td style={{ padding: '0.5rem 0.6rem', textAlign: 'center' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '0.1rem 0.4rem', borderRadius: '3px', background: '#f1f5f9', color: '#475569' }}>
+                        OPENING
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.5rem 0.6rem', fontFamily: 'monospace', color: '#64748b' }}>
+                      BALANCE B/F
+                    </td>
+                    <td style={{ padding: '0.5rem 0.6rem', color: '#475569', fontStyle: 'italic' }}>
+                      Previous outstanding balance brought forward
+                    </td>
+                    <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700, color: '#b91c1c' }}>
+                      ₹{openingDue.toFixed(2)}
+                    </td>
+                    <td style={{ padding: '0.5rem 0.6rem', textAlign: 'right', fontFamily: 'monospace', color: '#94a3b8' }}>
+                      —
+                    </td>
+                  </tr>
+                )}
+
+                {periodTransactions.length === 0 ? (
                   <tr>
                     <td colSpan={6} style={{ padding: '1.25rem', textAlign: 'center', color: '#64748b' }}>
-                      No transactions recorded yet for this customer.
+                      No transactions recorded in this period.
                     </td>
                   </tr>
                 ) : (
-                  transactions.map((tx, idx) => (
+                  periodTransactions.map((tx, idx) => (
                     <tr key={`${tx.ref}_${idx}`} style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <td style={{ padding: '0.5rem 0.6rem', fontFamily: 'monospace', color: '#475569' }}>
                         {formatDate(tx.date)}
@@ -676,10 +998,10 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
               <tfoot>
                 <tr style={{ background: '#f8fafc', borderTop: '2px solid #cbd5e1', fontWeight: 800 }}>
                   <td colSpan={4} style={{ padding: '0.6rem', textAlign: 'right' }}>
-                    CURRENT NET OUTSTANDING DUE:
+                    NET CLOSING OUTSTANDING DUE:
                   </td>
-                  <td colSpan={2} style={{ padding: '0.6rem', textAlign: 'right', color: '#b91c1c', fontSize: '1rem', fontFamily: 'monospace' }}>
-                    ₹{balance.toFixed(2)}
+                  <td colSpan={2} style={{ padding: '0.6rem', textAlign: 'right', color: '#b91c1c', fontSize: '1.05rem', fontFamily: 'monospace' }}>
+                    ₹{closingDue.toFixed(2)}
                   </td>
                 </tr>
               </tfoot>

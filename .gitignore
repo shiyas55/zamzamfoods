@@ -72,3 +72,9 @@ frontend/src-tauri/target/
 
 zamzam_foods_full_kit.zip
 zamzam_foods_full_kit/
+*.zip
+
+# ─── WhatsApp Bridge ──────────────────────────────────────────────────────────
+whatsapp-bridge/node_modules/
+whatsapp-bridge/.wwebjs_auth/
+whatsapp-bridge/.wwebjs_cache/

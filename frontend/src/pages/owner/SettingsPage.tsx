@@ -41,8 +41,10 @@ import {
   Maximize,
   ZoomIn,
   ZoomOut,
+  QrCode,
 } from 'lucide-react';
 import { settingsService } from '../../services/settingsService';
+import { checkWhatsAppBridgeStatus, BridgeStatus } from '../../utils/whatsappBridgeUtils';
 
 const DatabaseStorageBackupSection = React.lazy(() =>
   import('../../components/DatabaseStorageBackupSection').then((m) => ({ default: m.DatabaseStorageBackupSection }))
@@ -138,6 +140,26 @@ export const SettingsPage: React.FC = () => {
   const [whatsappPlanName, setWhatsappPlanName] = useState('WhatsApp Enterprise Pro');
   const [whatsappPlanExpiresAt, setWhatsappPlanExpiresAt] = useState<string | null>(null);
   const [whatsappLicenseKey, setWhatsappLicenseKey] = useState('');
+
+  // Local WhatsApp Laptop Bridge State
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus | null>(null);
+  const [checkingBridge, setCheckingBridge] = useState(false);
+
+  const refreshBridgeStatus = async () => {
+    setCheckingBridge(true);
+    try {
+      const s = await checkWhatsAppBridgeStatus();
+      setBridgeStatus(s);
+    } finally {
+      setCheckingBridge(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshBridgeStatus();
+    const interval = setInterval(refreshBridgeStatus, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Upgrade Plan Modal state
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -1305,6 +1327,169 @@ export const SettingsPage: React.FC = () => {
                     </div>
                   );
                 })()}
+
+                {/* 2b. WhatsApp Laptop Bridge (Free Auto-Send PDF/Image Bills) */}
+                <div
+                  style={{
+                    padding: '1.35rem',
+                    borderRadius: '14px',
+                    backgroundColor: 'var(--bg-main)',
+                    border: '1px solid var(--border)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '1rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: '12px',
+                          backgroundColor: bridgeStatus?.connected
+                            ? 'rgba(34, 197, 94, 0.15)'
+                            : 'rgba(234, 179, 8, 0.15)',
+                          color: bridgeStatus?.connected ? '#16a34a' : '#ca8a04',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <MessageCircle size={24} />
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
+                            WhatsApp Laptop Bridge (Free PDF / Image Auto-Send)
+                          </h4>
+                          <span
+                            style={{
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              backgroundColor: bridgeStatus?.connected ? '#dcfce7' : '#fef9c3',
+                              color: bridgeStatus?.connected ? '#15803d' : '#854d0e',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                backgroundColor: bridgeStatus?.connected ? '#22c55e' : '#eab308',
+                              }}
+                            />
+                            {bridgeStatus?.connected
+                              ? `Linked & Active (${bridgeStatus.info?.phone || 'Ready'})`
+                              : bridgeStatus?.hasQr
+                              ? 'Scan QR to Link'
+                              : 'Service Offline'}
+                          </span>
+                        </div>
+                        <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                          Sends real PDF and Image invoices directly into customer WhatsApp chats without Meta API fees.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => window.open('http://localhost:3005/qr', '_blank')}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          padding: '0.45rem 0.85rem',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          borderRadius: '8px',
+                          backgroundColor: '#16a34a',
+                          color: '#ffffff',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <QrCode size={15} />
+                        <span>Link WhatsApp (Scan QR)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={checkingBridge}
+                        onClick={refreshBridgeStatus}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          padding: '0.45rem 0.85rem',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--text-main)',
+                          border: '1px solid var(--border)',
+                          cursor: checkingBridge ? 'wait' : 'pointer',
+                        }}
+                      >
+                        <RotateCcw size={14} className={checkingBridge ? 'animate-spin' : ''} />
+                        <span>Refresh Status</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {!bridgeStatus?.connected && (
+                    <div
+                      style={{
+                        padding: '0.75rem 1rem',
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(234, 179, 8, 0.08)',
+                        border: '1px solid rgba(234, 179, 8, 0.3)',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-main)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <span>
+                        💡 <b>How to start on your laptop:</b> Run <code>start_whatsapp_bridge.bat</code> (Windows) or <code>./start_whatsapp_bridge_mac.sh</code> (Mac), then scan the QR code.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => window.open('http://localhost:3005/qr', '_blank')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#2563eb',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          padding: 0,
+                          fontSize: '0.8rem',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        Open QR Code Page &rarr;
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {/* 3. Customer Self-Ordering Toggle */}
                 <div style={{

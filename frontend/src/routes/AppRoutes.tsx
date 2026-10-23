@@ -25,6 +25,7 @@ const ReportsPage = React.lazy(() => import('../pages/owner/ReportsPage').then(m
 const StaffUsersPage = React.lazy(() => import('../pages/owner/StaffUsersPage').then(m => ({ default: m.StaffUsersPage })));
 const SettingsPage = React.lazy(() => import('../pages/owner/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const ShopDocumentsPage = React.lazy(() => import('../pages/owner/ShopDocumentsPage').then(m => ({ default: m.ShopDocumentsPage })));
+const NotepadSheetPage = React.lazy(() => import('../pages/owner/NotepadSheetPage').then(m => ({ default: m.NotepadSheetPage })));
 
 // Order Entry & Daily Operations (Lazy)
 const CreateOrderPage = React.lazy(() => import('../pages/manager/CreateOrderPage').then(m => ({ default: m.CreateOrderPage })));
@@ -91,6 +92,7 @@ export const AppRoutes: React.FC = () => {
           <Route path="daily-closing" element={<Navigate to="/owner/create-order" replace />} />
           <Route path="activity-history" element={<Navigate to="/owner/settings?tab=activity" replace />} />
           <Route path="attendance" element={<StaffUsersPage defaultTab="attendance" />} />
+          <Route path="notepad" element={<NotepadSheetPage />} />
           <Route path="users" element={<Navigate to="/owner" replace />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

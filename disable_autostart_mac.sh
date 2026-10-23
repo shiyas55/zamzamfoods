@@ -1,18 +1,21 @@
 #!/bin/bash
-# Zamzam Foods — Disable macOS Automatic Backend Startup
+# Zamzam Foods — macOS Disable Auto-Start
 
-PLIST_FILE="$HOME/Library/LaunchAgents/com.zamzamfoods.backend.plist"
+BACKEND_PLIST="$HOME/Library/LaunchAgents/com.zamzamfoods.backend.plist"
+WHATSAPP_PLIST="$HOME/Library/LaunchAgents/com.zamzamfoods.whatsapp.plist"
 
-echo "=================================================="
-echo "  Zamzam Foods — Disable Auto-Start on macOS Boot"
-echo "=================================================="
-echo ""
+echo "Disabling Zamzam Foods Auto-Start on macOS..."
 
-if [ -f "$PLIST_FILE" ]; then
-    launchctl unload "$PLIST_FILE" 2>/dev/null || true
-    rm -f "$PLIST_FILE"
-    echo "✓ Auto-start disabled. LaunchAgent removed."
-else
-    echo "Auto-start is already disabled."
+if [ -f "$BACKEND_PLIST" ]; then
+    launchctl unload "$BACKEND_PLIST" 2>/dev/null || true
+    rm -f "$BACKEND_PLIST"
+    echo "✓ Removed com.zamzamfoods.backend LaunchAgent"
 fi
-echo "=================================================="
+
+if [ -f "$WHATSAPP_PLIST" ]; then
+    launchctl unload "$WHATSAPP_PLIST" 2>/dev/null || true
+    rm -f "$WHATSAPP_PLIST"
+    echo "✓ Removed com.zamzamfoods.whatsapp LaunchAgent"
+fi
+
+echo "Auto-start disabled successfully."

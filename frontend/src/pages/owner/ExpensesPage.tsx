@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { expenseService } from '../../services/expenseService';
 import { routeService } from '../../services/routeService';
 import { DriverExpense, DriverExpenseCategory, DriverExpenseSummary, Driver, Route } from '../../types';
@@ -17,6 +17,10 @@ import {
   Receipt,
   Building,
   UserCheck,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  Tag,
 } from 'lucide-react';
 
 const CATEGORY_OPTIONS: { label: string; value: string }[] = [
@@ -63,6 +67,9 @@ export const ExpensesPage: React.FC = () => {
 
   // Add Expense Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const amountInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     category: 'SHOP_EXPENSE' as DriverExpenseCategory,
     custom_category: '',
@@ -75,6 +82,15 @@ export const ExpensesPage: React.FC = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setTimeout(() => {
+        amountInputRef.current?.focus();
+        amountInputRef.current?.select();
+      }, 50);
+    }
+  }, [isModalOpen]);
 
   const fetchData = async () => {
     try {
@@ -492,129 +508,263 @@ export const ExpensesPage: React.FC = () => {
         )}
       </div>
 
-      {/* Record Expense Modal */}
+      {/* Easy & Fast Record Expense Modal */}
       {isModalOpen && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1050,
             padding: '1rem',
           }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsModalOpen(false);
+          }}
         >
           <div
             className="card"
             style={{
               width: '100%',
-              maxWidth: '540px',
-              padding: '1.75rem',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-              borderRadius: '12px',
+              maxWidth: '520px',
+              padding: '1.5rem',
+              boxShadow: '0 25px 35px -5px rgba(0, 0, 0, 0.25), 0 15px 15px -5px rgba(0, 0, 0, 0.08)',
+              borderRadius: '16px',
               backgroundColor: 'var(--card-bg, #ffffff)',
+              border: '1px solid #e2e8f0',
+              maxHeight: '92vh',
+              overflowY: 'auto',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <Receipt size={22} style={{ color: 'var(--primary, #dc2626)' }} />
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.8rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    backgroundColor: '#fee2e2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#dc2626',
+                  }}
+                >
+                  <Receipt size={20} />
+                </div>
                 <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
-                    Record Business / Shop Expense
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+                    Quick Expense Entry
                   </h3>
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    Added by Owner or Manager with full audit logging
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748b' }}>
+                    Enter expense amount & category in 2 seconds
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 style={{
-                  background: 'none',
+                  background: '#f1f5f9',
                   border: 'none',
                   cursor: 'pointer',
-                  color: 'var(--text-muted)',
-                  padding: '4px',
+                  color: '#64748b',
+                  padding: '6px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {formError && (
               <div
                 style={{
-                  padding: '0.75rem 1rem',
+                  padding: '0.65rem 0.9rem',
                   backgroundColor: '#fee2e2',
                   color: '#991b1b',
-                  borderRadius: '6px',
+                  borderRadius: '8px',
                   marginBottom: '1rem',
-                  fontSize: '0.85rem',
+                  fontSize: '0.82rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                 }}
               >
                 <AlertCircle size={16} />
-                {formError}
+                <span>{formError}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Expense Category *
-                  </label>
-                  <select
-                    className="form-select"
-                    style={{ width: '100%' }}
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as DriverExpenseCategory })}
-                    required
+              {/* 1. Large Hero Amount Input */}
+              <div style={{ marginBottom: '1.1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>
+                  Expense Amount (₹) *
+                </label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: '14px',
+                      fontSize: '1.6rem',
+                      fontWeight: 900,
+                      color: '#dc2626',
+                      pointerEvents: 'none',
+                    }}
                   >
-                    {FORM_CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
+                    ₹
+                  </span>
+                  <input
+                    ref={amountInputRef}
+                    type="number"
+                    step="any"
+                    min="0.01"
+                    className="form-input"
+                    placeholder="0"
+                    style={{
+                      width: '100%',
+                      fontSize: '1.75rem',
+                      fontWeight: 800,
+                      padding: '10px 14px 10px 38px',
+                      borderRadius: '12px',
+                      border: '2px solid #cbd5e1',
+                      color: '#0f172a',
+                      backgroundColor: '#ffffff',
+                    }}
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    required
+                  />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Expense Source / Driver
-                  </label>
-                  <select
-                    className="form-select"
-                    style={{ width: '100%' }}
-                    value={formData.driver}
-                    onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
+                {/* Quick Amount Suggestion Chips */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.55rem' }}>
+                  {[50, 100, 200, 500, 1000, 2000].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, amount: String(val) })}
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        backgroundColor: formData.amount === String(val) ? '#fee2e2' : '#f8fafc',
+                        color: formData.amount === String(val) ? '#dc2626' : '#334155',
+                        border: formData.amount === String(val) ? '1px solid #f87171' : '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      ₹{val}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cur = parseFloat(formData.amount) || 0;
+                      setFormData({ ...formData, amount: String(cur + 50) });
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      backgroundColor: '#f1f5f9',
+                      color: '#64748b',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
                   >
-                    <option value="">🏢 Shop / General Expense</option>
-                    <optgroup label="Or assign to a Driver:">
-                      {drivers.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          🚗 {d.driver_name} ({d.assigned_route_details?.name || 'No Route'})
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
+                    +₹50
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const cur = parseFloat(formData.amount) || 0;
+                      setFormData({ ...formData, amount: String(cur + 100) });
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      backgroundColor: '#f1f5f9',
+                      color: '#64748b',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    +₹100
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. Fast 1-Tap Category Grid */}
+              <div style={{ marginBottom: '1.1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '0.45rem', letterSpacing: '0.04em' }}>
+                  Select Category *
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.45rem' }}>
+                  {[
+                    { label: 'Shop / Store', icon: '🏢', value: 'SHOP_EXPENSE' },
+                    { label: 'Petrol / Fuel', icon: '⛽', value: 'PETROL_FUEL' },
+                    { label: 'Tea / Food', icon: '🍽️', value: 'FOOD' },
+                    { label: 'Packaging', icon: '📦', value: 'RAW_MATERIAL' },
+                    { label: 'Maintenance', icon: '🔧', value: 'MAINTENANCE' },
+                    { label: 'Wages / Bata', icon: '💼', value: 'SALARY_WAGES' },
+                    { label: 'Power / Rent', icon: '💡', value: 'UTILITY' },
+                    { label: 'Other', icon: '📝', value: 'OTHER' },
+                  ].map((cat) => {
+                    const isSelected = formData.category === cat.value;
+                    return (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, category: cat.value as DriverExpenseCategory })}
+                        style={{
+                          padding: '8px 4px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '3px',
+                          borderRadius: '10px',
+                          border: isSelected ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                          backgroundColor: isSelected ? '#fef2f2' : '#ffffff',
+                          color: isSelected ? '#991b1b' : '#334155',
+                          cursor: 'pointer',
+                          fontWeight: isSelected ? 800 : 600,
+                          fontSize: '0.72rem',
+                          textAlign: 'center',
+                          transition: 'all 0.15s ease',
+                          boxShadow: isSelected ? '0 2px 4px rgba(220, 38, 38, 0.15)' : 'none',
+                        }}
+                      >
+                        <span style={{ fontSize: '1.15rem' }}>{cat.icon}</span>
+                        <span style={{ lineHeight: 1.1 }}>{cat.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {formData.category === 'OTHER' && (
                 <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Custom Category Name *
-                  </label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Packing materials, Ice blocks, Bakery maintenance..."
-                    style={{ width: '100%' }}
+                    placeholder="Enter Custom Category Name (e.g. Ice blocks, Covers...)"
+                    style={{ width: '100%', fontSize: '0.85rem' }}
                     value={formData.custom_category}
                     onChange={(e) => setFormData({ ...formData, custom_category: e.target.value })}
                     required
@@ -622,73 +772,179 @@ export const ExpensesPage: React.FC = () => {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Amount (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    className="form-input"
-                    placeholder="0.00"
-                    style={{ width: '100%', fontWeight: 700 }}
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                    Date *
-                  </label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    style={{ width: '100%' }}
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
+              {/* 3. Notes / What was this for? */}
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                  Receipt / Bill Reference (Optional)
+                <label style={{ display: 'block', fontSize: '0.76rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '0.35rem', letterSpacing: '0.04em' }}>
+                  What was this for? (Remarks)
                 </label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Shop Bill #104, Petrol receipt, Electric bill #..."
-                  style={{ width: '100%' }}
-                  value={formData.receipt_reference}
-                  onChange={(e) => setFormData({ ...formData, receipt_reference: e.target.value })}
-                />
-              </div>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                  Notes / Remarks
-                </label>
-                <textarea
-                  className="form-input"
-                  rows={2}
-                  placeholder="e.g. Shop maintenance repairs, packaging covers, tea refreshments..."
-                  style={{ width: '100%', resize: 'vertical' }}
+                  placeholder="e.g. Tea & snacks, Delivery auto petrol, Packaging covers..."
+                  style={{ width: '100%', fontSize: '0.88rem' }}
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
+
+                {/* Quick Remark Suggestions */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.4rem' }}>
+                  {[
+                    'Tea & Refreshments',
+                    'Delivery Van Petrol',
+                    'Packing Covers / Bags',
+                    'Shop Cleaning Supplies',
+                  ].map((phrase) => (
+                    <button
+                      key={phrase}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, notes: phrase })}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '0.72rem',
+                        backgroundColor: '#f1f5f9',
+                        color: '#475569',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + {phrase}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              {/* 4. Collapsible Advanced Options (Date, Driver, Bill #) */}
+              <div style={{ marginBottom: '1.25rem', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.85rem',
+                    backgroundColor: '#f8fafc',
+                    border: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    color: '#475569',
+                  }}
+                >
+                  <span>
+                    {showAdvanced ? '▲ Hide Extra Details' : '▼ More Options (Change Date, Driver, Bill Ref)'}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                    {formData.date === new Date().toISOString().split('T')[0] ? 'Date: Today' : `Date: ${formData.date}`}
+                  </span>
+                </button>
+
+                {showAdvanced && (
+                  <div style={{ padding: '0.85rem', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {/* Date with Today / Yesterday toggle */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569' }}>
+                          Expense Date
+                        </label>
+                        <div style={{ display: 'flex', gap: '0.3rem' }}>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, date: new Date().toISOString().split('T')[0] })}
+                            style={{
+                              padding: '2px 6px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              backgroundColor: formData.date === new Date().toISOString().split('T')[0] ? '#fee2e2' : '#f1f5f9',
+                              color: formData.date === new Date().toISOString().split('T')[0] ? '#dc2626' : '#475569',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Today
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const y = new Date();
+                              y.setDate(y.getDate() - 1);
+                              setFormData({ ...formData, date: y.toISOString().split('T')[0] });
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              backgroundColor: '#f1f5f9',
+                              color: '#475569',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Yesterday
+                          </button>
+                        </div>
+                      </div>
+                      <input
+                        type="date"
+                        className="form-input"
+                        style={{ width: '100%', fontSize: '0.82rem' }}
+                        value={formData.date}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      />
+                    </div>
+
+                    {/* Driver / Shop Source */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
+                        Assign to Driver (Optional)
+                      </label>
+                      <select
+                        className="form-select"
+                        style={{ width: '100%', fontSize: '0.82rem' }}
+                        value={formData.driver}
+                        onChange={(e) => setFormData({ ...formData, driver: e.target.value })}
+                      >
+                        <option value="">🏢 Shop / General Expense (Default)</option>
+                        <optgroup label="Or assign to a Driver:">
+                          {drivers.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              🚗 {d.driver_name} ({d.assigned_route_details?.name || 'No Route'})
+                            </option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    {/* Receipt Ref */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.25rem' }}>
+                        Bill / Receipt Reference (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Bill #104, Fuel receipt #42..."
+                        style={{ width: '100%', fontSize: '0.82rem' }}
+                        value={formData.receipt_reference}
+                        onChange={(e) => setFormData({ ...formData, receipt_reference: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. Action Buttons */}
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setIsModalOpen(false)}
                   disabled={formSubmitting}
+                  style={{ flex: 1, padding: '10px', fontWeight: 700 }}
                 >
                   Cancel
                 </button>
@@ -696,9 +952,26 @@ export const ExpensesPage: React.FC = () => {
                   type="submit"
                   className="btn btn-primary"
                   disabled={formSubmitting}
-                  style={{ fontWeight: 700 }}
+                  style={{
+                    flex: 2,
+                    padding: '10px',
+                    fontWeight: 800,
+                    fontSize: '0.95rem',
+                    backgroundColor: '#dc2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                  }}
                 >
-                  {formSubmitting ? 'Saving...' : 'Save Expense'}
+                  <CheckCircle size={18} />
+                  <span>
+                    {formSubmitting
+                      ? 'Saving...'
+                      : formData.amount
+                      ? `Save ₹${formData.amount} Expense`
+                      : 'Save Expense'}
+                  </span>
                 </button>
               </div>
             </form>

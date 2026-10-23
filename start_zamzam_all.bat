@@ -50,6 +50,17 @@ if %errorlevel% neq 0 (
 )
 :BACKEND_UP
 
+:: Start WhatsApp Bridge if not already listening on port 3005
+powershell -NoProfile -Command "$c = New-Object System.Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1', 3005); Write-Host 'OPEN'; $c.Close() } catch { Write-Host 'CLOSED' }" 2>nul | findstr "OPEN" >nul 2>&1
+if %errorlevel% neq 0 (
+    if exist "%~dp0whatsapp-bridge\server.js" (
+        echo Starting WhatsApp Web Bridge service silently in the background...
+        powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath 'cmd.exe' -ArgumentList '/c \"\"%~dp0start_whatsapp_bridge.bat\" /silent\"'" >nul 2>&1
+    )
+) else (
+    echo [INFO] WhatsApp Bridge is already running on port 3005.
+)
+
 echo.
 echo [2/2] Opening Zamzam Foods Desktop Window...
 
