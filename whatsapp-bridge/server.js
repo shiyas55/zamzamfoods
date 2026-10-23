@@ -82,7 +82,14 @@ const client = new Client({
   authStrategy: new LocalAuth({
     dataPath: path.join(__dirname, '.wwebjs_auth'),
   }),
-  puppeteer: getPuppeteerArgs(),
+  webVersionCache: {
+    type: 'remote',
+    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1018956976-alpha.html',
+  },
+  puppeteer: {
+    ...getPuppeteerArgs(),
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  },
 });
 
 client.on('loading_screen', (percent, message) => {
