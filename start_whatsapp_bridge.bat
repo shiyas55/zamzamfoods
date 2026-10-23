@@ -26,11 +26,31 @@ if %errorlevel% neq 0 (
         set "NODE_CMD=%LocalAppData%\Programs\node\node.exe"
         set "PATH=%LocalAppData%\Programs\node;%PATH%"
     ) else (
-        echo [ERROR] Node.js is not found on this Windows system!
-        echo Please download and install Node.js (LTS version) from:
-        echo https://nodejs.org/
-        if not "%~1"=="/silent" pause
-        exit /b 1
+        echo [INFO] Node.js is not detected. Attempting 1-click install via Windows winget...
+        where winget >nul 2>&1
+        if !errorlevel! equ 0 (
+            echo Installing Node.js LTS automatically via winget...
+            winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+            if exist "%ProgramFiles%\nodejs\node.exe" (
+                set "NODE_CMD=%ProgramFiles%\nodejs\node.exe"
+                set "PATH=%ProgramFiles%\nodejs;%PATH%"
+            )
+        )
+        
+        where node >nul 2>&1
+        if !errorlevel! neq 0 if not exist "%ProgramFiles%\nodejs\node.exe" (
+            color 0C
+            echo.
+            echo ==============================================================================
+            echo [REQUIRED] Node.js is required to run the local WhatsApp Bridge!
+            echo ==============================================================================
+            echo 1. Download and install Node.js (free): https://nodejs.org/
+            echo 2. After installing, run this script again.
+            echo.
+            start https://nodejs.org/
+            pause
+            exit /b 1
+        )
     )
 )
 
@@ -47,6 +67,9 @@ echo ===========================================================================
 echo.
 echo Starting WhatsApp Bridge on http://localhost:3005 ...
 echo.
+
+:: Auto-open QR page in browser after short delay
+start "" cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3005/qr"
 
 if "%~1"=="/silent" (
     "%NODE_CMD%" server.js
