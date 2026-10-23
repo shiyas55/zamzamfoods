@@ -193,10 +193,104 @@ function formatChatId(phone) {
 
 // API Routes
 
-// Root route: Redirect straight to QR page
-app.get('/', (req, res) => {
-  res.redirect('/qr');
-});
+// QR and Dashboard Web Page renderer (Always returns HTTP 200 OK)
+function renderQrPage(req, res) {
+  if (req.headers.accept && req.headers.accept.includes('application/json')) {
+    return res.status(200).json({
+      status: 'ok',
+      connected: clientReady,
+      hasQr: Boolean(latestQrImage),
+      stepStatus,
+    });
+  }
+
+  if (clientReady) {
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Zamzam WhatsApp Bridge</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
+            .box { background: #1e293b; padding: 2.5rem; border-radius: 16px; border: 1px solid #334155; }
+            h2 { color: #22c55e; margin-top: 0; }
+          </style>
+        </head>
+        <body>
+          <div class="box">
+            <h2>✅ WhatsApp Connected</h2>
+            <p>Your WhatsApp session is active and ready to send bills automatically.</p>
+            <p><strong>Connected Number:</strong> ${client.info?.wid?.user || 'Active'}</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  if (!latestQrImage) {
+    return res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Zamzam WhatsApp Bridge</title>
+          <meta http-equiv="refresh" content="3">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
+            .box { background: #1e293b; padding: 2.5rem; border-radius: 16px; border: 1px solid #334155; max-width: 420px; }
+            .status-badge { display: inline-block; padding: 6px 14px; background: #334155; border-radius: 999px; font-size: 0.85rem; color: #38bdf8; margin: 10px 0; font-family: monospace; }
+            .spinner { width: 36px; height: 36px; border: 3px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+            @keyframes spin { to { transform: rotate(360deg); } }
+          </style>
+        </head>
+        <body>
+          <div class="box">
+            <div class="spinner"></div>
+            <h2 style="margin: 0;">⏳ Generating QR Code...</h2>
+            <div class="status-badge">${stepStatus}</div>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Starting Chromium browser & loading WhatsApp Web.<br/>This page will auto-refresh every 3s.</p>
+            ${lastError ? `<p style="color: #f87171; font-size: 0.8rem; background: #450a0a; padding: 8px; border-radius: 8px;">⚠️ ${lastError}</p>` : ''}
+          </div>
+        </body>
+      </html>
+    `);
+  }
+
+  res.status(200).send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Zamzam WhatsApp Bridge - Scan QR</title>
+        <meta http-equiv="refresh" content="15">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
+          .box { background: #1e293b; padding: 2rem; border-radius: 16px; border: 1px solid #334155; max-width: 380px; }
+          img { background: #fff; padding: 12px; border-radius: 12px; margin: 1rem 0; width: 260px; height: 260px; }
+          p { color: #94a3b8; font-size: 0.9rem; line-height: 1.4; }
+          ol { text-align: left; font-size: 0.85rem; color: #cbd5e1; padding-left: 1.2rem; }
+        </style>
+      </head>
+      <body>
+        <div class="box">
+          <h2 style="margin: 0 0 0.5rem 0;">📱 Link WhatsApp</h2>
+          <p>Scan this QR code using your WhatsApp to enable automatic bill sending:</p>
+          <img src="${latestQrImage}" alt="WhatsApp QR Code" />
+          <ol>
+            <li>Open WhatsApp on your phone</li>
+            <li>Tap <b>Linked Devices</b></li>
+            <li>Tap <b>Link a Device</b> and point camera here</li>
+          </ol>
+        </div>
+      </body>
+    </html>
+  `);
+}
+
+// 0. Root & QR routes (Both return 200 OK)
+app.get('/', renderQrPage);
+app.get('/qr', renderQrPage);
 
 // 0. UptimeRobot Health Check (Keeps Render service awake 24/7)
 app.get('/health', (req, res) => {
@@ -240,91 +334,7 @@ app.post('/api/orders/clear', (req, res) => {
   res.json({ success: true, cleared: count });
 });
 
-// 2. Web QR Display Page (Open in browser)
-app.get('/qr', (req, res) => {
-  if (clientReady) {
-    return res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Zamzam WhatsApp Bridge</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-            .box { background: #1e293b; padding: 2.5rem; border-radius: 16px; border: 1px solid #334155; }
-            h2 { color: #22c55e; margin-top: 0; }
-          </style>
-        </head>
-        <body>
-          <div class="box">
-            <h2>✅ WhatsApp Connected</h2>
-            <p>Your WhatsApp session is active and ready to send bills automatically.</p>
-            <p><strong>Connected Number:</strong> ${client.info?.wid?.user || 'Active'}</p>
-          </div>
-        </body>
-      </html>
-    `);
-  }
 
-  if (!latestQrImage) {
-    return res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Zamzam WhatsApp Bridge</title>
-          <meta http-equiv="refresh" content="3">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-            .box { background: #1e293b; padding: 2.5rem; border-radius: 16px; border: 1px solid #334155; max-width: 420px; }
-            .status-badge { display: inline-block; padding: 6px 14px; background: #334155; border-radius: 999px; font-size: 0.85rem; color: #38bdf8; margin: 10px 0; font-family: monospace; }
-            .spinner { width: 36px; height: 36px; border: 3px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
-            @keyframes spin { to { transform: rotate(360deg); } }
-          </style>
-        </head>
-        <body>
-          <div class="box">
-            <div class="spinner"></div>
-            <h2 style="margin: 0;">⏳ Generating QR Code...</h2>
-            <div class="status-badge">${stepStatus}</div>
-            <p style="color: #94a3b8; font-size: 0.9rem;">Starting Chromium browser & loading WhatsApp Web.<br/>This page will auto-refresh every 3s.</p>
-            ${lastError ? `<p style="color: #f87171; font-size: 0.8rem; background: #450a0a; padding: 8px; border-radius: 8px;">⚠️ ${lastError}</p>` : ''}
-          </div>
-        </body>
-      </html>
-    `);
-  }
-
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Zamzam WhatsApp Bridge - Scan QR</title>
-        <meta http-equiv="refresh" content="15">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-          body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-          .box { background: #1e293b; padding: 2rem; border-radius: 16px; border: 1px solid #334155; max-width: 380px; }
-          img { background: #fff; padding: 12px; border-radius: 12px; margin: 1rem 0; width: 260px; height: 260px; }
-          p { color: #94a3b8; font-size: 0.9rem; line-height: 1.4; }
-          ol { text-align: left; font-size: 0.85rem; color: #cbd5e1; padding-left: 1.2rem; }
-        </style>
-      </head>
-      <body>
-        <div class="box">
-          <h2 style="margin: 0 0 0.5rem 0;">📱 Link WhatsApp</h2>
-          <p>Scan this QR code using your WhatsApp to enable automatic bill sending:</p>
-          <img src="${latestQrImage}" alt="WhatsApp QR Code" />
-          <ol>
-            <li>Open WhatsApp on your phone</li>
-            <li>Tap <b>Linked Devices</b></li>
-            <li>Tap <b>Link a Device</b> and point camera here</li>
-          </ol>
-        </div>
-      </body>
-    </html>
-  `);
-});
 
 // 3. Send File (PDF or Image)
 app.post('/send-file', async (req, res) => {
