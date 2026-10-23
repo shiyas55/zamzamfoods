@@ -73,7 +73,6 @@ export const OwnerLayout: React.FC = () => {
   const navItems = [
     { to: '/owner',                    label: 'Dashboard',          icon: LayoutDashboard, end: true },
     { to: '/owner/create-order',       label: 'Fast Wholesale',     icon: Zap             },
-    ...(isWhatsAppEnabled ? [{ to: '/owner/create-order?view=whatsapp', label: 'WhatsApp', icon: MessageCircle }] : []),
     { to: '/owner/orders',             label: 'Sales Orders',       icon: ShoppingCart    },
     { to: '/owner/customers',          label: 'Customer Shops',     icon: Store           },
     { to: '/owner/shop-documents',     label: 'Shop Documents',     icon: FolderArchive   },

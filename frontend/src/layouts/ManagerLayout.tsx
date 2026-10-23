@@ -56,7 +56,6 @@ export const ManagerLayout: React.FC = () => {
   const navItems = [
     { to: '/manager',                    label: 'Operations Dashboard',  icon: LayoutDashboard, end: true },
     { to: '/manager/create-order',       label: 'Fast Wholesale',      icon: Zap             },
-    ...(isWhatsAppEnabled ? [{ to: '/manager/create-order?view=whatsapp',   label: 'WhatsApp',           icon: MessageCircle   }] : []),
     { to: '/manager/orders',             label: 'Daily Orders',           icon: ShoppingCart    },
     { to: '/manager/customers',          label: 'Customer Shops',         icon: Store           },
     { to: '/manager/shop-documents',     label: 'Shop Documents',         icon: FolderArchive   },
