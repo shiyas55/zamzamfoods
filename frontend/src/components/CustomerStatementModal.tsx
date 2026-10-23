@@ -809,7 +809,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
               </div>
 
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', letterSpacing: '0.04em' }}>
+                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a' }}>
                   CUSTOMER ACCOUNT STATEMENT
                 </div>
                 <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#047857', marginTop: '3px' }}>
@@ -837,7 +837,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
             }}
           >
             <div>
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '3px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
                 CUSTOMER ACCOUNT DETAILS:
               </span>
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a' }}>
@@ -849,7 +849,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '3px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
                 ROUTE & PAYMENT PROFILE:
               </span>
               {customer.route_details?.name && <div>Delivery Route: <strong>{customer.route_details.name}</strong></div>}

@@ -1115,14 +1115,15 @@ export const BulkSendWhatsAppBillsModal: React.FC<BulkSendWhatsAppBillsModalProp
           style={{
             position: 'fixed',
             top: 0,
-            left: '-9999px',
+            left: 0,
             width: '760px',
             zIndex: -9999,
+            opacity: 0,
             pointerEvents: 'none',
             backgroundColor: '#ffffff',
             color: '#0f172a',
             padding: '28px 32px',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontFamily: 'Arial, Helvetica, sans-serif',
             boxSizing: 'border-box',
           }}
         >
@@ -1146,14 +1147,14 @@ export const BulkSendWhatsAppBillsModal: React.FC<BulkSendWhatsAppBillsModalProp
                     }}
                   />
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#b91c1c', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#b91c1c', textTransform: 'uppercase' }}>
                       {storeName}
                     </h2>
                     <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginTop: '2px' }}>
                       {storeAddress}
                     </div>
                     <div style={{ fontSize: '0.76rem', color: '#475569', marginTop: '2px' }}>
-                      Phone: <strong>{storePhone}</strong> {storeEmail ? `| Email: ${storeEmail}` : ''}
+                      Phone: <strong>{storePhone}</strong> {storeEmail ? ` | Email: ${storeEmail}` : ''}
                     </div>
                     {storeGst && (
                       <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
@@ -1164,7 +1165,7 @@ export const BulkSendWhatsAppBillsModal: React.FC<BulkSendWhatsAppBillsModalProp
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a', letterSpacing: '0.04em' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#0f172a' }}>
                     TAX INVOICE
                   </div>
                   <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#b91c1c', marginTop: '2px' }}>
@@ -1197,7 +1198,7 @@ export const BulkSendWhatsAppBillsModal: React.FC<BulkSendWhatsAppBillsModalProp
               }}
             >
               <div>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '3px' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
                   BILLED TO (CUSTOMER):
                 </span>
                 <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a' }}>
@@ -1209,7 +1210,7 @@ export const BulkSendWhatsAppBillsModal: React.FC<BulkSendWhatsAppBillsModalProp
               </div>
 
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '3px' }}>
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
                   DISPATCH & PAYMENT STATUS:
                 </span>
                 <div>Order Reference: <strong style={{ fontFamily: 'monospace' }}>#{renderOrder.orderNumber || 'BILL'}</strong></div>

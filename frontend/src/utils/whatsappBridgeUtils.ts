@@ -90,7 +90,28 @@ export async function sendInvoiceFileViaBridge({
       scrollY: 0,
       windowWidth: 1200,
       windowHeight: Math.max(height + 200, 1200),
-      onclone: (_clonedDoc, clonedElement) => {
+      onclone: (clonedDoc, clonedElement) => {
+        // 1. Inject global reset in cloned iframe to completely defeat html2canvas kerning/overlapping bugs
+        try {
+          const style = clonedDoc.createElement('style');
+          style.innerHTML = `
+            * {
+              letter-spacing: 0px !important;
+              word-spacing: normal !important;
+              font-kerning: none !important;
+              font-variant-ligatures: none !important;
+              text-rendering: geometricPrecision !important;
+            }
+            body, div, span, p, td, th, h1, h2, h3, h4, strong, b, em, table {
+              font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+              letter-spacing: 0px !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
+        } catch (e) {
+          console.warn('Could not inject cloned style:', e);
+        }
+
         // Ensure cloned element is visible and completely opaque in html2canvas iframe
         clonedElement.style.position = 'static';
         clonedElement.style.left = '0px';
@@ -99,17 +120,19 @@ export async function sendInvoiceFileViaBridge({
         clonedElement.style.opacity = '1';
         clonedElement.style.visibility = 'visible';
         clonedElement.style.display = 'block';
-        clonedElement.style.letterSpacing = 'normal';
+        clonedElement.style.letterSpacing = '0px';
         clonedElement.style.wordSpacing = 'normal';
-        clonedElement.style.fontFamily = 'Arial, Helvetica, sans-serif';
+        clonedElement.style.fontFamily = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
 
-        // Remove letter-spacing from all elements to avoid html2canvas kerning/overlapping bug
+        // 2. Remove letter-spacing from all elements to avoid html2canvas character splitting
         const allChildren = clonedElement.querySelectorAll('*');
         allChildren.forEach((child: any) => {
           if (child.style) {
-            child.style.letterSpacing = 'normal';
-            if (!child.style.fontFamily || child.style.fontFamily.includes('system-ui')) {
-              child.style.fontFamily = 'Arial, Helvetica, sans-serif';
+            child.style.letterSpacing = '0px';
+            child.style.fontKerning = 'none';
+            child.style.fontVariantLigatures = 'none';
+            if (!child.style.fontFamily || child.style.fontFamily.includes('system-ui') || child.style.fontFamily.includes('-apple-system')) {
+              child.style.fontFamily = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
             }
           }
         });
