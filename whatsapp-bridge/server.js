@@ -177,6 +177,11 @@ function formatChatId(phone) {
 
 // API Routes
 
+// Root route: Redirect straight to QR page
+app.get('/', (req, res) => {
+  res.redirect('/qr');
+});
+
 // 0. UptimeRobot Health Check (Keeps Render service awake 24/7)
 app.get('/health', (req, res) => {
   res.json({
