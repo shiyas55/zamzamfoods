@@ -45,6 +45,10 @@ if %errorlevel% equ 0 (
     echo [3/3] Task Scheduler registration skipped (non-critical).
 )
 
+:: 4. Allow ports 8000 (Backend) & 3005 (WhatsApp Bridge) through Windows Firewall for LAN Client PCs
+netsh advfirewall firewall add rule name="Zamzam Foods Backend (Port 8000)" dir=in action=allow protocol=TCP localport=8000 >nul 2>&1
+netsh advfirewall firewall add rule name="Zamzam WhatsApp Bridge (Port 3005)" dir=in action=allow protocol=TCP localport=3005 >nul 2>&1
+
 echo.
 echo ==============================================================================
 echo Starting Backend & WhatsApp Services silently in the background right now...

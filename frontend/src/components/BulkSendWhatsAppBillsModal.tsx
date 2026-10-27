@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Customer, Order } from '../types';
-import { sendInvoiceFileViaBridge, checkWhatsAppBridgeStatus, BridgeStatus } from '../utils/whatsappBridgeUtils';
+import { sendInvoiceFileViaBridge, checkWhatsAppBridgeStatus, BridgeStatus, getWhatsAppBridgeQrUrl } from '../utils/whatsappBridgeUtils';
 import { useSettings } from '../context/SettingsContext';
 import {
   MessageCircle,
@@ -149,7 +149,7 @@ export const BulkSendWhatsAppBillsModal: React.FC<BulkSendWhatsAppBillsModalProp
         'WhatsApp is not linked on your laptop yet.\nWould you like to open the QR Code page to link your phone now?'
       );
       if (openQr) {
-        window.open('http://localhost:3005/qr', '_blank');
+        window.open(getWhatsAppBridgeQrUrl(), '_blank');
       }
       return;
     }

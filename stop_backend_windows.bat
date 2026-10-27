@@ -15,13 +15,30 @@ if ($connections) {
     foreach ($conn in $connections) {
         $procId = $conn.OwningProcess;
         if ($procId -gt 0) {
-            Write-Host ('Stopping process ID: ' + $procId);
+            Write-Host ('Stopping Backend process ID: ' + $procId);
             Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue;
         }
     }
-    Write-Host '[SUCCESS] Backend server stopped cleanly.' -ForegroundColor Green;
+    Write-Host '[SUCCESS] Backend server stopped.' -ForegroundColor Green;
 } else {
     Write-Host '[INFO] Backend server is not running on port 8000.' -ForegroundColor Yellow;
+}
+"
+
+echo Terminating WhatsApp Bridge on port 3005...
+powershell -NoProfile -Command "
+$connections = Get-NetTCPConnection -LocalPort 3005 -ErrorAction SilentlyContinue;
+if ($connections) {
+    foreach ($conn in $connections) {
+        $procId = $conn.OwningProcess;
+        if ($procId -gt 0) {
+            Write-Host ('Stopping WhatsApp process ID: ' + $procId);
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue;
+        }
+    }
+    Write-Host '[SUCCESS] WhatsApp Bridge stopped.' -ForegroundColor Green;
+} else {
+    Write-Host '[INFO] WhatsApp Bridge is not running on port 3005.' -ForegroundColor Yellow;
 }
 "
 

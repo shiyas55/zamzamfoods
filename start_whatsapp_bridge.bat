@@ -47,8 +47,10 @@ if %errorlevel% neq 0 (
             echo 1. Download and install Node.js (free): https://nodejs.org/
             echo 2. After installing, run this script again.
             echo.
-            start https://nodejs.org/
-            pause
+            if not "%~1"=="/silent" (
+                start https://nodejs.org/
+                pause
+            )
             exit /b 1
         )
     )
@@ -68,8 +70,10 @@ echo.
 echo Starting WhatsApp Bridge on http://localhost:3005 ...
 echo.
 
-:: Auto-open QR page in browser after short delay
-start "" cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3005/qr"
+:: Auto-open QR page in browser only if interactive (not silent)
+if not "%~1"=="/silent" (
+    start "" cmd /c "timeout /t 3 /nobreak >nul & start http://localhost:3005/qr"
+)
 
 if "%~1"=="/silent" (
     "%NODE_CMD%" server.js

@@ -299,17 +299,10 @@ class DatabaseStatsView(APIView):
         db_name = db_settings.get("NAME", "zamzam_foods")
         db_user = db_settings.get("USER", "postgres")
 
-        quota_bytes = 1024 * 1024 * 1024  # 1 GB Aiven Free Plan limit
+        quota_bytes = 10 * 1024 * 1024 * 1024  # 10 GB safe local threshold
         usage_pct = round((total_size_bytes / quota_bytes) * 100, 2) if quota_bytes > 0 else 0.0
 
-        is_aiven = "aivencloud" in str(host)
-        is_cloud = is_aiven or "railway" in str(host) or "supabase" in str(host) or not any(h in str(host) for h in ["localhost", "127.0.0.1"])
-
-        if is_aiven:
-            actual_engine = "AIVEN POSTGRESQL CLOUD"
-        elif is_cloud and db_engine == "postgresql":
-            actual_engine = "CLOUD POSTGRESQL"
-        elif db_engine == "postgresql":
+        if db_engine == "postgresql":
             actual_engine = "POSTGRESQL"
         elif db_engine == "sqlite":
             actual_engine = "SQLITE"
@@ -320,10 +313,10 @@ class DatabaseStatsView(APIView):
         alert_message = None
         if usage_pct >= 90:
             status_label = "critical"
-            alert_message = f"Critical Storage Alert: Database usage is at {usage_pct}% of the 1 GB quota ({size_formatted} / 1 GB). Review capacity before limit is reached."
+            alert_message = f"Storage Alert: Database usage is at {usage_pct}% of capacity ({size_formatted}). Consider archiving historical records."
         elif usage_pct >= 80:
             status_label = "warning"
-            alert_message = f"Storage Warning: Database usage is approaching plan threshold ({usage_pct}% of 1 GB quota)."
+            alert_message = f"Storage Warning: Database usage is at {usage_pct}% of threshold."
 
         return Response({
             "engine": actual_engine,
@@ -1441,4 +1434,148 @@ class DatabaseClearAllView(APIView):
             "preserved_users": admin_users,
             "cleared_at": timezone.now().isoformat(),
         })
+
+
+class BackgroundServicesView(APIView):
+    """
+    GET  /api/v1/services/status/
+    Returns live status of Backend engine (port 8000), WhatsApp Bridge (port 3005),
+    and PC Boot Auto-Start status.
+
+    POST /api/v1/services/manage/
+    Body:
+      - action: 'start_services' | 'start_whatsapp' | 'toggle_autostart'
+      - enable: boolean (for toggle_autostart)
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def _check_port_listening(self, port, host="127.0.0.1", timeout=0.8):
+        import socket
+        try:
+            with socket.create_connection((host, port), timeout=timeout):
+                return True
+        except (socket.timeout, ConnectionRefusedError, OSError):
+            return False
+
+    def _check_autostart_status(self):
+        import sys
+        import os
+        from pathlib import Path
+
+        is_windows = sys.platform == "win32"
+        is_mac = sys.platform == "darwin"
+
+        if is_windows:
+            startup_path = os.path.expandvars(r"%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ZamzamFoods_AutoStart.lnk")
+            if os.path.exists(startup_path):
+                return {"enabled": True, "platform": "windows", "method": "Startup Folder"}
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run")
+                val, _ = winreg.QueryValueEx(key, "ZamzamFoodsServices")
+                return {"enabled": True, "platform": "windows", "method": "Windows Registry"}
+            except Exception:
+                pass
+            return {"enabled": False, "platform": "windows", "method": None}
+
+        elif is_mac:
+            home = Path.home()
+            backend_plist = home / "Library" / "LaunchAgents" / "com.zamzamfoods.backend.plist"
+            wa_plist = home / "Library" / "LaunchAgents" / "com.zamzamfoods.whatsapp.plist"
+            if backend_plist.exists() or wa_plist.exists():
+                return {"enabled": True, "platform": "mac", "method": "LaunchAgents"}
+            return {"enabled": False, "platform": "mac", "method": None}
+
+        return {"enabled": False, "platform": sys.platform, "method": None}
+
+    def get(self, request):
+        import sys
+        whatsapp_port = 3005
+        backend_port = 8000
+
+        whatsapp_running = self._check_port_listening(whatsapp_port)
+        autostart_info = self._check_autostart_status()
+
+        return Response({
+            "backend": {
+                "running": True,
+                "port": backend_port,
+                "host": "127.0.0.1",
+            },
+            "whatsapp": {
+                "running": whatsapp_running,
+                "port": whatsapp_port,
+                "host": "127.0.0.1",
+                "url": f"http://127.0.0.1:{whatsapp_port}",
+            },
+            "autostart": autostart_info,
+            "system": {
+                "platform": sys.platform,
+                "timestamp": timezone.now().isoformat(),
+            }
+        })
+
+    def post(self, request):
+        import sys
+        import os
+        import subprocess
+        import time
+        from pathlib import Path
+        from django.conf import settings
+
+        action = request.data.get("action", "start_services")
+        project_root = Path(settings.BASE_DIR).parent
+        is_windows = sys.platform == "win32"
+        is_mac = sys.platform == "darwin"
+
+        if action in ["start_services", "start_whatsapp"]:
+            if is_windows:
+                vbs_path = project_root / "run_all_hidden.vbs"
+                bat_path = project_root / "start_whatsapp_bridge.bat"
+                if vbs_path.exists():
+                    subprocess.Popen(["wscript.exe", str(vbs_path)], cwd=str(project_root))
+                elif bat_path.exists():
+                    subprocess.Popen(["cmd.exe", "/c", str(bat_path), "/silent"], cwd=str(project_root), creationflags=0x08000000)
+            elif is_mac:
+                sh_path = project_root / "start_whatsapp_bridge_mac.sh"
+                if sh_path.exists():
+                    subprocess.Popen(["/bin/bash", str(sh_path)], cwd=str(project_root), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                else:
+                    wa_dir = project_root / "whatsapp-bridge"
+                    subprocess.Popen(["node", "server.js"], cwd=str(wa_dir), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            else:
+                wa_dir = project_root / "whatsapp-bridge"
+                if wa_dir.exists():
+                    subprocess.Popen(["node", "server.js"], cwd=str(wa_dir), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+            time.sleep(1.5)
+            whatsapp_running = self._check_port_listening(3005)
+            return Response({
+                "success": True,
+                "message": "Background services trigger initiated.",
+                "whatsapp_running": whatsapp_running,
+            })
+
+        elif action == "toggle_autostart":
+            enable = bool(request.data.get("enable", True))
+            if is_windows:
+                script = "enable_autostart_windows.bat" if enable else "disable_autostart_windows.bat"
+                script_path = project_root / script
+                if script_path.exists():
+                    subprocess.Popen(["cmd.exe", "/c", str(script_path)], cwd=str(project_root), creationflags=0x08000000)
+            elif is_mac:
+                script = "enable_autostart_mac.sh" if enable else "disable_autostart_mac.sh"
+                script_path = project_root / script
+                if script_path.exists():
+                    subprocess.run(["/bin/bash", str(script_path)], cwd=str(project_root), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            time.sleep(0.5)
+            autostart_info = self._check_autostart_status()
+            return Response({
+                "success": True,
+                "message": f"Auto-start on boot {'enabled' if enable else 'disabled'}.",
+                "autostart": autostart_info,
+            })
+
+        return Response({"error": f"Unknown action '{action}'"}, status=400)
 

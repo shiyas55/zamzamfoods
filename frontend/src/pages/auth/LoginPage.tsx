@@ -812,7 +812,7 @@ export const LoginPage: React.FC = () => {
                   border: '1px solid #fca5a5',
                 }}
               >
-                Aiven Cloud DB
+                Server Engine
               </span>
             </div>
             <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>

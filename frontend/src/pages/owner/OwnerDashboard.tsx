@@ -33,9 +33,10 @@ export const OwnerDashboard: React.FC = () => {
 
   // Date Filtering State
   const [datePreset, setDatePreset] = useState<DatePreset>('today');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [showCustomRange, setShowCustomRange] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Data & loading state
   const [data, setData] = useState<DashboardSummary | null>(null);
@@ -48,8 +49,9 @@ export const OwnerDashboard: React.FC = () => {
       setError(null);
       const params: DateFilterParams = overrideParams || {
         date_preset: datePreset,
-        start_date: datePreset === 'custom' ? startDate : undefined,
-        end_date: datePreset === 'custom' ? endDate : undefined,
+        start_date: datePreset === 'custom' ? selectedDate : undefined,
+        end_date: datePreset === 'custom' ? selectedDate : undefined,
+        date: datePreset === 'custom' ? selectedDate : undefined,
       };
       const res = await reportService.getDashboardSummary(params);
       setData(res);
@@ -65,14 +67,16 @@ export const OwnerDashboard: React.FC = () => {
     fetchDashboard();
   }, [datePreset]);
 
-  const handleApplyCustomDates = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!startDate || !endDate) return;
+  const handleApplySingleDate = (e?: React.FormEvent, dateVal?: string) => {
+    if (e) e.preventDefault();
+    const d = dateVal || selectedDate;
+    if (!d) return;
     setDatePreset('custom');
     fetchDashboard({
       date_preset: 'custom',
-      start_date: startDate,
-      end_date: endDate,
+      start_date: d,
+      end_date: d,
+      date: d,
     });
   };
 
@@ -87,7 +91,7 @@ export const OwnerDashboard: React.FC = () => {
       case 'this_month':
         return "THIS MONTH'S";
       default:
-        return 'PERIOD';
+        return 'SELECTED DATE';
     }
   };
 
@@ -145,7 +149,7 @@ export const OwnerDashboard: React.FC = () => {
                 fontSize: '0.8rem',
               }}
               onClick={() => {
-                setShowCustomRange(false);
+                setShowDatePicker(false);
                 setDatePreset(preset);
               }}
             >
@@ -154,11 +158,11 @@ export const OwnerDashboard: React.FC = () => {
           ))}
 
           <button
-            className={`btn btn-sm ${datePreset === 'custom' || showCustomRange ? 'btn-primary' : 'btn-secondary'}`}
+            className={`btn btn-sm ${datePreset === 'custom' || showDatePicker ? 'btn-primary' : 'btn-secondary'}`}
             style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem' }}
-            onClick={() => setShowCustomRange(!showCustomRange)}
+            onClick={() => setShowDatePicker(!showDatePicker)}
           >
-            Custom Range
+            {datePreset === 'custom' && selectedDate ? `Date: ${selectedDate}` : 'Select Date'}
           </button>
         </div>
 
@@ -169,48 +173,42 @@ export const OwnerDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* Custom Range Picker Drawer */}
-      {showCustomRange && (
+      {/* Single Date Picker Drawer */}
+      {showDatePicker && (
         <form
-          onSubmit={handleApplyCustomDates}
+          onSubmit={(e) => handleApplySingleDate(e)}
           className="card"
           style={{
-            padding: '1rem 1.25rem',
+            padding: '0.9rem 1.25rem',
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '1rem',
+            gap: '0.85rem',
             flexWrap: 'wrap',
             background: 'var(--bg-main)',
             border: '1px solid var(--border)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>Start Date:</label>
+            <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Select Date:</label>
             <input
               type="date"
               className="form-input"
-              style={{ padding: '0.3rem 0.6rem', fontSize: '0.85rem' }}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-            />
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.82rem', fontWeight: 600 }}>End Date:</label>
-            <input
-              type="date"
-              className="form-input"
-              style={{ padding: '0.3rem 0.6rem', fontSize: '0.85rem' }}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              style={{ padding: '0.35rem 0.65rem', fontSize: '0.85rem' }}
+              value={selectedDate}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedDate(val);
+                if (val) {
+                  handleApplySingleDate(undefined, val);
+                }
+              }}
               required
             />
           </div>
 
           <button type="submit" className="btn btn-primary btn-sm">
-            Apply Date Range
+            Apply Date
           </button>
         </form>
       )}
@@ -244,7 +242,7 @@ export const OwnerDashboard: React.FC = () => {
               </span>
             </div>
 
-            {/* 9 KPI Cards as specified in Prompt 3 */}
+            {/* KPI Cards: Orders, Sales, Collection, Last Day Net Collection, Expenses, Net Collection, Credit, Deliveries */}
             <div
               style={{
                 display: 'grid',
@@ -303,71 +301,34 @@ export const OwnerDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* 4. Today's Credit */}
+              {/* 4. Total Net Collection */}
               <div className="card" style={{ padding: '1.15rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                    {getPeriodLabel()} Credit
+                    Total Net Collection
                   </span>
-                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Wallet size={16} />
+                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <History size={16} />
                   </div>
                 </div>
-                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#b45309', margin: 0 }}>
-                  {formatCurrency(data.today_credit || '0.00')}
+                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#1d4ed8', margin: 0 }}>
+                  {formatCurrency(
+                    data.total_net_collection ??
+                    (parseFloat(data.last_day_net_collection || '0') + parseFloat(data.net_collection || '0')).toFixed(2)
+                  )}
                 </p>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Net credit extended in period</span>
-              </div>
-
-              {/* 5. Delivered Orders */}
-              <div className="card" style={{ padding: '1.15rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                    Delivered
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', fontSize: '0.72rem', marginTop: '0.35rem', alignItems: 'center' }}>
+                  <span style={{ color: '#2563eb', fontWeight: 700, background: '#eff6ff', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                    Last Day Total Net Collection: {formatCurrency(data.last_day_net_collection || '0.00')}
                   </span>
-                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CheckCircle2 size={16} />
-                  </div>
-                </div>
-                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#047857', margin: 0 }}>
-                  {data.completed_deliveries || 0}
-                </p>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Successfully received</span>
-              </div>
-
-              {/* 6. Pending Deliveries */}
-              <div className="card" style={{ padding: '1.15rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                    Pending
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 800 }}>+</span>
+                  <span style={{ color: '#059669', fontWeight: 700, background: '#ecfdf5', padding: '0.15rem 0.45rem', borderRadius: '4px' }}>
+                    Today's Net: {formatCurrency(data.net_collection || '0.00')}
                   </span>
-                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#fffbeb', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Clock size={16} />
-                  </div>
                 </div>
-                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#d97706', margin: 0 }}>
-                  {data.pending_deliveries || 0}
-                </p>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Assigned or in-transit</span>
               </div>
 
-              {/* 7. Not Delivered Orders */}
-              <div className="card" style={{ padding: '1.15rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                    Not Delivered
-                  </span>
-                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <XCircle size={16} />
-                  </div>
-                </div>
-                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#dc2626', margin: 0 }}>
-                  {data.not_delivered_count || 0}
-                </p>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Shop closed or failed</span>
-              </div>
-
-              {/* 8. Total Expenses */}
+              {/* 5. Total Expenses */}
               <div className="card" style={{ padding: '1.15rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
                   <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
@@ -380,10 +341,13 @@ export const OwnerDashboard: React.FC = () => {
                 <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#b91c1c', margin: 0 }}>
                   {formatCurrency(data.today_expenses || '0.00')}
                 </p>
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Shop, maintenance, fuel & route</span>
+                <div style={{ display: 'flex', gap: '0.4rem', fontSize: '0.7rem', marginTop: '0.2rem' }}>
+                  <span style={{ color: '#b91c1c', fontWeight: 600 }}>Cash: {formatCurrency(data.today_cash_expenses || '0.00')}</span>
+                  <span style={{ color: 'var(--primary)', fontWeight: 600 }}>GPay: {formatCurrency(data.today_upi_expenses || '0.00')}</span>
+                </div>
               </div>
 
-              {/* 9. Net Collection (Highlighted Card) */}
+              {/* 6. Net Collection (Highlighted Card) */}
               <div
                 className="card"
                 style={{
@@ -406,6 +370,70 @@ export const OwnerDashboard: React.FC = () => {
                 <span style={{ fontSize: '0.72rem', color: '#78350f', fontWeight: 600 }}>
                   Collection − Total Expenses
                 </span>
+              </div>
+
+              {/* 7. Today's Credit */}
+              <div className="card" style={{ padding: '1.15rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    {getPeriodLabel()} Credit
+                  </span>
+                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Wallet size={16} />
+                  </div>
+                </div>
+                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#b45309', margin: 0 }}>
+                  {formatCurrency(data.today_credit || '0.00')}
+                </p>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Net credit extended in period</span>
+              </div>
+
+              {/* 8. Delivered Orders */}
+              <div className="card" style={{ padding: '1.15rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    Delivered
+                  </span>
+                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#ecfdf5', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CheckCircle2 size={16} />
+                  </div>
+                </div>
+                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#047857', margin: 0 }}>
+                  {data.completed_deliveries || 0}
+                </p>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Successfully received</span>
+              </div>
+
+              {/* 9. Pending Deliveries */}
+              <div className="card" style={{ padding: '1.15rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    Pending
+                  </span>
+                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#fffbeb', color: '#f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={16} />
+                  </div>
+                </div>
+                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#d97706', margin: 0 }}>
+                  {data.pending_deliveries || 0}
+                </p>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Assigned or in-transit</span>
+              </div>
+
+              {/* 10. Not Delivered Orders */}
+              <div className="card" style={{ padding: '1.15rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    Not Delivered
+                  </span>
+                  <div style={{ width: 32, height: 32, borderRadius: '8px', background: '#fee2e2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <XCircle size={16} />
+                  </div>
+                </div>
+                <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#dc2626', margin: 0 }}>
+                  {data.not_delivered_count || 0}
+                </p>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Shop closed or failed</span>
               </div>
             </div>
           </div>

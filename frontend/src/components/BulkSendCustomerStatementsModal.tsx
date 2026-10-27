@@ -26,6 +26,7 @@ import {
   checkWhatsAppBridgeStatus,
   sendInvoiceFileViaBridge,
   BridgeStatus,
+  getWhatsAppBridgeQrUrl,
 } from '../utils/whatsappBridgeUtils';
 
 interface BulkCustomerItem {
@@ -166,7 +167,7 @@ export const BulkSendCustomerStatementsModal: React.FC<BulkSendCustomerStatement
         'WhatsApp is not connected on your laptop yet.\n\nWould you like to open the WhatsApp QR Code page now to link it?'
       );
       if (openQr) {
-        window.open('http://localhost:3005/qr', '_blank');
+        window.open(getWhatsAppBridgeQrUrl(), '_blank');
       }
       return;
     }

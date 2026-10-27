@@ -14,12 +14,15 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+let client = null;
 let clientReady = false;
 let latestQrText = null;
 let latestQrImage = null;
 let clientInfo = null;
 let stepStatus = 'Initializing Chromium browser...';
 let lastError = null;
+let isStarting = false;
+let reinitTimeout = null;
 
 // Incoming order queue (Holds overnight orders for local PC sync)
 let incomingOrdersQueue = [];
@@ -38,23 +41,37 @@ function getBrowserExecutablePath() {
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
     '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-    // Windows
+    // Windows Standard
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
     'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
   ];
 
+  if (process.env.LOCALAPPDATA) {
+    possiblePaths.push(path.join(process.env.LOCALAPPDATA, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+    possiblePaths.push(path.join(process.env.LOCALAPPDATA, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+  }
+  if (process.env.PROGRAMFILES) {
+    possiblePaths.push(path.join(process.env.PROGRAMFILES, 'Google', 'Chrome', 'Application', 'chrome.exe'));
+    possiblePaths.push(path.join(process.env.PROGRAMFILES, 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+  }
+  if (process.env['PROGRAMFILES(X86)']) {
+    possiblePaths.push(path.join(process.env['PROGRAMFILES(X86)'], 'Google', 'Chrome', 'Application', 'chrome.exe'));
+    possiblePaths.push(path.join(process.env['PROGRAMFILES(X86)'], 'Microsoft', 'Edge', 'Application', 'msedge.exe'));
+  }
+
   for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      console.log(`Using system browser at: ${p}`);
-      return p;
-    }
+    try {
+      if (fs.existsSync(p)) {
+        console.log(`Using system browser at: ${p}`);
+        return p;
+      }
+    } catch (_) {}
   }
   return undefined;
 }
 
-// Determine Chrome path for Mac / Windows / Linux fallback if needed
 function getPuppeteerArgs() {
   const args = [
     '--no-sandbox',
@@ -69,6 +86,7 @@ function getPuppeteerArgs() {
   const executablePath = getBrowserExecutablePath();
   const config = {
     headless: true,
+    protocolTimeout: 120000,
     args,
   };
   if (executablePath) {
@@ -77,116 +95,175 @@ function getPuppeteerArgs() {
   return config;
 }
 
-// Initialize WhatsApp Web Client
-const client = new Client({
-  authStrategy: new LocalAuth({
-    dataPath: path.join(__dirname, '.wwebjs_auth'),
-  }),
-  webVersionCache: {
-    type: 'remote',
-    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1018956976-alpha.html',
-  },
-  puppeteer: {
-    ...getPuppeteerArgs(),
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  },
-});
-
-client.on('loading_screen', (percent, message) => {
-  stepStatus = `Loading WhatsApp Web: ${percent}% (${message || 'syncing'})`;
-  console.log(`⏳ ${stepStatus}`);
-});
-
-client.on('qr', async (qr) => {
-  latestQrText = qr;
-  clientReady = false;
-  clientInfo = null;
-  stepStatus = 'QR Code Ready for Scanning';
-
-  try {
-    latestQrImage = await QRCode.toDataURL(qr);
-  } catch (err) {
-    console.error('Failed to generate QR data URL:', err);
-  }
-
-  console.log('\n======================================================');
-  console.log('📱 SCAN THIS QR CODE IN WHATSAPP TO CONNECT:');
-  console.log('(WhatsApp > Linked Devices > Link a Device)');
-  console.log('Or open in your browser: http://localhost:' + PORT + '/qr');
-  console.log('======================================================\n');
-  qrcodeTerminal.generate(qr, { small: true });
-});
-
-client.on('ready', () => {
-  clientReady = true;
-  latestQrText = null;
-  latestQrImage = null;
-  clientInfo = client.info;
-  stepStatus = 'Connected & Active';
-
-  console.log('\n======================================================');
-  console.log('✅ ZAMZAM FOODS WHATSAPP BRIDGE IS CONNECTED & READY!');
-  console.log(`Connected Number: ${client.info?.wid?.user || 'Active'}`);
-  console.log(`Push Name: ${client.info?.pushname || 'Zamzam'}`);
-  console.log('======================================================\n');
-});
-
-client.on('authenticated', () => {
-  stepStatus = 'Authenticated. Finalizing session...';
-  console.log('🔐 WhatsApp Session authenticated successfully.');
-});
-
-client.on('auth_failure', (msg) => {
-  lastError = `Authentication failure: ${msg}`;
-  stepStatus = 'Auth Failed';
-  console.error('❌ WhatsApp Authentication failure:', msg);
-  clientReady = false;
-});
-
-client.on('disconnected', (reason) => {
-  stepStatus = `Disconnected: ${reason}`;
-  console.warn('⚠️ WhatsApp client disconnected:', reason);
-  clientReady = false;
-  latestQrText = null;
-  latestQrImage = null;
-  clientInfo = null;
-  console.log('🔄 Re-initializing WhatsApp client...');
-  client.initialize().catch((e) => {
-    lastError = e.message || String(e);
-    console.error('Failed to reinitialize:', e);
+function createClient() {
+  const newClient = new Client({
+    authStrategy: new LocalAuth({
+      dataPath: path.join(__dirname, '.wwebjs_auth'),
+    }),
+    authTimeoutMs: 60000,
+    qrMaxRetries: 0,
+    puppeteer: getPuppeteerArgs(),
   });
-});
 
-// Incoming message listener (Receives 24/7 orders and queues for local PC)
-client.on('message', async (msg) => {
-  try {
-    const sender = msg.from; // e.g. 919847012345@c.us
-    const text = msg.body || '';
-    console.log(`📩 Incoming WhatsApp from ${sender}: ${text}`);
+  newClient.on('loading_screen', (percent, message) => {
+    stepStatus = `Loading WhatsApp Web: ${percent}% (${message || 'syncing'})`;
+    console.log(`⏳ ${stepStatus}`);
+  });
 
-    const cleanPhone = sender.replace(/\D/g, '');
-    const orderData = {
-      id: Date.now().toString(),
-      sender,
-      phone: cleanPhone,
-      message: text,
-      timestamp: new Date().toISOString(),
-      receivedAt: new Date().toLocaleTimeString('en-IN'),
-    };
+  newClient.on('qr', async (qr) => {
+    latestQrText = qr;
+    clientReady = false;
+    clientInfo = null;
+    stepStatus = 'QR Code Ready for Scanning';
 
-    // Store in memory queue for local PC pickup
-    incomingOrdersQueue.unshift(orderData);
-    if (incomingOrdersQueue.length > 500) incomingOrdersQueue.pop();
-
-    // Auto-reply if message looks like an order template
-    const lower = text.toLowerCase();
-    if (lower.includes('order') || lower.includes('porotta') || lower.includes('chapathi') || text.includes('1.')) {
-      await msg.reply('✅ *Zamzam Foods Order Received!*\nThank you. Your daily order is recorded and is being prepared for dispatch.');
+    try {
+      latestQrImage = await QRCode.toDataURL(qr);
+    } catch (err) {
+      console.error('Failed to generate QR data URL:', err);
     }
-  } catch (err) {
-    console.error('Error in message listener:', err);
+
+    console.log('\n======================================================');
+    console.log('📱 SCAN THIS QR CODE IN WHATSAPP TO CONNECT:');
+    console.log('(WhatsApp > Linked Devices > Link a Device)');
+    console.log('Or open in your browser: http://localhost:' + PORT + '/qr');
+    console.log('======================================================\n');
+    qrcodeTerminal.generate(qr, { small: true });
+  });
+
+  newClient.on('ready', () => {
+    clientReady = true;
+    latestQrText = null;
+    latestQrImage = null;
+    clientInfo = newClient.info;
+    stepStatus = 'Connected & Active';
+
+    console.log('\n======================================================');
+    console.log('✅ ZAMZAM FOODS WHATSAPP BRIDGE IS CONNECTED & READY!');
+    console.log(`Connected Number: ${newClient.info?.wid?.user || 'Active'}`);
+    console.log(`Push Name: ${newClient.info?.pushname || 'Zamzam'}`);
+    console.log('======================================================\n');
+  });
+
+  newClient.on('authenticated', () => {
+    stepStatus = 'Authenticated. Finalizing session...';
+    console.log('🔐 WhatsApp Session authenticated successfully.');
+  });
+
+  newClient.on('auth_failure', (msg) => {
+    lastError = `Authentication failure: ${msg}`;
+    stepStatus = 'Auth Failed';
+    console.error('❌ WhatsApp Authentication failure:', msg);
+    clientReady = false;
+  });
+
+  newClient.on('disconnected', async (reason) => {
+    stepStatus = `Disconnected: ${reason}`;
+    console.warn('⚠️ WhatsApp client disconnected:', reason);
+    clientReady = false;
+    latestQrText = null;
+    latestQrImage = null;
+    clientInfo = null;
+
+    if (reason === 'LOGOUT') {
+      console.log('🧹 Session logged out from WhatsApp. Resetting session directory...');
+      const authDir = path.join(__dirname, '.wwebjs_auth');
+      try {
+        if (fs.existsSync(authDir)) {
+          fs.rmSync(authDir, { recursive: true, force: true });
+        }
+      } catch (rmErr) {
+        console.warn('Could not remove auth directory:', rmErr.message);
+      }
+    }
+
+    if (!reinitTimeout) {
+      console.log('🔄 Re-initializing WhatsApp client in 3 seconds...');
+      reinitTimeout = setTimeout(() => {
+        reinitTimeout = null;
+        startClient().catch((err) => console.error('Re-init error:', err));
+      }, 3000);
+    }
+  });
+
+  newClient.on('message', async (msg) => {
+    try {
+      const sender = msg.from;
+      const text = msg.body || '';
+      console.log(`📩 Incoming WhatsApp from ${sender}: ${text}`);
+
+      const cleanPhone = sender.replace(/\D/g, '');
+      const orderData = {
+        id: Date.now().toString(),
+        sender,
+        phone: cleanPhone,
+        message: text,
+        timestamp: new Date().toISOString(),
+        receivedAt: new Date().toLocaleTimeString('en-IN'),
+      };
+
+      incomingOrdersQueue.unshift(orderData);
+      if (incomingOrdersQueue.length > 500) incomingOrdersQueue.pop();
+
+      const lower = text.toLowerCase();
+      if (lower.includes('order') || lower.includes('porotta') || lower.includes('chapathi') || text.includes('1.')) {
+        await msg.reply('✅ *Zamzam Foods Order Received!*\nThank you. Your daily order is recorded and is being prepared for dispatch.');
+      }
+    } catch (err) {
+      console.error('Error in message listener:', err);
+    }
+  });
+
+  return newClient;
+}
+
+function clearStaleBrowserLocks() {
+  const sessionDir = path.join(__dirname, '.wwebjs_auth', 'session');
+  if (fs.existsSync(sessionDir)) {
+    const lockFiles = ['SingletonLock', 'SingletonSocket', 'SingletonCookie', 'lockfile'];
+    for (const lf of lockFiles) {
+      const lockPath = path.join(sessionDir, lf);
+      try {
+        if (fs.existsSync(lockPath)) {
+          fs.rmSync(lockPath, { force: true });
+          console.log(`🔓 Removed stale Chromium lock: ${lf}`);
+        } else {
+          // Check for dangling symlinks
+          fs.unlinkSync(lockPath);
+          console.log(`🔓 Removed dangling lock symlink: ${lf}`);
+        }
+      } catch (_) {}
+    }
   }
-});
+}
+
+async function startClient() {
+  if (isStarting) {
+    console.log('⏳ Client is already initializing, skipping concurrent startClient call.');
+    return;
+  }
+  isStarting = true;
+
+  if (client) {
+    try {
+      await client.destroy();
+    } catch (_) {}
+    client = null;
+  }
+  clearStaleBrowserLocks();
+  client = createClient();
+  stepStatus = 'Starting Chromium & loading WhatsApp Web...';
+  console.log('⏳ Starting WhatsApp Web browser session...');
+
+  try {
+    await client.initialize();
+  } catch (err) {
+    lastError = err.message || String(err);
+    stepStatus = `Init Error: ${lastError}`;
+    console.error('❌ Error initializing WhatsApp client:', err);
+  } finally {
+    isStarting = false;
+  }
+}
 
 // Helper: Format phone number into WhatsApp chatId
 function formatChatId(phone) {
@@ -220,15 +297,20 @@ function renderQrPage(req, res) {
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-            .box { background: #1e293b; padding: 2.5rem; border-radius: 16px; border: 1px solid #334155; }
+            .box { background: #1e293b; padding: 2.5rem; border-radius: 16px; border: 1px solid #334155; max-width: 420px; }
             h2 { color: #22c55e; margin-top: 0; }
+            .btn { display: inline-block; margin-top: 1.25rem; padding: 8px 18px; background: #334155; color: #cbd5e1; text-decoration: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; }
+            .btn:hover { background: #475569; }
           </style>
         </head>
         <body>
           <div class="box">
             <h2>✅ WhatsApp Connected</h2>
             <p>Your WhatsApp session is active and ready to send bills automatically.</p>
-            <p><strong>Connected Number:</strong> ${client.info?.wid?.user || 'Active'}</p>
+            <p><strong>Connected Number:</strong> ${client?.info?.wid?.user || clientInfo?.wid?.user || 'Active'}</p>
+            <div>
+              <a href="/reset?force=true" class="btn" onclick="return confirm('Disconnect and scan a new QR code?')">🔄 Disconnect & Scan New Phone</a>
+            </div>
           </div>
         </body>
       </html>
@@ -249,6 +331,8 @@ function renderQrPage(req, res) {
             .status-badge { display: inline-block; padding: 6px 14px; background: #334155; border-radius: 999px; font-size: 0.85rem; color: #38bdf8; margin: 10px 0; font-family: monospace; }
             .spinner { width: 36px; height: 36px; border: 3px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
             @keyframes spin { to { transform: rotate(360deg); } }
+            .btn-reset { display: inline-block; margin-top: 1.25rem; padding: 9px 18px; background: #e11d48; color: #fff; text-decoration: none; border-radius: 8px; font-size: 0.85rem; font-weight: bold; }
+            .btn-reset:hover { background: #be123c; }
           </style>
         </head>
         <body>
@@ -256,8 +340,11 @@ function renderQrPage(req, res) {
             <div class="spinner"></div>
             <h2 style="margin: 0;">⏳ Generating QR Code...</h2>
             <div class="status-badge">${stepStatus}</div>
-            <p style="color: #94a3b8; font-size: 0.9rem;">Starting Chromium browser & loading WhatsApp Web.<br/>This page will auto-refresh every 3s.</p>
+            <p style="color: #94a3b8; font-size: 0.9rem;">Starting Chromium browser & connecting to WhatsApp Web.<br/>This page will auto-refresh every 3s.</p>
             ${lastError ? `<p style="color: #f87171; font-size: 0.8rem; background: #450a0a; padding: 8px; border-radius: 8px;">⚠️ ${lastError}</p>` : ''}
+            <div>
+              <a href="/reset?force=true" class="btn-reset">⚡ Reset Session & Force Fresh QR</a>
+            </div>
           </div>
         </body>
       </html>
@@ -269,7 +356,7 @@ function renderQrPage(req, res) {
     <html>
       <head>
         <title>Zamzam WhatsApp Bridge - Scan QR</title>
-        <meta http-equiv="refresh" content="15">
+        <meta http-equiv="refresh" content="20">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
           body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
@@ -277,6 +364,8 @@ function renderQrPage(req, res) {
           img { background: #fff; padding: 12px; border-radius: 12px; margin: 1rem 0; width: 260px; height: 260px; }
           p { color: #94a3b8; font-size: 0.9rem; line-height: 1.4; }
           ol { text-align: left; font-size: 0.85rem; color: #cbd5e1; padding-left: 1.2rem; }
+          .refresh-link { display: inline-block; margin-top: 10px; color: #38bdf8; font-size: 0.82rem; text-decoration: none; }
+          .refresh-link:hover { text-decoration: underline; }
         </style>
       </head>
       <body>
@@ -289,6 +378,9 @@ function renderQrPage(req, res) {
             <li>Tap <b>Linked Devices</b></li>
             <li>Tap <b>Link a Device</b> and point camera here</li>
           </ol>
+          <div>
+            <a href="/reset" class="refresh-link">🔄 QR expired or not working? Click to generate fresh QR</a>
+          </div>
         </div>
       </body>
     </html>
@@ -299,7 +391,47 @@ function renderQrPage(req, res) {
 app.get('/', renderQrPage);
 app.get('/qr', renderQrPage);
 
-// 0. UptimeRobot Health Check (Keeps Render service awake 24/7)
+// Reset / Re-link endpoint (Destroys stale session & forces fresh QR generation)
+app.all('/reset', async (req, res) => {
+  console.log('🔄 User requested WhatsApp session reset...');
+  clientReady = false;
+  latestQrImage = null;
+  latestQrText = null;
+  clientInfo = null;
+  stepStatus = 'Resetting WhatsApp session and clearing locks...';
+
+  const force = req.query.force === 'true' || req.body?.force === true;
+
+  if (client) {
+    try {
+      await client.destroy();
+    } catch (e) {
+      console.warn('Error during client destroy:', e.message);
+    }
+    client = null;
+  }
+
+  if (force) {
+    const authDir = path.join(__dirname, '.wwebjs_auth');
+    try {
+      if (fs.existsSync(authDir)) {
+        fs.rmSync(authDir, { recursive: true, force: true });
+        console.log('🧹 Cleaned .wwebjs_auth session directory.');
+      }
+    } catch (rmErr) {
+      console.warn('Could not remove auth directory:', rmErr.message);
+    }
+  }
+
+  await startClient();
+
+  if (req.headers.accept && req.headers.accept.includes('application/json')) {
+    return res.json({ success: true, message: 'WhatsApp session reset. Generating fresh QR code...' });
+  }
+  res.redirect('/qr');
+});
+
+// UptimeRobot Health Check
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -341,14 +473,12 @@ app.post('/api/orders/clear', (req, res) => {
   res.json({ success: true, cleared: count });
 });
 
-
-
 // 3. Send File (PDF or Image)
 app.post('/send-file', async (req, res) => {
   try {
     const { phone, base64, filename, mimetype, caption } = req.body;
 
-    if (!clientReady) {
+    if (!clientReady || !client) {
       return res.status(503).json({
         success: false,
         error: 'WhatsApp Bridge is not connected yet. Please scan the QR code at /qr first.',
@@ -368,7 +498,6 @@ app.post('/send-file', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid phone number.' });
     }
 
-    // Clean base64 string if it contains data URL prefix
     let cleanBase64 = base64;
     let resolvedMime = mimetype || 'application/pdf';
 
@@ -388,7 +517,7 @@ app.post('/send-file', async (req, res) => {
 
     const sentMessage = await client.sendMessage(chatId, media, {
       caption: caption || '',
-      sendMediaAsDocument: resolvedMime.includes('pdf'), // Send PDFs as documents
+      sendMediaAsDocument: resolvedMime.includes('pdf'),
     });
 
     const msgId = sentMessage?.id?._serialized || sentMessage?.id?.id || 'sent_' + Date.now();
@@ -403,9 +532,9 @@ app.post('/send-file', async (req, res) => {
     console.error('❌ Error sending WhatsApp file:', error);
     const errMsg = error.message || String(error);
     if (errMsg.includes('detached Frame') || errMsg.includes('Session closed') || errMsg.includes('Execution context was destroyed')) {
-      console.warn('🔄 Detached frame or stale browser detected. Auto-reloading client...');
+      console.warn('🔄 Detached frame detected. Auto-reloading client...');
       clientReady = false;
-      client.initialize().catch((e) => console.error('Auto-reinit error:', e));
+      startClient().catch((e) => console.error('Auto-reinit error:', e));
     }
     res.status(500).json({
       success: false,
@@ -419,7 +548,7 @@ app.post('/send-text', async (req, res) => {
   try {
     const { phone, message } = req.body;
 
-    if (!clientReady) {
+    if (!clientReady || !client) {
       return res.status(503).json({
         success: false,
         error: 'WhatsApp Bridge is not connected yet.',
@@ -438,26 +567,39 @@ app.post('/send-text', async (req, res) => {
     console.error('❌ Error sending WhatsApp text:', error);
     const errMsg = error.message || String(error);
     if (errMsg.includes('detached Frame') || errMsg.includes('Session closed') || errMsg.includes('Execution context was destroyed')) {
-      console.warn('🔄 Detached frame or stale browser detected. Auto-reloading client...');
+      console.warn('🔄 Detached frame detected. Auto-reloading client...');
       clientReady = false;
-      client.initialize().catch((e) => console.error('Auto-reinit error:', e));
+      startClient().catch((e) => console.error('Auto-reinit error:', e));
     }
     res.status(500).json({ success: false, error: errMsg });
   }
 });
 
+// Handle process errors to prevent bridge crashing on browser target close
+process.on('uncaughtException', (err) => {
+  const errMsg = err?.message || String(err);
+  console.warn('⚠️ Process uncaughtException caught:', errMsg);
+  if (errMsg.includes('Target closed') || errMsg.includes('Session closed') || errMsg.includes('Protocol error')) {
+    if (!reinitTimeout) {
+      reinitTimeout = setTimeout(() => {
+        reinitTimeout = null;
+        startClient().catch((e) => console.error('Auto-restart error:', e));
+      }, 4000);
+    }
+  }
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.warn('⚠️ Process unhandledRejection caught:', reason?.message || reason);
+});
+
 // Start Express server and initialize WhatsApp client
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n======================================================`);
   console.log(`🚀 Zamzam WhatsApp Bridge running at: http://localhost:${PORT}`);
   console.log(`📱 QR Code Web Page: http://localhost:${PORT}/qr`);
   console.log(`🔍 Status Check: http://localhost:${PORT}/status`);
   console.log(`======================================================\n`);
 
-  console.log('⏳ Starting WhatsApp Web browser session...');
-  client.initialize().catch((err) => {
-    lastError = err.message || String(err);
-    stepStatus = `Init Error: ${lastError}`;
-    console.error('❌ Error initializing WhatsApp client:', err);
-  });
+  startClient().catch((err) => console.error('Initial startClient error:', err));
 });

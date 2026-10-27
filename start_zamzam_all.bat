@@ -30,13 +30,13 @@ del /f /q "%LocalAppData%\com.zamzamfoods.desktop\EBWebView\Default\lockfile" >n
 del /f /q "%LocalAppData%\Programs\Zamzam Foods\EBWebView\Default\lockfile" >nul 2>&1
 del /f /q "%LocalAppData%\Zamzam Foods\EBWebView\Default\lockfile" >nul 2>&1
 
-:: Start backend service if not already listening on port 8000
+:: Start backend and WhatsApp bridge if not already listening
 powershell -NoProfile -Command "$c = New-Object System.Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1', 8000); Write-Host 'OPEN'; $c.Close() } catch { Write-Host 'CLOSED' }" 2>nul | findstr "OPEN" >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [1/2] Starting local SQLite backend engine silently in the background...
-    wscript.exe "%~dp0run_backend_hidden.vbs"
+    echo [1/2] Starting Backend & WhatsApp services silently in the background...
+    wscript.exe "%~dp0run_all_hidden.vbs"
     
-    echo Connecting to local SQLite Database...
+    echo Connecting to database and local engine...
     set /a attempts=0
     :WAIT_LOOP
     set /a attempts+=1
@@ -46,16 +46,16 @@ if %errorlevel% neq 0 (
     if !attempts! geq 25 goto BACKEND_UP
     goto WAIT_LOOP
 ) else (
-    echo [1/2] Local SQLite backend engine is already running on port 8000.
+    echo [1/2] Backend engine is already running on port 8000.
 )
 :BACKEND_UP
 
-:: Start WhatsApp Bridge if not already listening on port 3005
+:: Ensure WhatsApp Bridge is also running
 powershell -NoProfile -Command "$c = New-Object System.Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1', 3005); Write-Host 'OPEN'; $c.Close() } catch { Write-Host 'CLOSED' }" 2>nul | findstr "OPEN" >nul 2>&1
 if %errorlevel% neq 0 (
     if exist "%~dp0whatsapp-bridge\server.js" (
         echo Starting WhatsApp Web Bridge service silently in the background...
-        powershell -NoProfile -Command "Start-Process -WindowStyle Hidden -FilePath 'cmd.exe' -ArgumentList '/c \"\"%~dp0start_whatsapp_bridge.bat\" /silent\"'" >nul 2>&1
+        wscript.exe "%~dp0run_all_hidden.vbs"
     )
 ) else (
     echo [INFO] WhatsApp Bridge is already running on port 3005.

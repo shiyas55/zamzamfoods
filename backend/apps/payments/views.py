@@ -96,12 +96,31 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
         date_param = self.request.query_params.get("date")
         if date_param:
-            queryset = queryset.filter(received_at__date=date_param)
+            try:
+                parsed_d = datetime.date.fromisoformat(str(date_param).strip()[:10])
+                day_start = datetime.datetime.combine(parsed_d, datetime.time.min)
+                day_end = datetime.datetime.combine(parsed_d, datetime.time.max)
+                if timezone.is_aware(timezone.now()):
+                    day_start = timezone.make_aware(day_start)
+                    day_end = timezone.make_aware(day_end)
+                queryset = queryset.filter(received_at__range=(day_start, day_end))
+            except Exception:
+                queryset = queryset.filter(received_at__date=date_param)
 
         start_date = self.request.query_params.get("start_date")
         end_date = self.request.query_params.get("end_date")
         if start_date and end_date:
-            queryset = queryset.filter(received_at__date__gte=start_date, received_at__date__lte=end_date)
+            try:
+                p_start = datetime.date.fromisoformat(str(start_date).strip()[:10])
+                p_end = datetime.date.fromisoformat(str(end_date).strip()[:10])
+                dt_start = datetime.datetime.combine(p_start, datetime.time.min)
+                dt_end = datetime.datetime.combine(p_end, datetime.time.max)
+                if timezone.is_aware(timezone.now()):
+                    dt_start = timezone.make_aware(dt_start)
+                    dt_end = timezone.make_aware(dt_end)
+                queryset = queryset.filter(received_at__range=(dt_start, dt_end))
+            except Exception:
+                queryset = queryset.filter(received_at__date__gte=start_date, received_at__date__lte=end_date)
 
         payment_type = self.request.query_params.get("payment_type")
         if payment_type == "ORDER_PAYMENT":

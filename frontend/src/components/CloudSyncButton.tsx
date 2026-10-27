@@ -62,7 +62,7 @@ export const CloudSyncButton: React.FC<CloudSyncButtonProps> = ({
           userSelect: 'none',
           ...style,
         }}
-        title="Aiven Cloud Database (defaultdb) — Connected & Live. All EXE and DMG installs share this data in real time."
+        title="Database Engine — Connected & Live. All terminals share this data in real time."
         onClick={handleSync}
       >
         <span
@@ -76,7 +76,7 @@ export const CloudSyncButton: React.FC<CloudSyncButtonProps> = ({
           }}
         />
         <span style={{ letterSpacing: '-0.01em' }}>
-          {syncState.isSyncing ? 'Testing...' : 'Aiven Cloud Live'}
+          {syncState.isSyncing ? 'Testing...' : 'Database Live'}
         </span>
       </div>
     );

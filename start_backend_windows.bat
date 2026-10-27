@@ -111,8 +111,8 @@ echo ===========================================================================
 if not "%~1"=="/silent" (
     echo Keep this window open while using the Zamzam Foods Desktop application.
     echo.
-    python "!MANAGE_PY!" runserver 127.0.0.1:8000
+    python "!MANAGE_PY!" runserver 0.0.0.0:8000
     pause
 ) else (
-    python "!MANAGE_PY!" runserver 127.0.0.1:8000 --noreload
+    python "!MANAGE_PY!" runserver 0.0.0.0:8000 --noreload
 )

@@ -17,8 +17,7 @@ ALLOWED_HOSTS = [
 ALLOWED_HOSTS += ["localhost", "127.0.0.1", "0.0.0.0", ".ts.net", "shiyass-macbook-air.tail4ef336.ts.net", "testserver"]
 
 # ─── Database ─────────────────────────────────────────────────────────────────
-# Database configuration: defaults to live Aiven Cloud PostgreSQL database
-AIVEN_DEFAULT_DATABASE_URL = "postgres://avnadmin:AVNS__5t4TpkXOy-BXhofK6i@pg-65e4170-zamzamfoods.h.aivencloud.com:18638/defaultdb?sslmode=require"
+DEFAULT_DATABASE_URL = "sqlite:///db.sqlite3"
 
 DATABASE_URL_ENV = os.environ.get("DATABASE_URL", "").strip()
 
@@ -33,7 +32,7 @@ if not DATABASE_URL_ENV:
                     break
 
 if not DATABASE_URL_ENV or any(p in DATABASE_URL_ENV for p in ["[YOUR-PASSWORD]", "<your-", "<password>", "YOUR_PASSWORD"]):
-    DATABASE_URL_ENV = AIVEN_DEFAULT_DATABASE_URL
+    DATABASE_URL_ENV = DEFAULT_DATABASE_URL
 
 _is_sqlite = DATABASE_URL_ENV.startswith("sqlite")
 _is_internal = any(h in DATABASE_URL_ENV for h in ["railway.internal", "localhost", "127.0.0.1"]) or _is_sqlite

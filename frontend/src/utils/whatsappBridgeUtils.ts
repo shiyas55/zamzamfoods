@@ -8,11 +8,81 @@ import { toJpeg } from 'html-to-image';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
-const BRIDGE_URL = 'http://localhost:3005';
+import { getApiBaseUrl } from '../services/apiClient';
+
+/**
+ * Returns the base URL for the WhatsApp Web Bridge.
+ * 
+ * In a multi-PC / client-server setup:
+ * - On the Server PC, this resolves to http://localhost:3005
+ * - On a Client PC (connecting across LAN):
+ *   1. Explicit override in localStorage ('zamzam_whatsapp_bridge_url')
+ *   2. Extracted host from the active API_BASE_URL (e.g. http://192.168.1.50:8000 -> http://192.168.1.50:3005)
+ *   3. Extracted host from window.location.hostname
+ *   4. Fallback to http://localhost:3005
+ */
+export function getWhatsAppBridgeBaseUrl(): string {
+  if (typeof window === 'undefined') return 'http://localhost:3005';
+
+  // 1. Explicit override in localStorage
+  const saved = localStorage.getItem('zamzam_whatsapp_bridge_url');
+  if (saved && saved.trim()) {
+    return saved.trim().replace(/\/+$/, '');
+  }
+
+  // 2. Derive host from backend API URL (e.g. http://192.168.1.50:8000/api/v1 -> http://192.168.1.50:3005)
+  try {
+    const apiUrl = getApiBaseUrl();
+    if (apiUrl) {
+      const parsed = new URL(apiUrl);
+      const host = parsed.hostname;
+      if (host && host !== 'localhost' && host !== '127.0.0.1' && host !== 'tauri.localhost') {
+        const protocol = parsed.protocol === 'https:' ? 'https:' : 'http:';
+        return `${protocol}//${host}:3005`;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 3. Derive host from window.location
+  try {
+    if (window.location && window.location.hostname) {
+      const host = window.location.hostname;
+      if (host && host !== 'localhost' && host !== '127.0.0.1' && host !== 'tauri.localhost') {
+        const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+        return `${protocol}//${host}:3005`;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return 'http://localhost:3005';
+}
+
+export function setWhatsAppBridgeBaseUrl(url: string): string {
+  if (typeof window !== 'undefined') {
+    if (!url || !url.trim()) {
+      localStorage.removeItem('zamzam_whatsapp_bridge_url');
+      return getWhatsAppBridgeBaseUrl();
+    }
+    const clean = url.trim().replace(/\/+$/, '');
+    const normalized = clean.startsWith('http://') || clean.startsWith('https://') ? clean : `http://${clean}`;
+    localStorage.setItem('zamzam_whatsapp_bridge_url', normalized);
+    return normalized;
+  }
+  return 'http://localhost:3005';
+}
+
+export function getWhatsAppBridgeQrUrl(): string {
+  return `${getWhatsAppBridgeBaseUrl()}/qr`;
+}
 
 export interface BridgeStatus {
   connected: boolean;
   hasQr: boolean;
+  stepStatus?: string;
   info?: {
     phone?: string;
     name?: string;
@@ -24,10 +94,11 @@ export interface BridgeStatus {
  */
 export async function checkWhatsAppBridgeStatus(): Promise<BridgeStatus> {
   try {
-    const res = await fetch(`${BRIDGE_URL}/status`, {
+    const bridgeUrl = getWhatsAppBridgeBaseUrl();
+    const res = await fetch(`${bridgeUrl}/status`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(2000), // Quick timeout
+      signal: AbortSignal.timeout(3000), // 3s timeout
     });
     if (!res.ok) {
       return { connected: false, hasQr: false };
@@ -36,10 +107,28 @@ export async function checkWhatsAppBridgeStatus(): Promise<BridgeStatus> {
     return {
       connected: Boolean(data.connected),
       hasQr: Boolean(data.hasQr),
+      stepStatus: data.stepStatus || undefined,
       info: data.info || null,
     };
   } catch {
     return { connected: false, hasQr: false };
+  }
+}
+
+/**
+ * Reset WhatsApp bridge session, destroying locks and forcing a fresh QR code.
+ */
+export async function resetWhatsAppBridgeSession(force = true): Promise<boolean> {
+  try {
+    const bridgeUrl = getWhatsAppBridgeBaseUrl();
+    const res = await fetch(`${bridgeUrl}/reset?force=${force}`, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(10000),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -65,12 +154,13 @@ export async function sendInvoiceFileViaBridge({
   try {
     // 1. Check bridge status first
     const status = await checkWhatsAppBridgeStatus();
+    const bridgeUrl = getWhatsAppBridgeBaseUrl();
     if (!status.connected) {
       return {
         success: false,
         error: status.hasQr
-          ? 'WhatsApp is not linked on your laptop yet. Please scan the QR code first.'
-          : 'WhatsApp service is not running on your laptop. Start whatsapp-bridge to send files.',
+          ? 'WhatsApp is not linked on your laptop/server yet. Please scan the QR code first.'
+          : `WhatsApp bridge is not reachable at ${bridgeUrl}. Ensure start_whatsapp_bridge.bat is running on your server PC.`,
       };
     }
 
@@ -161,7 +251,7 @@ export async function sendInvoiceFileViaBridge({
     }
 
     // 3. Post to local bridge
-    const response = await fetch(`${BRIDGE_URL}/send-file`, {
+    const response = await fetch(`${bridgeUrl}/send-file`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -205,16 +295,17 @@ export async function sendWhatsAppTextMessageViaBridge({
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     const status = await checkWhatsAppBridgeStatus();
+    const bridgeUrl = getWhatsAppBridgeBaseUrl();
     if (!status.connected) {
       return {
         success: false,
         error: status.hasQr
-          ? 'WhatsApp is not linked on your laptop yet. Please scan the QR code first.'
-          : 'WhatsApp service is not running on your laptop. Start whatsapp-bridge to send messages.',
+          ? 'WhatsApp is not linked on your laptop/server yet. Please scan the QR code first.'
+          : `WhatsApp bridge is not reachable at ${bridgeUrl}. Ensure start_whatsapp_bridge.bat is running on your server PC.`,
       };
     }
 
-    const response = await fetch(`${BRIDGE_URL}/send-text`, {
+    const response = await fetch(`${bridgeUrl}/send-text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

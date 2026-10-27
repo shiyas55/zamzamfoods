@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Customer, CustomerDetailSummary, Order, Payment } from '../types';
 import { openWhatsApp, generateCustomerStatementMessage } from '../utils/whatsappUtils';
-import { sendInvoiceFileViaBridge } from '../utils/whatsappBridgeUtils';
+import { sendInvoiceFileViaBridge, getWhatsAppBridgeQrUrl } from '../utils/whatsappBridgeUtils';
 import { useSettings } from '../context/SettingsContext';
 import {
   Printer,
@@ -337,7 +337,7 @@ export const CustomerStatementModal: React.FC<CustomerStatementModalProps> = ({
           `${res.error}\n\nWould you like to open the WhatsApp QR Code page on your laptop now to connect?`
         );
         if (openQr) {
-          window.open('http://localhost:3005/qr', '_blank');
+          window.open(getWhatsAppBridgeQrUrl(), '_blank');
         }
       }
     } catch (err: unknown) {

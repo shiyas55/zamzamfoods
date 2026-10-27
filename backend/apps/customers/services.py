@@ -146,8 +146,12 @@ def get_customers_opening_balances_for_date(target_date, customer_ids=None):
         for row in orders_agg.values("customer_id").annotate(total=Sum("total_amount"))
     }
 
+    start_dt = datetime.datetime.combine(target_date, datetime.time.min)
+    if timezone.is_aware(timezone.now()):
+        start_dt = timezone.make_aware(start_dt)
+
     payments_agg = (
-        Payment.objects.filter(received_at__date__gte=target_date, status=Payment.Status.COMPLETED)
+        Payment.objects.filter(received_at__gte=start_dt, status=Payment.Status.COMPLETED)
     )
     if customer_ids:
         payments_agg = payments_agg.filter(customer_id__in=customer_ids)
@@ -162,7 +166,7 @@ def get_customers_opening_balances_for_date(target_date, customer_ids=None):
     adjustments_agg = (
         CreditTransaction.objects.filter(
             transaction_type=CreditTransaction.TransactionType.ADJUSTMENT,
-            created_at__date__gte=target_date,
+            created_at__gte=start_dt,
             reference_order__isnull=True,  # standalone balance corrections only
         ).exclude(notes__icontains="Fast Wholesale Entry")
     )

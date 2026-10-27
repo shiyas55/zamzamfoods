@@ -46,8 +46,7 @@ if not DATABASE_URL_ENV:
                     break
 
 if not DATABASE_URL_ENV:
-    # Safe production fallback to primary Aiven Cloud PostgreSQL database
-    DATABASE_URL_ENV = "postgres://avnadmin:AVNS__5t4TpkXOy-BXhofK6i@pg-65e4170-zamzamfoods.h.aivencloud.com:18638/defaultdb?sslmode=require"
+    DATABASE_URL_ENV = "sqlite:///db.sqlite3"
 
 _is_sqlite = DATABASE_URL_ENV.startswith("sqlite")
 _is_internal_db = any(h in DATABASE_URL_ENV for h in ["railway.internal", "localhost", "127.0.0.1"]) or _is_sqlite

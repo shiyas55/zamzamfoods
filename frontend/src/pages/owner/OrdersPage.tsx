@@ -41,19 +41,20 @@ export const OrdersPage: React.FC = () => {
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Load routes once on initial mount
+  useEffect(() => {
+    routeService.getRoutes().then(setRoutes).catch(console.error);
+  }, []);
+
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const [orderList, routeList] = await Promise.all([
-        orderService.getOrders({
-          route: selectedRoute || undefined,
-          status: selectedStatus || undefined,
-          date: selectedDate || undefined,
-        }),
-        routeService.getRoutes(),
-      ]);
+      const orderList = await orderService.getOrders({
+        route: selectedRoute || undefined,
+        status: selectedStatus || undefined,
+        date: selectedDate || undefined,
+      });
       setOrders(orderList);
-      setRoutes(routeList);
     } catch (err: unknown) {
       console.error(err);
     } finally {

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Order, Customer } from '../types';
 import { openWhatsApp, generateInvoiceMessage } from '../utils/whatsappUtils';
-import { sendInvoiceFileViaBridge } from '../utils/whatsappBridgeUtils';
+import { sendInvoiceFileViaBridge, getWhatsAppBridgeQrUrl } from '../utils/whatsappBridgeUtils';
 import { useSettings } from '../context/SettingsContext';
 import { Printer, MessageCircle, X, Check, Receipt, FileText, QrCode, Send, Loader2, Image as ImageIcon } from 'lucide-react';
 
@@ -192,7 +192,7 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ order, customer, onC
           `${res.error}\n\nWould you like to open the WhatsApp QR Code page on your laptop now to connect?`
         );
         if (openQr) {
-          window.open('http://localhost:3005/qr', '_blank');
+          window.open(getWhatsAppBridgeQrUrl(), '_blank');
         }
       }
     } catch (err: unknown) {

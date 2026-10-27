@@ -36,7 +36,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Order.objects.none()
 
-        queryset = Order.objects.select_related("customer", "route", "driver", "driver__user").prefetch_related("items__product", "credit_ledger_entries", "payments")
+        queryset = Order.objects.select_related("customer", "route", "driver", "driver__user", "delivery").prefetch_related("items__product", "credit_ledger_entries", "payments")
 
         # Query filters for managers/owners
         route_id = self.request.query_params.get("route")
@@ -56,11 +56,11 @@ class OrderViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(customer_id=customer_id)
 
         if user.is_superuser or user.role in ["OWNER", "MANAGER"]:
-            return queryset.order_by("-order_date", "-created_at").distinct()
+            return queryset.order_by("-order_date", "-created_at")
 
         # Driver data isolation: driver ONLY sees their assigned orders
         if user.role == "DRIVER":
-            return queryset.filter(driver__user=user).order_by("-order_date", "-created_at").distinct()
+            return queryset.filter(driver__user=user).order_by("-order_date", "-created_at")
 
         return Order.objects.none()
 
