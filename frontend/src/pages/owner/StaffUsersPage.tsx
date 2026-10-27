@@ -52,6 +52,7 @@ import {
   ArrowUpCircle,
   HelpCircle,
   Receipt,
+  Zap,
 } from 'lucide-react';
 import { RecordShopPaymentModal } from '../../components/RecordShopPaymentModal';
 
@@ -126,6 +127,10 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
   const [attendanceLoading, setAttendanceLoading] = useState(false);
   const [attendanceSaving, setAttendanceSaving] = useState(false);
   const [showAttendanceWages, setShowAttendanceWages] = useState(true);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const autoSaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialSheetLoadRef = React.useRef(true);
 
   // Payout State
   const [payouts, setPayouts] = useState<StaffPayout[]>([]);
@@ -215,15 +220,27 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
     }
   };
 
+  const getInitials = (name: string) => {
+    if (!name) return 'S';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
   const fetchDailySheet = async (dateVal: string) => {
     try {
       setAttendanceLoading(true);
+      isInitialSheetLoadRef.current = true;
       const res = await staffService.getDailySheet(dateVal);
       setDailySheet(res.sheet);
+      setHasUnsavedChanges(false);
     } catch (err) {
       console.error('Failed to load daily sheet:', err);
     } finally {
       setAttendanceLoading(false);
+      setTimeout(() => {
+        isInitialSheetLoadRef.current = false;
+      }, 400);
     }
   };
 
@@ -265,6 +282,35 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
       fetchUsers();
     }
   }, [activeTab, attendanceDate]);
+
+  // Debounced Auto-Save for Attendance Sheet
+  useEffect(() => {
+    if (isInitialSheetLoadRef.current || !autoSaveEnabled || activeTab !== 'attendance' || dailySheet.length === 0) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+    setHasUnsavedChanges(true);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        await staffService.bulkSaveAttendance({
+          date: attendanceDate,
+          attendances: dailySheet.map((item) => ({
+            staff_id: item.staff_id,
+            status: item.status,
+            notes: item.notes,
+            cash_paid: item.cash_paid || '0.00',
+            gpay_paid: item.gpay_paid || '0.00',
+          })),
+        });
+        setHasUnsavedChanges(false);
+      } catch (err) {
+        console.warn('Silent auto-save attendance notice:', err);
+      }
+    }, 1200);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [dailySheet, autoSaveEnabled, attendanceDate, activeTab]);
 
   // ─── Staff Modal Handlers ──────────────────────────────────────────────────
   const handleOpenCreateStaff = () => {
@@ -433,6 +479,22 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
         cash_paid: '0.00',
         gpay_paid: '0.00',
       }))
+    );
+  };
+
+  const handlePayFullWage = (staffId: string) => {
+    setDailySheet((prev) =>
+      prev.map((item) => {
+        if (item.staff_id === staffId) {
+          const earned = parseFloat(item.calculated_wage) || 0;
+          return {
+            ...item,
+            cash_paid: earned.toFixed(2),
+            gpay_paid: '0.00',
+          };
+        }
+        return item;
+      })
     );
   };
 
@@ -1153,32 +1215,33 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
         </div>
       )}
 
-      {/* ─── TAB 2: DAILY ATTENDANCE ROLL-CALL (EXCEL ORDER PAGE STYLE) ─────── */}
+      {/* ─── TAB 2: DAILY ATTENDANCE & WAGES (CLEAN & SIMPLE) ─────── */}
       {activeTab === 'attendance' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-          {/* 1. Top Header & Date Navigation Toolbar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          {/* 1. Clean Top Header & Date Navigation Toolbar */}
           <div
             className="card"
             style={{
-              padding: '0.6rem 1rem',
+              padding: '0.85rem 1.15rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '0.75rem',
+              gap: '0.85rem',
               background: 'var(--bg-card)',
-              borderRadius: '8px',
+              borderRadius: '10px',
               border: '1px solid var(--border)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
             }}
           >
             {/* Title & Date Controls */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
                 <div
                   style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 8,
+                    width: 38,
+                    height: 38,
+                    borderRadius: 9,
                     background: '#fef2f2',
                     display: 'flex',
                     alignItems: 'center',
@@ -1186,14 +1249,14 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                     color: '#dc2626',
                   }}
                 >
-                  <Calendar size={18} />
+                  <Calendar size={20} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.98rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                    Daily Attendance &amp; Wage Sheet
+                  <div style={{ fontWeight: 900, fontSize: '1.05rem', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                    Daily Attendance &amp; Wages
                   </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                    Daily roll-call, wages, and instant cash / GPay payouts
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                    1-Tap Roll-Call, wage calculation &amp; live expense sync
                   </div>
                 </div>
               </div>
@@ -1203,10 +1266,10 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.2rem',
+                  gap: '0.25rem',
                   background: 'var(--bg-hover, #f8fafc)',
-                  padding: '3px 6px',
-                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  borderRadius: '8px',
                   border: '1px solid var(--border)',
                 }}
               >
@@ -1214,10 +1277,10 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => handleShiftDate(-1)}
-                  style={{ padding: '2px 6px', height: 26, fontSize: '0.75rem' }}
+                  style={{ padding: '3px 8px', height: 28, fontSize: '0.78rem' }}
                   title="Previous Day"
                 >
-                  <ChevronLeft size={13} />
+                  <ChevronLeft size={14} />
                 </button>
                 <input
                   type="date"
@@ -1226,31 +1289,96 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                   onChange={(e) => setAttendanceDate(e.target.value)}
                   style={{
                     fontWeight: 700,
-                    padding: '2px 6px',
-                    fontSize: '0.78rem',
-                    height: 26,
-                    width: 125,
+                    padding: '2px 8px',
+                    fontSize: '0.82rem',
+                    height: 28,
+                    width: 135,
                     border: '1px solid var(--border)',
-                    borderRadius: '4px',
+                    borderRadius: '6px',
                   }}
                 />
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => handleShiftDate(1)}
-                  style={{ padding: '2px 6px', height: 26, fontSize: '0.75rem' }}
+                  style={{ padding: '3px 8px', height: 28, fontSize: '0.78rem' }}
                   title="Next Day"
                 >
-                  <ChevronRight size={13} />
+                  <ChevronRight size={14} />
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => setAttendanceDate(new Date().toISOString().split('T')[0])}
-                  style={{ padding: '2px 8px', height: 26, fontSize: '0.72rem', fontWeight: 700 }}
+                  style={{ padding: '2px 10px', height: 28, fontSize: '0.75rem', fontWeight: 800 }}
                 >
                   Today
                 </button>
+              </div>
+
+              {/* Live Auto-Save Status Badge */}
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                {attendanceSaving || hasUnsavedChanges ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '0.74rem',
+                      color: '#b45309',
+                      background: '#fffbeb',
+                      padding: '4px 9px',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      border: '1px solid #fde68a',
+                    }}
+                    title="Saving changes in background..."
+                  >
+                    <Clock size={13} style={{ animation: 'spin 1.2s linear infinite' }} />
+                    Saving changes...
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      fontSize: '0.74rem',
+                      color: '#059669',
+                      background: '#ecfdf5',
+                      padding: '4px 9px',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      border: '1px solid #a7f3d0',
+                    }}
+                    title="All attendance and wages are synchronized with central database"
+                  >
+                    <CheckCircle size={13} />
+                    Auto-Saved
+                  </span>
+                )}
+
+                <label
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    fontSize: '0.72rem',
+                    color: 'var(--text-muted)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                  title="Toggle automatic saving as you click"
+                >
+                  <input
+                    type="checkbox"
+                    checked={autoSaveEnabled}
+                    onChange={(e) => setAutoSaveEnabled(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span>Auto-Save</span>
+                </label>
               </div>
             </div>
 
@@ -1261,15 +1389,15 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 className="btn btn-secondary btn-sm"
                 onClick={() => handleOpenCreateForSection('MEMBER')}
                 style={{
-                  height: 30,
-                  fontSize: '0.75rem',
+                  height: 32,
+                  fontSize: '0.78rem',
                   fontWeight: 700,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
+                  gap: '0.35rem',
                 }}
               >
-                <Plus size={13} />
+                <Plus size={14} />
                 <span>Add Member</span>
               </button>
 
@@ -1278,36 +1406,17 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 className="btn btn-secondary btn-sm"
                 onClick={() => handleOpenCreateForSection('DRIVER')}
                 style={{
-                  height: 30,
-                  fontSize: '0.75rem',
+                  height: 32,
+                  fontSize: '0.78rem',
                   fontWeight: 700,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
+                  gap: '0.35rem',
                 }}
               >
-                <Truck size={13} />
+                <Truck size={14} />
                 <span>Add Driver</span>
               </button>
-
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  color: '#047857',
-                  background: '#ecfdf5',
-                  border: '1px solid #a7f3d0',
-                  padding: '4px 8px',
-                  borderRadius: '5px',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-                title="When attendance is saved, paid cash and gpay amounts are automatically added to operating expenses"
-              >
-                <Receipt size={12} />
-                Paid Cash & GPay added to Expenses
-              </span>
 
               <button
                 type="button"
@@ -1315,130 +1424,137 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 onClick={handleSaveAttendance}
                 disabled={attendanceSaving}
                 style={{
-                  height: 30,
-                  padding: '0 0.95rem',
+                  height: 32,
+                  padding: '0 1.05rem',
                   fontWeight: 800,
-                  fontSize: '0.78rem',
+                  fontSize: '0.8rem',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '0.35rem',
+                  gap: '0.4rem',
                 }}
               >
-                <Save size={14} />
-                <span>{attendanceSaving ? 'Saving...' : 'Save Attendance Sheet'}</span>
+                <Save size={15} />
+                <span>{attendanceSaving ? 'Saving...' : 'Save Attendance'}</span>
               </button>
             </div>
           </div>
 
-          {/* 2. Modern Clean KPI Cards Grid */}
+          {/* 2. 3 Clean, Simple, Modern KPI Cards */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-              gap: '0.5rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+              gap: '0.75rem',
             }}
           >
-            {/* Card 1: Attendance summary */}
-            <div className="card" style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Roll-Call ({attendanceDate})
+            {/* Card 1: Attendance Summary */}
+            <div className="card" style={{ padding: '0.9rem 1.15rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Roll-Call Status ({attendanceDate})
                 </span>
-                <UserCheck size={15} style={{ color: '#b91c1c' }} />
-              </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                {attendanceStats.presentCount} / {attendanceStats.totalStaff}{' '}
-                <span style={{ fontSize: '0.76rem', color: '#b91c1c', fontWeight: 700 }}>Present</span>
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>{attendanceStats.fullCount} Full</span> •{' '}
-                <span style={{ color: 'var(--text-secondary)', fontWeight: 700 }}>{attendanceStats.halfCount} Half</span> •{' '}
-                <span style={{ color: '#dc2626', fontWeight: 700 }}>{attendanceStats.leaveCount} Leave</span>
-              </div>
-            </div>
-
-            {/* Card 2: Share Members */}
-            <div className="card" style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Share Members
-                </span>
-                <Briefcase size={15} style={{ color: '#b91c1c' }} />
-              </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                {attendanceStats.memberPresent} / {attendanceStats.memberTotal}{' '}
-                <span style={{ fontSize: '0.76rem', color: '#b91c1c', fontWeight: 700 }}>Active</span>
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Earned: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.memberEarned)}</strong>
-              </div>
-            </div>
-
-            {/* Card 3: Staff Drivers */}
-            <div className="card" style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Staff Drivers
-                </span>
-                <Truck size={15} style={{ color: '#b91c1c' }} />
-              </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                {attendanceStats.driverPresent} / {attendanceStats.driverTotal}{' '}
-                <span style={{ fontSize: '0.76rem', color: '#b91c1c', fontWeight: 700 }}>Active</span>
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                Earned: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.driverEarned)}</strong>
-              </div>
-            </div>
-
-            {/* Card 4: Daily Wages & Collections */}
-            <div className="card" style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Total Wages &amp; Due
-                </span>
-                <Wallet size={15} style={{ color: '#b91c1c' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                  {formatCurrency(attendanceStats.totalEarned)}
-                </div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#b91c1c' }}>
-                  {formatCurrency(attendanceStats.netBalance)} due
+                <div style={{ width: 28, height: 28, borderRadius: 6, background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserCheck size={16} />
                 </div>
               </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <span>Paid: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.totalPaid)}</strong></span>
-                <span>(Cash: {formatCurrency(attendanceStats.totalCash)}, GPay: {formatCurrency(attendanceStats.totalGPay)})</span>
-                <span style={{ fontSize: '0.62rem', color: '#047857', fontWeight: 700 }}>• In Expenses</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                  {attendanceStats.presentCount} / {attendanceStats.totalStaff}
+                </span>
+                <span style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 800 }}>Present Today</span>
+              </div>
+              {/* Progress bar */}
+              <div style={{ display: 'flex', height: 6, borderRadius: 3, overflow: 'hidden', background: '#f1f5f9', marginTop: '8px' }}>
+                <div style={{ width: `${attendanceStats.totalStaff ? (attendanceStats.fullCount / attendanceStats.totalStaff) * 100 : 0}%`, background: '#059669' }} title={`${attendanceStats.fullCount} Full Day`} />
+                <div style={{ width: `${attendanceStats.totalStaff ? (attendanceStats.halfCount / attendanceStats.totalStaff) * 100 : 0}%`, background: '#d97706' }} title={`${attendanceStats.halfCount} Half Day`} />
+                <div style={{ width: `${attendanceStats.totalStaff ? (attendanceStats.leaveCount / attendanceStats.totalStaff) * 100 : 0}%`, background: '#dc2626' }} title={`${attendanceStats.leaveCount} On Leave`} />
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '8px', display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span style={{ color: '#047857', fontWeight: 700 }}>🟢 {attendanceStats.fullCount} Full</span>
+                <span style={{ color: '#b45309', fontWeight: 700 }}>🟡 {attendanceStats.halfCount} Half</span>
+                <span style={{ color: '#dc2626', fontWeight: 700 }}>🔴 {attendanceStats.leaveCount} Leave</span>
+              </div>
+            </div>
+
+            {/* Card 2: Daily Wages Earned */}
+            <div className="card" style={{ padding: '0.9rem 1.15rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Total Daily Wages Earned
+                </span>
+                <div style={{ width: 28, height: 28, borderRadius: 6, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <DollarSign size={16} />
+                </div>
+              </div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#1e40af', lineHeight: 1.1 }}>
+                {formatCurrency(attendanceStats.totalEarned)}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '10px', display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <span>Members: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.memberEarned)}</strong></span>
+                <span>• Drivers: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(attendanceStats.driverEarned)}</strong></span>
+              </div>
+            </div>
+
+            {/* Card 3: Paid Out Today & Due */}
+            <div className="card" style={{ padding: '0.9rem 1.15rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Total Paid &amp; Balance Due
+                </span>
+                <div style={{ width: 28, height: 28, borderRadius: 6, background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Wallet size={16} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.4rem' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                  {formatCurrency(attendanceStats.totalPaid)}
+                </div>
+                <div
+                  style={{
+                    fontSize: '0.76rem',
+                    fontWeight: 800,
+                    padding: '2px 8px',
+                    borderRadius: '5px',
+                    background: attendanceStats.netBalance > 0 ? '#fef2f2' : '#ecfdf5',
+                    color: attendanceStats.netBalance > 0 ? '#dc2626' : '#059669',
+                    border: `1px solid ${attendanceStats.netBalance > 0 ? '#fecaca' : '#a7f3d0'}`,
+                  }}
+                >
+                  {attendanceStats.netBalance > 0 ? `${formatCurrency(attendanceStats.netBalance)} due` : '✓ All Settled'}
+                </div>
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '10px', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ color: '#047857', fontWeight: 700 }}>💵 Cash: {formatCurrency(attendanceStats.totalCash)}</span>
+                <span style={{ color: '#2563eb', fontWeight: 700 }}>📱 GPay: {formatCurrency(attendanceStats.totalGPay)}</span>
+                <span style={{ fontSize: '0.65rem', color: '#059669', background: '#ecfdf5', padding: '1px 5px', borderRadius: '3px' }}>In Expenses</span>
               </div>
             </div>
           </div>
 
-          {/* 3. Compact Clean Filter Bar & Actions */}
+          {/* 3. Compact Clean Filter & 1-Tap Bulk Actions Toolbar */}
           <div
             style={{
               display: 'flex',
-              gap: '0.5rem',
+              gap: '0.65rem',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               background: 'var(--bg-card)',
-              padding: '0.45rem 0.75rem',
+              padding: '0.6rem 0.95rem',
               borderRadius: '8px',
               border: '1px solid var(--border)',
             }}
           >
             {/* Search Input */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flex: '1 1 200px', maxWidth: 280 }}>
-              <Search size={14} style={{ color: 'var(--text-muted)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: '1 1 200px', maxWidth: 280 }}>
+              <Search size={15} style={{ color: 'var(--text-muted)' }} />
               <input
                 type="text"
                 className="form-input"
                 placeholder="Search staff or driver..."
                 value={attendanceSearch}
                 onChange={(e) => setAttendanceSearch(e.target.value)}
-                style={{ height: 28, fontSize: '0.78rem', width: '100%', padding: '0 0.5rem' }}
+                style={{ height: 30, fontSize: '0.8rem', width: '100%', padding: '0 0.55rem' }}
               />
               {attendanceSearch && (
                 <button
@@ -1446,26 +1562,26 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                   onClick={() => setAttendanceSearch('')}
                   style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px' }}
                 >
-                  <X size={13} />
+                  <X size={14} />
                 </button>
               )}
             </div>
 
             {/* Section Filter Pills */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className={`btn btn-sm ${attendanceFilterRole === 'ALL' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setAttendanceFilterRole('ALL')}
-                style={{ height: 28, fontSize: '0.75rem', padding: '0 0.65rem', fontWeight: 700 }}
+                style={{ height: 30, fontSize: '0.78rem', padding: '0 0.75rem', fontWeight: 700 }}
               >
-                All Personnel ({attendanceStats.totalStaff})
+                All ({attendanceStats.totalStaff})
               </button>
               <button
                 type="button"
                 className={`btn btn-sm ${attendanceFilterRole === 'MEMBERS' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setAttendanceFilterRole('MEMBERS')}
-                style={{ height: 28, fontSize: '0.75rem', padding: '0 0.65rem', fontWeight: 700 }}
+                style={{ height: 30, fontSize: '0.78rem', padding: '0 0.75rem', fontWeight: 700 }}
               >
                 Share Members ({attendanceStats.memberTotal})
               </button>
@@ -1473,46 +1589,62 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 type="button"
                 className={`btn btn-sm ${attendanceFilterRole === 'DRIVERS' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setAttendanceFilterRole('DRIVERS')}
-                style={{ height: 28, fontSize: '0.75rem', padding: '0 0.65rem', fontWeight: 700 }}
+                style={{ height: 30, fontSize: '0.78rem', padding: '0 0.75rem', fontWeight: 700 }}
               >
-                Staff Drivers ({attendanceStats.driverTotal})
+                Drivers ({attendanceStats.driverTotal})
               </button>
             </div>
 
-            {/* Bulk Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+            {/* 1-Tap Bulk Quick Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleMarkAllFull}
-                style={{ height: 28, fontSize: '0.74rem', padding: '0 0.55rem', fontWeight: 700 }}
-                title="Mark all staff full day"
+                style={{
+                  height: 30,
+                  fontSize: '0.76rem',
+                  padding: '0 0.65rem',
+                  fontWeight: 700,
+                  color: '#059669',
+                  borderColor: '#a7f3d0',
+                  background: '#ecfdf5',
+                }}
+                title="Mark all staff full day present"
               >
-                <Check size={12} /> Mark All Present
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={handleMarkAllLeave}
-                style={{ height: 28, fontSize: '0.74rem', padding: '0 0.55rem', fontWeight: 700, color: '#dc2626', borderColor: '#fecaca' }}
-                title="Mark all staff on leave"
-              >
-                <X size={12} /> Mark All Leave
+                <Check size={13} /> Mark All Present
               </button>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleAutoFillCash}
-                style={{ height: 28, fontSize: '0.74rem', padding: '0 0.55rem', fontWeight: 700 }}
+                style={{ height: 30, fontSize: '0.76rem', padding: '0 0.65rem', fontWeight: 700 }}
                 title="Fill Cash column with earned wage for quick daily payout"
               >
-                <DollarSign size={12} /> Pay to Cash
+                <DollarSign size={13} /> Pay All Cash
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleMarkAllLeave}
+                style={{
+                  height: 30,
+                  fontSize: '0.76rem',
+                  padding: '0 0.65rem',
+                  fontWeight: 700,
+                  color: '#dc2626',
+                  borderColor: '#fecaca',
+                  background: '#fef2f2',
+                }}
+                title="Mark all staff on leave"
+              >
+                <X size={13} /> Mark All Leave
               </button>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={handleClearPayouts}
-                style={{ height: 28, fontSize: '0.74rem', padding: '0 0.55rem' }}
+                style={{ height: 30, fontSize: '0.76rem', padding: '0 0.65rem' }}
                 title="Reset Cash and GPay amounts to 0"
               >
                 Clear Paid
@@ -1520,17 +1652,16 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
             </div>
           </div>
 
-          {/* 4. Excel-Style Grouped Sections Table */}
+          {/* 4. Clean Simplified Table Sections */}
           {attendanceLoading ? (
-            <div style={{ padding: '3rem', textAlign: 'center' }}>
+            <div style={{ padding: '3.5rem', textAlign: 'center' }}>
               <div className="spinner" style={{ margin: '0 auto' }} />
-              <div style={{ marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
+              <div style={{ marginTop: '0.65rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                 Loading roll-call sheet...
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {/* SECTION RENDERER HELPER */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {(['MEMBERS', 'DRIVERS'] as const).map((secKey) => {
                 if (attendanceFilterRole !== 'ALL' && attendanceFilterRole !== secKey) {
                   return null;
@@ -1562,26 +1693,18 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
 
                 const secSubtitle =
                   secKey === 'MEMBERS'
-                    ? 'Full Day, Half Day, or Leave'
-                    : 'Present or Leave';
-
-                const secBadgeBg = 'var(--bg-main)';
-                const secBadgeText = 'var(--text-primary)';
-                const secBadgeBorder = 'var(--border)';
+                    ? 'Roll-call: Full Day, Half Day, or Leave'
+                    : 'Roll-call: Present or Leave';
 
                 const secPresent = sectionItems.filter((i) => i.status === 'FULL' || i.status === 'HALF').length;
                 const secEarned = sectionItems.reduce((acc, i) => acc + (parseFloat(i.calculated_wage) || 0), 0);
-                const secCash = sectionItems.reduce((acc, i) => acc + (parseFloat(i.cash_paid || '0') || 0), 0);
-                const secGPay = sectionItems.reduce((acc, i) => acc + (parseFloat(i.gpay_paid || '0') || 0), 0);
-                const secPaid = secCash + secGPay;
-                const secDue = secEarned - secPaid;
 
                 return (
                   <div
                     key={secKey}
                     style={{
                       background: 'var(--bg-card)',
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       border: '1px solid var(--border)',
                       overflow: 'hidden',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
@@ -1590,37 +1713,49 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                     {/* Section Header Banner */}
                     <div
                       style={{
-                        padding: '0.55rem 0.95rem',
-                        background: 'var(--bg-main)',
+                        padding: '0.7rem 1.15rem',
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
                         borderBottom: '1px solid var(--border)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         flexWrap: 'wrap',
-                        gap: '0.5rem',
+                        gap: '0.65rem',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {secKey === 'MEMBERS' ? <Briefcase size={16} style={{ color: '#b91c1c' }} /> : <Truck size={16} style={{ color: '#b91c1c' }} />}
-                        <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                          {secTitle}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({secSubtitle})</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                        {secKey === 'MEMBERS' ? (
+                          <div style={{ width: 28, height: 28, borderRadius: 6, background: '#fef2f2', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Briefcase size={16} />
+                          </div>
+                        ) : (
+                          <div style={{ width: 28, height: 28, borderRadius: 6, background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Truck size={16} />
+                          </div>
+                        )}
+                        <div>
+                          <span style={{ fontWeight: 900, fontSize: '0.95rem', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                            {secTitle}
+                          </span>
+                          <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginLeft: '0.45rem' }}>
+                            ({secSubtitle})
+                          </span>
+                        </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
                         <span
                           style={{
-                            fontSize: '0.74rem',
-                            fontWeight: 700,
-                            padding: '2px 8px',
-                            borderRadius: '5px',
-                            background: 'var(--bg-card)',
+                            fontSize: '0.76rem',
+                            fontWeight: 800,
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            background: '#ffffff',
                             border: '1px solid var(--border)',
                             color: 'var(--text-secondary)',
                           }}
                         >
-                          {secPresent} / {sectionItems.length} Present • Earned: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(secEarned)}</strong>
+                          <span style={{ color: '#059669' }}>{secPresent} / {sectionItems.length} Present</span> • Total Wage: <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(secEarned)}</strong>
                         </span>
 
                         <button
@@ -1628,54 +1763,52 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                           className="btn btn-secondary btn-sm"
                           onClick={() => handleOpenCreateForSection(secKey === 'MEMBERS' ? 'MEMBER' : 'DRIVER')}
                           style={{
-                            height: 26,
-                            fontSize: '0.72rem',
+                            height: 28,
+                            fontSize: '0.74rem',
                             fontWeight: 700,
-                            padding: '0 0.55rem',
+                            padding: '0 0.65rem',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.25rem',
+                            gap: '0.3rem',
                           }}
                         >
-                          <Plus size={12} />
+                          <Plus size={13} />
                           {secKey === 'MEMBERS' ? 'Add Member' : 'Add Driver'}
                         </button>
                       </div>
                     </div>
 
-                    {/* Section Excel Grid Table */}
+                    {/* Clean Simplified Table */}
                     <div style={{ overflowX: 'auto' }}>
                       <table
                         style={{
                           width: '100%',
                           borderCollapse: 'collapse',
-                          fontSize: '0.78rem',
+                          fontSize: '0.82rem',
                           textAlign: 'left',
                         }}
                       >
                         <thead>
                           <tr
                             style={{
-                              background: 'var(--bg-hover, #f8fafc)',
+                              background: '#ffffff',
                               borderBottom: '1px solid var(--border)',
-                              fontSize: '0.68rem',
+                              fontSize: '0.72rem',
                               fontWeight: 800,
                               color: 'var(--text-muted)',
                               textTransform: 'uppercase',
-                              letterSpacing: '0.03em',
+                              letterSpacing: '0.04em',
                             }}
                           >
-                            <th style={{ padding: '0.4rem 0.5rem', width: '32px', textAlign: 'center' }}>#</th>
-                            <th style={{ padding: '0.4rem 0.6rem' }}>Personnel / Role</th>
-                            <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Daily Rate</th>
-                            <th style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>Attendance (Click to Toggle)</th>
-                            <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Earned Today</th>
-                            <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Cash Paid</th>
-                            <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>GPay Paid</th>
-                            <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Total Paid</th>
-                            <th style={{ padding: '0.4rem 0.5rem', textAlign: 'right' }}>Net Balance</th>
-                            <th style={{ padding: '0.4rem 0.5rem' }}>Daily Remarks</th>
-                            <th style={{ padding: '0.4rem 0.4rem', textAlign: 'center', width: '60px' }}>Actions</th>
+                            <th style={{ padding: '0.65rem 0.65rem', width: '38px', textAlign: 'center' }}>#</th>
+                            <th style={{ padding: '0.65rem 0.85rem' }}>Staff Personnel</th>
+                            <th style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>Daily Rate</th>
+                            <th style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>Attendance (1-Click Toggle)</th>
+                            <th style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>Earned Wage</th>
+                            <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>Paid Today (Cash / GPay)</th>
+                            <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>Status</th>
+                            <th style={{ padding: '0.65rem 0.75rem' }}>Daily Remarks</th>
+                            <th style={{ padding: '0.65rem 0.5rem', textAlign: 'center', width: '70px' }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1692,156 +1825,212 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                   key={item.staff_id}
                                   style={{
                                     borderBottom: '1px solid var(--border)',
-                                    background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.01)',
-                                    transition: 'background 0.1s ease',
+                                    background: idx % 2 === 0 ? '#ffffff' : 'rgba(248, 250, 252, 0.6)',
+                                    transition: 'background 0.12s ease',
                                   }}
                                 >
-                                  {/* # */}
-                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem' }}>
+                                  {/* 1. # */}
+                                  <td style={{ padding: '0.65rem 0.65rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.76rem', fontWeight: 700 }}>
                                     {idx + 1}
                                   </td>
 
-                                  {/* Name & Details */}
-                                  <td style={{ padding: '0.35rem 0.6rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                      <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{item.full_name}</span>
-                                      <span
+                                  {/* 2. Staff Personnel (Avatar + Name + Phone + Role) */}
+                                  <td style={{ padding: '0.65rem 0.85rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                      {/* Avatar Circle */}
+                                      <div
                                         style={{
-                                          fontSize: '0.62rem',
-                                          padding: '1px 5px',
-                                          borderRadius: '4px',
-                                          fontWeight: 700,
-                                          background: secBadgeBg,
-                                          color: secBadgeText,
-                                          border: `1px solid ${secBadgeBorder}`,
+                                          width: 32,
+                                          height: 32,
+                                          borderRadius: '50%',
+                                          background: secKey === 'MEMBERS' ? '#fee2e2' : '#dbeafe',
+                                          color: secKey === 'MEMBERS' ? '#991b1b' : '#1e40af',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: '0.74rem',
+                                          fontWeight: 800,
+                                          flexShrink: 0,
+                                          border: `1.5px solid ${secKey === 'MEMBERS' ? '#fecaca' : '#bfdbfe'}`,
                                         }}
                                       >
-                                        {item.designation}
-                                      </span>
-                                    </div>
-                                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '1px', display: 'flex', gap: '0.4rem' }}>
-                                      {item.phone_number && <span>{item.phone_number}</span>}
-                                      <span style={{ opacity: 0.85 }}>
-                                        • {isDriverPersonnel(item) && item.tenure_slab_label?.includes('Member') ? 'Tenure Slab Rate' : item.tenure_slab_label}
-                                      </span>
+                                        {getInitials(item.full_name)}
+                                      </div>
+                                      <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                          <strong style={{ fontSize: '0.86rem', color: 'var(--text-primary)' }}>
+                                            {item.full_name}
+                                          </strong>
+                                          <span
+                                            style={{
+                                              fontSize: '0.65rem',
+                                              padding: '1px 6px',
+                                              borderRadius: '4px',
+                                              fontWeight: 700,
+                                              background: secKey === 'MEMBERS' ? '#fef2f2' : '#eff6ff',
+                                              color: secKey === 'MEMBERS' ? '#b91c1c' : '#1d4ed8',
+                                              border: `1px solid ${secKey === 'MEMBERS' ? '#fee2e2' : '#dbeafe'}`,
+                                            }}
+                                          >
+                                            {item.designation}
+                                          </span>
+                                        </div>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '1px', display: 'flex', gap: '0.45rem' }}>
+                                          {item.phone_number && <span>{item.phone_number}</span>}
+                                          {item.tenure_slab_label && (
+                                            <span style={{ opacity: 0.85 }}>
+                                              • {isDriverPersonnel(item) && item.tenure_slab_label?.includes('Member') ? 'Tenure Slab' : item.tenure_slab_label}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
                                     </div>
                                   </td>
 
-                                  {/* Base Rate */}
-                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                  {/* 3. Base Daily Rate */}
+                                  <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right', fontWeight: 700, color: 'var(--text-secondary)' }}>
                                     {formatCurrency(item.base_daily_wage)}
-                                    <span style={{ fontSize: '0.65rem', opacity: 0.75 }}>/d</span>
+                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginLeft: '2px' }}>/d</span>
                                   </td>
 
-                                  {/* Attendance Status Pill Buttons */}
-                                  <td style={{ padding: '0.35rem 0.6rem', textAlign: 'center' }}>
+                                  {/* 4. Attendance Status (Vibrant 1-Click Color Toggle) */}
+                                  <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>
                                     <div
                                       style={{
                                         display: 'inline-flex',
-                                        background: 'var(--border, #e2e8f0)',
-                                        borderRadius: '6px',
-                                        padding: '2px',
-                                        gap: '2px',
+                                        background: '#f1f5f9',
+                                        borderRadius: '8px',
+                                        padding: '3px',
+                                        gap: '3px',
+                                        border: '1px solid #e2e8f0',
                                       }}
                                     >
                                       {secKey === 'MEMBERS' ? (
                                         <>
+                                          {/* Full Day (Green) */}
                                           <button
                                             type="button"
                                             onClick={() => handleUpdateSheetItem(item.staff_id, 'FULL')}
                                             style={{
-                                              border: 'none',
-                                              padding: '4px 10px',
-                                              borderRadius: '4px',
+                                              border: item.status === 'FULL' ? '1.5px solid #047857' : '1.5px solid transparent',
+                                              padding: '5px 12px',
+                                              borderRadius: '6px',
                                               fontWeight: 800,
-                                              fontSize: '0.72rem',
+                                              fontSize: '0.75rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'FULL' ? '#b91c1c' : 'transparent',
-                                              color: item.status === 'FULL' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'FULL' ? '0 1px 3px rgba(185,28,28,0.3)' : 'none',
+                                              background: item.status === 'FULL' ? '#059669' : 'transparent',
+                                              color: item.status === 'FULL' ? '#ffffff' : '#047857',
+                                              boxShadow: item.status === 'FULL' ? '0 2px 5px rgba(5, 150, 105, 0.35)' : 'none',
                                               transition: 'all 0.12s ease',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
                                             }}
-                                            title="Full Day — 100% daily wage"
+                                            title="Full Day: 100% daily wage"
                                           >
+                                            {item.status === 'FULL' && <Check size={12} />}
                                             Full Day
                                           </button>
+
+                                          {/* Half Day (Amber) */}
                                           <button
                                             type="button"
                                             onClick={() => handleUpdateSheetItem(item.staff_id, 'HALF')}
                                             style={{
-                                              border: 'none',
-                                              padding: '4px 10px',
-                                              borderRadius: '4px',
+                                              border: item.status === 'HALF' ? '1.5px solid #b45309' : '1.5px solid transparent',
+                                              padding: '5px 12px',
+                                              borderRadius: '6px',
                                               fontWeight: 800,
-                                              fontSize: '0.72rem',
+                                              fontSize: '0.75rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'HALF' ? '#7f1d1d' : 'transparent',
-                                              color: item.status === 'HALF' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'HALF' ? '0 1px 3px rgba(127,29,29,0.3)' : 'none',
+                                              background: item.status === 'HALF' ? '#d97706' : 'transparent',
+                                              color: item.status === 'HALF' ? '#ffffff' : '#b45309',
+                                              boxShadow: item.status === 'HALF' ? '0 2px 5px rgba(217, 119, 6, 0.35)' : 'none',
                                               transition: 'all 0.12s ease',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
                                             }}
-                                            title="Half Day — 50% daily wage"
+                                            title="Half Day: 50% daily wage"
                                           >
+                                            {item.status === 'HALF' && <Clock size={12} />}
                                             Half Day
                                           </button>
+
+                                          {/* Leave (Red) */}
                                           <button
                                             type="button"
                                             onClick={() => handleUpdateSheetItem(item.staff_id, 'LEAVE')}
                                             style={{
-                                              border: 'none',
-                                              padding: '4px 10px',
-                                              borderRadius: '4px',
+                                              border: item.status === 'LEAVE' ? '1.5px solid #b91c1c' : '1.5px solid transparent',
+                                              padding: '5px 12px',
+                                              borderRadius: '6px',
                                               fontWeight: 800,
-                                              fontSize: '0.72rem',
+                                              fontSize: '0.75rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'LEAVE' ? '#450a0a' : 'transparent',
-                                              color: item.status === 'LEAVE' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'LEAVE' ? '0 1px 3px rgba(69,10,10,0.3)' : 'none',
+                                              background: item.status === 'LEAVE' ? '#dc2626' : 'transparent',
+                                              color: item.status === 'LEAVE' ? '#ffffff' : '#991b1b',
+                                              boxShadow: item.status === 'LEAVE' ? '0 2px 5px rgba(220, 38, 38, 0.35)' : 'none',
                                               transition: 'all 0.12s ease',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '3px',
                                             }}
-                                            title="Leave / Absent — ₹0 wage"
+                                            title="Leave: ₹0 wage"
                                           >
+                                            {item.status === 'LEAVE' && <X size={12} />}
                                             Leave
                                           </button>
                                         </>
                                       ) : (
                                         <>
+                                          {/* Driver: Present (Green) */}
                                           <button
                                             type="button"
                                             onClick={() => handleUpdateSheetItem(item.staff_id, 'FULL')}
                                             style={{
-                                              border: 'none',
-                                              padding: '4px 14px',
-                                              borderRadius: '4px',
+                                              border: item.status === 'FULL' ? '1.5px solid #047857' : '1.5px solid transparent',
+                                              padding: '5px 16px',
+                                              borderRadius: '6px',
                                               fontWeight: 800,
-                                              fontSize: '0.72rem',
+                                              fontSize: '0.75rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'FULL' ? '#b91c1c' : 'transparent',
-                                              color: item.status === 'FULL' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'FULL' ? '0 1px 3px rgba(185,28,28,0.3)' : 'none',
+                                              background: item.status === 'FULL' ? '#059669' : 'transparent',
+                                              color: item.status === 'FULL' ? '#ffffff' : '#047857',
+                                              boxShadow: item.status === 'FULL' ? '0 2px 5px rgba(5, 150, 105, 0.35)' : 'none',
                                               transition: 'all 0.12s ease',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
                                             }}
-                                            title="Present for duty — 100% daily wage"
+                                            title="Present: Full daily wage"
                                           >
+                                            {item.status === 'FULL' && <Check size={12} />}
                                             Present
                                           </button>
+
+                                          {/* Driver: Leave (Red) */}
                                           <button
                                             type="button"
                                             onClick={() => handleUpdateSheetItem(item.staff_id, 'LEAVE')}
                                             style={{
-                                              border: 'none',
-                                              padding: '4px 14px',
-                                              borderRadius: '4px',
+                                              border: item.status === 'LEAVE' ? '1.5px solid #b91c1c' : '1.5px solid transparent',
+                                              padding: '5px 16px',
+                                              borderRadius: '6px',
                                               fontWeight: 800,
-                                              fontSize: '0.72rem',
+                                              fontSize: '0.75rem',
                                               cursor: 'pointer',
-                                              background: item.status === 'LEAVE' ? '#450a0a' : 'transparent',
-                                              color: item.status === 'LEAVE' ? '#fff' : 'var(--text-primary)',
-                                              boxShadow: item.status === 'LEAVE' ? '0 1px 3px rgba(69,10,10,0.3)' : 'none',
+                                              background: item.status === 'LEAVE' ? '#dc2626' : 'transparent',
+                                              color: item.status === 'LEAVE' ? '#ffffff' : '#991b1b',
+                                              boxShadow: item.status === 'LEAVE' ? '0 2px 5px rgba(220, 38, 38, 0.35)' : 'none',
                                               transition: 'all 0.12s ease',
+                                              display: 'inline-flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
                                             }}
-                                            title="Leave / Absent — ₹0 wage"
+                                            title="Leave: ₹0 wage"
                                           >
+                                            {item.status === 'LEAVE' && <X size={12} />}
                                             Leave
                                           </button>
                                         </>
@@ -1849,113 +2038,174 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                     </div>
                                   </td>
 
-                                  {/* Earned Today */}
-                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right' }}>
+                                  {/* 5. Earned Wage Today */}
+                                  <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>
                                     <strong
                                       style={{
-                                        fontSize: '0.86rem',
-                                        color: item.status === 'LEAVE' ? 'var(--text-muted)' : '#b91c1c',
+                                        fontSize: '0.92rem',
+                                        fontWeight: 900,
+                                        color: item.status === 'LEAVE' ? 'var(--text-muted)' : '#0f172a',
                                       }}
                                     >
                                       {formatCurrency(earned)}
                                     </strong>
                                   </td>
 
-                                  {/* Cash Paid Today (Editable) */}
-                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right' }}>
-                                    <div
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        background: 'var(--bg-input, #fff)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '4px',
-                                        padding: '1px 4px',
-                                      }}
-                                    >
-                                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, marginRight: '2px' }}>₹</span>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        step="1"
-                                        className="hide-arrows"
-                                        value={item.cash_paid ?? '0.00'}
-                                        onChange={(e) => handleUpdatePayment(item.staff_id, 'cash_paid', e.target.value)}
-                                        onFocus={(e) => {
-                                          if (e.target.value === '0' || e.target.value === '0.00') e.target.select();
-                                        }}
+                                  {/* 6. Paid Today (Cash + GPay + 1-Tap Pay Full) */}
+                                  <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                      {/* Cash Input */}
+                                      <div
                                         style={{
-                                          width: '58px',
-                                          textAlign: 'right',
-                                          fontWeight: 700,
-                                          fontFamily: 'monospace',
-                                          fontSize: '0.8rem',
-                                          border: 'none',
-                                          background: 'transparent',
-                                          outline: 'none',
-                                          color: 'var(--text-primary)',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          background: '#ffffff',
+                                          border: '1px solid var(--border)',
+                                          borderRadius: '6px',
+                                          padding: '2px 5px',
                                         }}
-                                        title="Daily cash wage / advance given today"
-                                      />
+                                        title="Cash paid today"
+                                      >
+                                        <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 800, marginRight: '2px' }}>💵</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          className="hide-arrows"
+                                          value={item.cash_paid ?? '0.00'}
+                                          onChange={(e) => handleUpdatePayment(item.staff_id, 'cash_paid', e.target.value)}
+                                          onFocus={(e) => {
+                                            if (e.target.value === '0' || e.target.value === '0.00') e.target.select();
+                                          }}
+                                          style={{
+                                            width: '56px',
+                                            textAlign: 'right',
+                                            fontWeight: 800,
+                                            fontFamily: 'monospace',
+                                            fontSize: '0.82rem',
+                                            border: 'none',
+                                            background: 'transparent',
+                                            outline: 'none',
+                                            color: 'var(--text-primary)',
+                                          }}
+                                        />
+                                      </div>
+
+                                      {/* GPay Input */}
+                                      <div
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          background: '#ffffff',
+                                          border: '1px solid var(--border)',
+                                          borderRadius: '6px',
+                                          padding: '2px 5px',
+                                        }}
+                                        title="GPay / Online wage paid today"
+                                      >
+                                        <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 800, marginRight: '2px' }}>📱</span>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          className="hide-arrows"
+                                          value={item.gpay_paid ?? '0.00'}
+                                          onChange={(e) => handleUpdatePayment(item.staff_id, 'gpay_paid', e.target.value)}
+                                          onFocus={(e) => {
+                                            if (e.target.value === '0' || e.target.value === '0.00') e.target.select();
+                                          }}
+                                          style={{
+                                            width: '56px',
+                                            textAlign: 'right',
+                                            fontWeight: 800,
+                                            fontFamily: 'monospace',
+                                            fontSize: '0.82rem',
+                                            border: 'none',
+                                            background: 'transparent',
+                                            outline: 'none',
+                                            color: 'var(--text-primary)',
+                                          }}
+                                        />
+                                      </div>
+
+                                      {/* 1-Tap "Pay Full" Quick Button */}
+                                      {earned > 0 && rowPaid === 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handlePayFullWage(item.staff_id)}
+                                          style={{
+                                            border: '1px solid #d1fae5',
+                                            background: '#ecfdf5',
+                                            color: '#047857',
+                                            borderRadius: '5px',
+                                            padding: '2px 6px',
+                                            fontSize: '0.68rem',
+                                            fontWeight: 800,
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '2px',
+                                          }}
+                                          title="1-Tap Pay Full: fills Cash with earned wage"
+                                        >
+                                          <Zap size={10} style={{ color: '#059669' }} />
+                                          Pay Full
+                                        </button>
+                                      )}
                                     </div>
                                   </td>
 
-                                  {/* GPay Paid Today (Editable) */}
-                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right' }}>
-                                    <div
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        background: 'var(--bg-input, #fff)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: '4px',
-                                        padding: '1px 4px',
-                                      }}
-                                    >
-                                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 700, marginRight: '2px' }}>₹</span>
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        step="1"
-                                        className="hide-arrows"
-                                        value={item.gpay_paid ?? '0.00'}
-                                        onChange={(e) => handleUpdatePayment(item.staff_id, 'gpay_paid', e.target.value)}
-                                        onFocus={(e) => {
-                                          if (e.target.value === '0' || e.target.value === '0.00') e.target.select();
-                                        }}
+                                  {/* 7. Status / Balance Due */}
+                                  <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>
+                                    {rowDue === 0 && earned > 0 ? (
+                                      <span
                                         style={{
-                                          width: '58px',
-                                          textAlign: 'right',
-                                          fontWeight: 700,
-                                          fontFamily: 'monospace',
-                                          fontSize: '0.8rem',
-                                          border: 'none',
-                                          background: 'transparent',
-                                          outline: 'none',
-                                          color: 'var(--text-primary)',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '2px',
+                                          fontSize: '0.72rem',
+                                          fontWeight: 800,
+                                          padding: '2px 8px',
+                                          borderRadius: '5px',
+                                          background: '#ecfdf5',
+                                          color: '#059669',
+                                          border: '1px solid #a7f3d0',
                                         }}
-                                        title="Daily GPay / online wage payout today"
-                                      />
-                                    </div>
-                                  </td>
-
-                                  {/* Total Paid Today */}
-                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right', fontWeight: 700, color: rowPaid > 0 ? '#b91c1c' : 'var(--text-muted)' }}>
-                                    {formatCurrency(rowPaid)}
-                                  </td>
-
-                                  {/* Net Balance (Due / Settled / Advance) */}
-                                  <td style={{ padding: '0.35rem 0.5rem', textAlign: 'right' }}>
-                                    {rowDue > 0 ? (
-                                      <span style={{ color: '#dc2626', fontWeight: 800, fontSize: '0.78rem' }}>
+                                      >
+                                        ✓ Settled
+                                      </span>
+                                    ) : rowDue > 0 ? (
+                                      <span
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '2px',
+                                          fontSize: '0.72rem',
+                                          fontWeight: 800,
+                                          padding: '2px 8px',
+                                          borderRadius: '5px',
+                                          background: '#fef2f2',
+                                          color: '#dc2626',
+                                          border: '1px solid #fecaca',
+                                        }}
+                                      >
                                         {formatCurrency(rowDue)} due
                                       </span>
-                                    ) : rowDue === 0 && earned > 0 ? (
-                                      <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.74rem' }}>
-                                        Settled
-                                      </span>
                                     ) : rowDue < 0 ? (
-                                      <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '0.74rem' }}>
+                                      <span
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '2px',
+                                          fontSize: '0.72rem',
+                                          fontWeight: 800,
+                                          padding: '2px 8px',
+                                          borderRadius: '5px',
+                                          background: '#eff6ff',
+                                          color: '#2563eb',
+                                          border: '1px solid #bfdbfe',
+                                        }}
+                                      >
                                         +{formatCurrency(Math.abs(rowDue))} adv
                                       </span>
                                     ) : (
@@ -1963,19 +2213,19 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                     )}
                                   </td>
 
-                                  {/* Daily Remarks / Notes */}
-                                  <td style={{ padding: '0.35rem 0.5rem' }}>
+                                  {/* 8. Daily Remark */}
+                                  <td style={{ padding: '0.65rem 0.75rem' }}>
                                     <input
                                       type="text"
                                       className="form-input"
-                                      placeholder="Daily remark..."
+                                      placeholder="Note / remark..."
                                       style={{
-                                        padding: '2px 6px',
-                                        fontSize: '0.74rem',
+                                        padding: '2px 7px',
+                                        fontSize: '0.76rem',
                                         width: '100%',
-                                        maxWidth: '160px',
-                                        height: 24,
-                                        borderRadius: '4px',
+                                        maxWidth: '170px',
+                                        height: 26,
+                                        borderRadius: '5px',
                                       }}
                                       value={item.notes}
                                       onChange={(e) => {
@@ -1987,19 +2237,28 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                     />
                                   </td>
 
-                                  {/* Actions */}
-                                  <td style={{ padding: '0.35rem 0.4rem', textAlign: 'center' }}>
-                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                  {/* 9. Actions */}
+                                  <td style={{ padding: '0.65rem 0.5rem', textAlign: 'center' }}>
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                       <button
                                         type="button"
                                         onClick={() => {
                                           const original = staffList.find((s) => s.id === item.staff_id);
                                           if (original) handleOpenLedgerModal(original);
                                         }}
-                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', color: '#b91c1c' }}
-                                        title="View ledger / wage statements"
+                                        style={{
+                                          border: '1px solid var(--border)',
+                                          background: '#ffffff',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          padding: '3px 5px',
+                                          color: '#b91c1c',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                        }}
+                                        title="View ledger / wage statement"
                                       >
-                                        <FileText size={14} />
+                                        <FileText size={13} />
                                       </button>
                                       <button
                                         type="button"
@@ -2007,7 +2266,16 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                           const original = staffList.find((s) => s.id === item.staff_id);
                                           if (original) handleOpenEditStaff(original);
                                         }}
-                                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', color: 'var(--text-muted)' }}
+                                        style={{
+                                          border: '1px solid var(--border)',
+                                          background: '#ffffff',
+                                          borderRadius: '4px',
+                                          cursor: 'pointer',
+                                          padding: '3px 5px',
+                                          color: 'var(--text-muted)',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                        }}
                                         title="Edit staff profile"
                                       >
                                         <Edit2 size={13} />
@@ -2019,8 +2287,8 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                             })
                           ) : (
                             <tr>
-                              <td colSpan={11} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
-                                No active members found in this section.{' '}
+                              <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                                No active personnel found in this section.{' '}
                                 <button
                                   type="button"
                                   onClick={() => handleOpenCreateForSection(secKey === 'MEMBERS' ? 'MEMBER' : 'DRIVER')}
@@ -2033,7 +2301,7 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                                     textDecoration: 'underline',
                                   }}
                                 >
-                                  Click here to add one now
+                                  Click here to add one
                                 </button>
                                 .
                               </td>
@@ -2051,86 +2319,113 @@ export const StaffUsersPage: React.FC<StaffUsersPageProps> = ({ defaultTab }) =>
                 className="card"
                 style={{
                   background: 'var(--bg-card)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  padding: '0.75rem 1.15rem',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '0.85rem 1.25rem',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   flexWrap: 'wrap',
-                  gap: '0.75rem',
+                  gap: '0.85rem',
                   boxShadow: 'var(--shadow-sm)',
-                  marginTop: '0.25rem',
+                  marginTop: '0.35rem',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <span
                     style={{
-                      background: 'var(--bg-hover, #f1f5f9)',
-                      color: 'var(--text-primary)',
-                      padding: '3px 8px',
-                      borderRadius: '5px',
-                      fontSize: '0.75rem',
+                      background: '#0f172a',
+                      color: '#ffffff',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.76rem',
                       fontWeight: 800,
                       letterSpacing: '0.02em',
                     }}
                   >
                     Sheet Summary
                   </span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    <strong>{attendanceStats.totalStaff}</strong> Personnel •{' '}
-                    <strong style={{ color: 'var(--text-primary)' }}>{attendanceStats.presentCount} Present</strong> (
+                  <span style={{ fontSize: '0.84rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <strong>{attendanceStats.totalStaff}</strong> Total Personnel •{' '}
+                    <strong style={{ color: '#059669' }}>{attendanceStats.presentCount} Present</strong> (
                     {attendanceStats.fullCount} Full, {attendanceStats.halfCount} Half,{' '}
                     <strong style={{ color: '#dc2626' }}>{attendanceStats.leaveCount} Leave</strong>)
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.84rem' }}>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
                       Earned Wages
                     </span>
-                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.98rem' }}>{formatCurrency(attendanceStats.totalEarned)}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '1.05rem', fontWeight: 900 }}>
+                      {formatCurrency(attendanceStats.totalEarned)}
+                    </strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
                       Cash Given
                     </span>
-                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.98rem' }}>{formatCurrency(attendanceStats.totalCash)}</strong>
+                    <strong style={{ color: '#059669', fontSize: '1.05rem', fontWeight: 900 }}>
+                      {formatCurrency(attendanceStats.totalCash)}
+                    </strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
                       GPay Given
                     </span>
-                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.98rem' }}>{formatCurrency(attendanceStats.totalGPay)}</strong>
+                    <strong style={{ color: '#2563eb', fontSize: '1.05rem', fontWeight: 900 }}>
+                      {formatCurrency(attendanceStats.totalGPay)}
+                    </strong>
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
-                      Total Paid
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>
+                      Total Paid Out
                     </span>
-                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.98rem' }}>{formatCurrency(attendanceStats.totalPaid)}</strong>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '1.05rem', fontWeight: 900 }}>
+                      {formatCurrency(attendanceStats.totalPaid)}
+                    </strong>
                   </div>
                   <div
                     style={{
-                      background: '#fef2f2',
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      border: '1px solid #fecaca',
+                      background: attendanceStats.netBalance > 0 ? '#fef2f2' : '#ecfdf5',
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      border: `1.5px solid ${attendanceStats.netBalance > 0 ? '#fecaca' : '#a7f3d0'}`,
                     }}
                   >
-                    <span style={{ fontSize: '0.66rem', color: '#991b1b', display: 'block', fontWeight: 800, textTransform: 'uppercase' }}>
-                      Net Due Today
+                    <span style={{ fontSize: '0.68rem', color: attendanceStats.netBalance > 0 ? '#991b1b' : '#047857', display: 'block', fontWeight: 800, textTransform: 'uppercase' }}>
+                      {attendanceStats.netBalance > 0 ? 'Net Due Today' : 'Status'}
                     </span>
                     <strong
                       style={{
-                        color: '#dc2626',
-                        fontSize: '1.05rem',
+                        color: attendanceStats.netBalance > 0 ? '#dc2626' : '#059669',
+                        fontSize: '1.1rem',
                         fontWeight: 900,
                       }}
                     >
-                      {formatCurrency(attendanceStats.netBalance)}
+                      {attendanceStats.netBalance > 0 ? formatCurrency(attendanceStats.netBalance) : '✓ Fully Settled'}
                     </strong>
                   </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={handleSaveAttendance}
+                    disabled={attendanceSaving}
+                    style={{
+                      height: 32,
+                      padding: '0 1rem',
+                      fontWeight: 800,
+                      fontSize: '0.78rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    <Save size={14} />
+                    <span>{attendanceSaving ? 'Saving...' : 'Save Sheet'}</span>
+                  </button>
                 </div>
               </div>
             </div>
